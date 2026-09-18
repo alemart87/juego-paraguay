@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Team UPAP y Juan",
+      "hasCanvas": false,
+      "bodyTextLen": 5,
+      "bodyTextHash": "b61eda6f4b63d533dc50c276c01d55133d6c4b6ad088afd86d31e39d15ddf609",
+      "bodyTextPrefix": "Jugar",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Team UPAP y Juan",
+      "hasCanvas": false,
+      "bodyTextLen": 5,
+      "bodyTextHash": "b61eda6f4b63d533dc50c276c01d55133d6c4b6ad088afd86d31e39d15ddf609",
+      "bodyTextPrefix": "Jugar",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}

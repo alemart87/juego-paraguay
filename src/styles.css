@@ -1,0 +1,807 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --color-bg: #0b0f14;
+  --color-surface: #161c24;
+  --color-elevated: #1d2530;
+  --color-fg: #ebe4d6;
+  --color-muted: #9a9284;
+  --color-line: #ebe4d61f;
+  --color-accent: #d4a45a;
+  --color-accent-fg: #0b0f14;
+  --color-paper: #ebe4d6;
+  --shadow-soft: 0 18px 50px #00000059;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+}
+
+html,
+body,
+#app {
+  background: var(--color-bg);
+  min-height: 100%;
+  height: 100%;
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  font-family: var(--font-display);
+}
+
+.press {
+  transition:
+    transform 0.15s ease-out,
+    background-color 0.15s ease-out,
+    border-color 0.15s ease-out;
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+.mission-alert {
+  color: #ff2a2a;
+  text-shadow: 0 0 14px #ff28288c;
+  animation: 1.05s ease-in-out infinite missionFlash;
+}
+
+.toast-alert {
+  color: #ffe8e8;
+  background: #960c0ce6;
+  border-radius: 12px;
+  font-weight: 600;
+  animation:
+    0.38s cubic-bezier(0.22, 1, 0.36, 1) toastIn,
+    1.25s ease-in-out 0.38s infinite toastPulse;
+}
+
+@keyframes missionFlash {
+  0%,
+  to {
+    opacity: 1;
+    transform: translate(0) scale(1);
+  }
+  45% {
+    opacity: 0.72;
+    transform: translate(3px) scale(1.03);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-2px) scale(1);
+  }
+}
+
+@keyframes toastIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastPulse {
+  0%,
+  to {
+    box-shadow: 0 0 #ff32328c;
+  }
+  50% {
+    box-shadow: 0 0 0 8px #ff323200;
+  }
+}
+
+.game-root {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.game-root img {
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none !important;
+  -webkit-touch-callout: none !important;
+  max-width: none;
+}
+
+.actor {
+  --fx: -1;
+  transform: translateX(-50%) scaleX(var(--fx));
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  position: absolute;
+  max-width: none;
+}
+
+.actor-idle {
+  animation: 2.2s ease-in-out infinite idle-breath;
+}
+.actor-walk {
+  animation: 0.36s infinite stride;
+}
+.actor-cycle {
+  background-repeat: no-repeat;
+  background-size: 200% 200%;
+  background-position: 0 0;
+  background-color: transparent;
+  animation: 0.46s infinite walk-cycle;
+}
+.actor-punch {
+  animation: 0.28s ease-out punch-swing;
+}
+.actor-slash {
+  animation: 0.32s ease-out slash-body;
+}
+.actor-aim {
+  animation: 0.18s ease-out aim-kick;
+}
+.actor-hit {
+  filter: brightness(1.4) saturate(0.6);
+  animation: 0.4s ease-out hit-recoil;
+}
+.actor-fly {
+  z-index: 6;
+  animation: none;
+}
+.actor-down {
+  transform-origin: 50% 80%;
+  animation: none;
+}
+
+.actor-sashay {
+  animation: 0.42s infinite sashay;
+}
+.actor-cry {
+  animation: 0.7s ease-in-out infinite cry-shake;
+  filter: saturate(0.8) brightness(1.1);
+}
+.actor-explode {
+  animation: 0.8s ease-out explode-out forwards;
+  z-index: 8;
+  filter: brightness(1.8) saturate(1.4) hue-rotate(-10deg);
+}
+.actor-headless {
+  clip-path: inset(22% 0 0 0);
+  filter: contrast(1.2) saturate(0.7);
+}
+.actor-shot {
+  animation: 0.45s ease-out shot-take;
+  filter: brightness(1.7) saturate(0.5) contrast(1.2);
+}
+.actor-slashed {
+  animation: 0.4s ease-out slash-take;
+  filter: brightness(1.3) saturate(0.7) hue-rotate(-15deg);
+}
+
+.book-shot {
+  position: absolute;
+  z-index: 6;
+  height: 7vh;
+  width: auto;
+  max-width: none;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 6px #0008);
+}
+
+.game-root img.actor[alt="Onichan"] {
+  height: 30vh !important;
+  max-width: none !important;
+  width: auto;
+}
+.game-root img.capi-pet,
+.capi-pet {
+  position: absolute;
+  height: 12vh;
+  width: auto;
+  max-width: 18vw;
+  pointer-events: none;
+  object-fit: contain;
+  transform: translateX(-50%);
+  animation: 0.7s ease-in-out infinite capi-idle;
+  filter: drop-shadow(0 4px 6px #0008);
+}
+
+.game-root img.slime-shot,
+.slime-shot {
+  position: absolute;
+  z-index: 7;
+  height: 3.2vh;
+  width: auto;
+  max-width: 5vw;
+  pointer-events: none;
+  object-fit: contain;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 0 6px #8fd46a);
+  animation: 0.35s linear slime-spin infinite;
+}
+
+.capi-run {
+  animation: 0.28s ease-in-out infinite capi-hop;
+}
+
+.capi-atk {
+  animation: 0.32s ease-out capi-spit;
+}
+
+.npc-tag {
+  position: absolute;
+  z-index: 8;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #000000c4;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ebe4d6;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.npc-tag-hot {
+  background: #c2413be6;
+  color: #fff;
+  animation: 0.8s ease-in-out infinite missionFlash;
+}
+
+.game-root img.slime-hit,
+.slime-hit {
+  position: absolute;
+  bottom: 18%;
+  z-index: 9;
+  height: 7vh;
+  width: auto;
+  max-width: 10vw;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: 0.5s ease-out slime-flash forwards;
+  filter: drop-shadow(0 0 6px #8fd46a);
+}
+
+@keyframes capi-spit {
+  0% {
+    transform: translateX(-50%) scale(1);
+  }
+  35% {
+    transform: translateX(-50%) scale(1.35) translateY(-18px) rotate(-18deg);
+  }
+  to {
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@keyframes capi-idle {
+  0%,
+  to {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-8px);
+  }
+}
+
+@keyframes capi-hop {
+  0%,
+  to {
+    transform: translateX(-50%) translateY(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-14px) rotate(8deg);
+  }
+}
+
+@keyframes slime-spin {
+  to {
+    transform: translateX(-50%) rotate(360deg);
+  }
+}
+
+@keyframes slime-flash {
+  0% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+.blood {
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.92;
+  background: radial-gradient(circle at 35% 30%, #ff2a3a, #9b0b18 55%, #4a0408 100%);
+  border-radius: 70% 40% 60% 45%;
+  position: absolute;
+  box-shadow: 0 0 10px #b40014b3;
+}
+
+.game-shake {
+  animation: 0.38s linear boom;
+}
+
+@keyframes boom {
+  0%,
+  to {
+    transform: translate(0);
+  }
+  15% {
+    transform: translate(-10px, 6px);
+  }
+  30% {
+    transform: translate(12px, -8px);
+  }
+  50% {
+    transform: translate(-8px, -4px);
+  }
+  70% {
+    transform: translate(9px, 5px);
+  }
+}
+
+@keyframes idle-breath {
+  0%,
+  to {
+    transform: translateX(-50%) scaleX(var(--fx)) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) scaleX(var(--fx)) translateY(-3px);
+  }
+}
+
+@keyframes stride {
+  0%,
+  to {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(-7deg) translateY(0);
+  }
+  25% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(0deg) translateY(-11px);
+  }
+  50% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(7deg) translateY(0);
+  }
+  75% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(0deg) translateY(-9px);
+  }
+}
+
+@keyframes sashay {
+  0%,
+  to {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(-10deg) translateY(0);
+  }
+  25% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(4deg) translateY(-14px);
+  }
+  50% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(12deg) translateY(0);
+  }
+  75% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(-2deg) translateY(-10px);
+  }
+}
+
+@keyframes cry-shake {
+  0%,
+  to {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(-6deg);
+  }
+  50% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(8deg) translateY(-4px);
+  }
+}
+
+@keyframes explode-out {
+  0% {
+    transform: translateX(-50%) scaleX(var(--fx)) scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: translateX(-50%) scaleX(var(--fx)) scale(1.35) rotate(18deg);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%) scaleX(var(--fx)) scale(1.8) rotate(40deg);
+    opacity: 0;
+  }
+}
+
+@keyframes punch-swing {
+  0% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(0deg);
+  }
+  35% {
+    transform: translateX(calc(-50% + (var(--fx) * -22px))) scaleX(var(--fx)) rotate(calc(var(--fx) * -22deg));
+  }
+  to {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(0deg);
+  }
+}
+
+@keyframes slash-body {
+  0% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(8deg);
+  }
+  40% {
+    transform: translateX(calc(-50% + (var(--fx) * -18px))) scaleX(var(--fx)) rotate(calc(var(--fx) * -28deg));
+  }
+  to {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(-4deg);
+  }
+}
+
+@keyframes aim-kick {
+  0% {
+    transform: translateX(-50%) scaleX(var(--fx));
+  }
+  30% {
+    transform: translateX(calc(-50% + (var(--fx) * 10px))) scaleX(var(--fx)) rotate(calc(var(--fx) * 6deg));
+  }
+  to {
+    transform: translateX(-50%) scaleX(var(--fx));
+  }
+}
+
+@keyframes shot-take {
+  0% {
+    filter: brightness(3) saturate(0.2);
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(-18deg) scale(1.04);
+  }
+  35% {
+    filter: brightness(1.4) sepia(0.4) hue-rotate(-20deg);
+    transform: translateX(calc(-50% + 14px)) scaleX(var(--fx)) rotate(-28deg);
+  }
+  to {
+    filter: brightness(0.9) saturate(0.6);
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(var(--rot, 0deg));
+  }
+}
+
+@keyframes slash-take {
+  0% {
+    filter: brightness(2.2) hue-rotate(-20deg);
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(12deg);
+  }
+  40% {
+    transform: translateX(calc(-50% + 10px)) scaleX(var(--fx)) rotate(-16deg);
+  }
+  to {
+    transform: translateX(-50%) scaleX(var(--fx));
+  }
+}
+
+.game-root img.held-weapon,
+.held-weapon {
+  position: absolute;
+  pointer-events: none;
+  transform: translateX(-50%) scaleX(var(--wx, 1));
+  transform-origin: 20% 85%;
+  filter: drop-shadow(0 2px 3px #0009);
+  object-fit: contain;
+  max-width: 78px;
+}
+.game-root img.held-knife,
+.held-knife {
+  height: 46px;
+  width: 78px;
+  max-width: 78px;
+}
+.game-root img.held-pistol,
+.held-pistol {
+  height: 40px;
+  width: 56px;
+  max-width: 56px;
+}
+.held-slash {
+  animation: 0.3s ease-out knife-arc;
+}
+.held-fire {
+  animation: 0.16s ease-out gun-kick;
+}
+
+@keyframes knife-arc {
+  0% {
+    transform: translateX(-50%) scaleX(var(--wx, 1)) rotate(-80deg);
+  }
+  45% {
+    transform: translateX(-50%) scaleX(var(--wx, 1)) rotate(55deg);
+  }
+  to {
+    transform: translateX(-50%) scaleX(var(--wx, 1)) rotate(12deg);
+  }
+}
+
+@keyframes gun-kick {
+  0% {
+    transform: translateX(-50%) scaleX(var(--wx, 1)) rotate(0deg);
+  }
+  35% {
+    transform: translateX(-50%) scaleX(var(--wx, 1)) rotate(-18deg) translateY(-4px);
+  }
+  to {
+    transform: translateX(-50%) scaleX(var(--wx, 1)) rotate(0deg);
+  }
+}
+
+.game-root img.fx-slash,
+.fx-slash {
+  position: absolute;
+  z-index: 7;
+  height: 110px;
+  width: 110px;
+  max-width: 110px;
+  pointer-events: none;
+  transform: translateX(-50%) scaleX(var(--wx, 1));
+  animation: 0.32s ease-out fx-pop forwards;
+  filter: drop-shadow(0 0 8px #fff8);
+}
+.game-root img.fx-muzzle,
+.fx-muzzle {
+  position: absolute;
+  z-index: 8;
+  height: 86px;
+  width: 110px;
+  max-width: 110px;
+  pointer-events: none;
+  transform: translateX(-50%) scaleX(var(--wx, 1));
+  animation: 0.2s ease-out fx-pop forwards;
+  filter: drop-shadow(0 0 14px #ffb24a);
+}
+.game-root img.fx-impact,
+.fx-impact {
+  position: absolute;
+  z-index: 8;
+  height: 90px;
+  width: 110px;
+  max-width: 110px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: 0.4s ease-out fx-pop forwards;
+  filter: drop-shadow(0 0 8px #c40014);
+}
+
+.game-root img.fx-boom,
+.fx-boom {
+  position: absolute;
+  z-index: 9;
+  height: 160px;
+  width: 160px;
+  max-width: 160px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: 0.55s ease-out boom-pop forwards;
+  filter: drop-shadow(0 0 18px #ff7a18);
+}
+
+.game-root img.fx-tracer,
+.fx-tracer {
+  position: absolute;
+  z-index: 8;
+  height: 14px;
+  width: 32vw;
+  max-width: 42vw;
+  pointer-events: none;
+  transform: translateX(-50%) scaleX(var(--wx, 1));
+  transform-origin: center;
+  animation: 0.16s linear tracer-fade forwards;
+  filter: drop-shadow(0 0 8px #ffe08a);
+}
+
+@keyframes boom-pop {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) scale(0.35);
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.15);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.45);
+  }
+}
+
+@keyframes tracer-fade {
+  0% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.game-root img.gib,
+.gib {
+  position: absolute;
+  z-index: 7;
+  height: 38px;
+  width: 38px;
+  max-width: 38px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px #0008);
+}
+
+.game-root img.torn-half,
+.torn-half {
+  position: absolute;
+  pointer-events: none;
+  max-width: none;
+  object-fit: contain;
+  filter: contrast(1.15) saturate(1.2) hue-rotate(-8deg);
+}
+.torn-top {
+  clip-path: inset(0 0 52% 0);
+}
+.torn-bot {
+  clip-path: inset(48% 0 0 0);
+}
+
+@keyframes fx-pop {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(var(--wx, 1)) scale(0.6);
+  }
+  35% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(var(--wx, 1)) scale(1.15);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(var(--wx, 1)) scale(1.35);
+  }
+}
+
+@keyframes hit-recoil {
+  0% {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(12deg);
+    filter: brightness(2);
+  }
+  to {
+    transform: translateX(-50%) scaleX(var(--fx)) rotate(0deg);
+  }
+}
+
+.pad {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.select-stage {
+  background:
+    radial-gradient(at 50% 100%, #d4a45a40, #0000 60%), linear-gradient(#1a2430 0%, #0f141c 100%);
+}
+
+.walk-sheet {
+  transform-origin: 50% 100%;
+  background-repeat: no-repeat;
+  background-size: 200% 200%;
+  width: 150px;
+  height: 175px;
+  margin-bottom: -8px;
+  animation:
+    0.48s infinite walk-sheet,
+    2.8s ease-in-out infinite select-pace;
+}
+
+@keyframes walk-sheet {
+  0%,
+  24% {
+    background-position: 0 0;
+  }
+  25%,
+  49% {
+    background-position: 100% 0;
+  }
+  50%,
+  74% {
+    background-position: 0 100%;
+  }
+  75%,
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes select-pace {
+  0%,
+  to {
+    transform: translate(-10px) scaleX(1);
+  }
+  45% {
+    transform: translate(18px) scaleX(1);
+  }
+  50% {
+    transform: translate(18px) scaleX(-1);
+  }
+  95% {
+    transform: translate(-10px) scaleX(-1);
+  }
+}
+
+@keyframes walk-cycle {
+  0%,
+  24% {
+    background-position: 0 0;
+  }
+  25%,
+  49% {
+    background-position: 100% 0;
+  }
+  50%,
+  74% {
+    background-position: 0 100%;
+  }
+  75%,
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+.game-root img.weapon-drop,
+.weapon-drop {
+  position: absolute;
+  bottom: 16%;
+  z-index: 3;
+  height: 28px;
+  max-width: 72px;
+  object-fit: contain;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 3px 4px #0008);
+  animation: 1.6s ease-in-out infinite idle-float;
+}
+
+.game-root img.bullet-shot,
+.bullet-shot {
+  position: absolute;
+  z-index: 7;
+  height: 18px;
+  max-width: 36px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px #ffd27a);
+}
+
+@keyframes idle-float {
+  0%,
+  to {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-6px);
+  }
+}
+
+.grade-warm {
+  filter: saturate(1.08) contrast(1.04);
+}
+.grade-day {
+  filter: saturate(0.95) brightness(1.05);
+}
+.grade-night {
+  filter: saturate(0.85) brightness(0.92) hue-rotate(-8deg);
+}
