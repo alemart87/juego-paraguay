@@ -46,10 +46,11 @@ export type Hero = {
   tagline: string;
   portrait: string;
   sprite: string;
-  walk: string;
   steps: string[];
   reel: string;
   accent: string;
+  /** Small gameplay perks so the hero choice matters. */
+  perk: { label: string; speed: number; hp: number; ammo: number };
 };
 
 export type HazardDef = {
@@ -59,16 +60,28 @@ export type HazardDef = {
   tagline: string;
   portrait: string;
   sprite: string;
-  walk: string;
   steps: string[];
   accent: string;
-  home: number;
   speed: number;
+  /** Hits (pistol bullets) needed to take them down. Melee on Marcos/Gallaguer is a one-shot gag. */
+  hp: number;
+  /** Distance at which they notice the player. */
+  sight: number;
+  /** Distance at which they give up and go home. */
+  leash: number;
+  alert: string;
+  lost: string;
+  killed: string;
+  /** Tiny label shown when they chase. */
+  chaseLabel: string;
 };
 
 export type WeaponId = "fist" | "knife" | "pistol";
-export type Shot = { id: number; x: number; y: number; vx: number; face: 1 | -1 };
-export type SlimeShot = { id: number; x: number; y: number; vx: number };
+export const WEAPON_NAME: Record<WeaponId, string> = {
+  fist: "Puño",
+  knife: "Cuchillo",
+  pistol: "Pistola",
+};
 
 function stepsOf(id: string) {
   return [0, 1, 2, 3].map((i) => `/sprites/walk/${id}-${i}.png`);
@@ -82,10 +95,10 @@ export const HEROES: Hero[] = [
     tagline: "Si hay silencio, hay asado.",
     portrait: "/characters/rafa.jpg",
     sprite: "/sprites/rafa.png",
-    walk: "/sprites/walk-rafa.png",
     steps: stepsOf("rafa"),
     reel: "/select/rafa.mp4",
     accent: "#d4a45a",
+    perk: { label: "Equilibrado", speed: 1, hp: 100, ammo: 12 },
   },
   {
     id: "juan",
@@ -94,10 +107,10 @@ export const HEROES: Hero[] = [
     tagline: "Poco mensaje. Mucho límite.",
     portrait: "/characters/juan.jpg",
     sprite: "/sprites/juan.png",
-    walk: "/sprites/walk-juan.png",
     steps: stepsOf("juan"),
     reel: "/select/juan.mp4",
     accent: "#c4b59a",
+    perk: { label: "Más rápido", speed: 1.12, hp: 90, ammo: 10 },
   },
   {
     id: "richard",
@@ -106,10 +119,10 @@ export const HEROES: Hero[] = [
     tagline: "Menos charla. Más fecha.",
     portrait: "/characters/richard.jpg",
     sprite: "/sprites/richard.png",
-    walk: "/sprites/walk-richard.png",
     steps: stepsOf("richard"),
     reel: "/select/richard.mp4",
     accent: "#c2413b",
+    perk: { label: "Más balas", speed: 0.96, hp: 100, ammo: 18 },
   },
   {
     id: "hector",
@@ -118,17 +131,14 @@ export const HEROES: Hero[] = [
     tagline: "Un reel, un partido, y fuerza.",
     portrait: "/characters/hector.jpg",
     sprite: "/sprites/hector.png",
-    walk: "/sprites/walk-hector.png",
     steps: stepsOf("hector"),
     reel: "/select/hector.mp4",
     accent: "#8aa0b8",
+    perk: { label: "Más vida", speed: 0.94, hp: 130, ammo: 10 },
   },
 ];
 
-export const HERO_BY_ID = Object.fromEntries(HEROES.map((h) => [h.id, h])) as Record<
-  HeroId,
-  Hero
->;
+export const HERO_BY_ID = Object.fromEntries(HEROES.map((h) => [h.id, h])) as Record<HeroId, Hero>;
 export const TEAM: HeroId[] = ["rafa", "juan", "richard", "hector"];
 export const NAMES: Record<HeroId, string> = {
   juan: "Juan",
@@ -145,11 +155,16 @@ export const HAZARDS: HazardDef[] = [
     tagline: "SOS Pobro.",
     portrait: "/characters/masivo.jpg",
     sprite: "/sprites/masivo.png",
-    walk: "/sprites/walk-masivo.png",
     steps: stepsOf("masivo"),
     accent: "#e8c15a",
-    home: 455,
-    speed: 30,
+    speed: 34,
+    hp: 3,
+    sight: 24,
+    leash: 60,
+    alert: "¡SOS Pobro! ¡CORRÉ!",
+    lost: "Masivo: fuera de acá.",
+    killed: "¡Masivo revienta!",
+    chaseLabel: "GYM",
   },
   {
     id: "pablito",
@@ -158,11 +173,16 @@ export const HAZARDS: HazardDef[] = [
     tagline: "Vení, no seas así.",
     portrait: "/characters/pablito.jpg",
     sprite: "/sprites/pablito.png",
-    walk: "/sprites/walk-pablito.png",
     steps: stepsOf("pablito"),
     accent: "#e8a0c8",
-    home: 195,
-    speed: 33,
+    speed: 37,
+    hp: 2,
+    sight: 22,
+    leash: 58,
+    alert: "¡Pablito te vio! ¡ESCAPÁ!",
+    lost: "Zafaste de Pablito.",
+    killed: "¡Pablito explota!",
+    chaseLabel: "VENÍ",
   },
   {
     id: "marcos",
@@ -171,11 +191,16 @@ export const HAZARDS: HazardDef[] = [
     tagline: "Tocame la panza.",
     portrait: "/characters/marcos.jpg",
     sprite: "/sprites/marcos.png",
-    walk: "/sprites/walk-marcos.png",
     steps: stepsOf("marcos"),
     accent: "#b07ad4",
-    home: 118,
-    speed: 22,
+    speed: 24,
+    hp: 2,
+    sight: 22,
+    leash: 56,
+    alert: "¡Marcos tira libros!",
+    lost: "Marcos se queda tirando tesis.",
+    killed: "Marcos explota.",
+    chaseLabel: "TESIS",
   },
   {
     id: "gallaguer",
@@ -184,11 +209,16 @@ export const HAZARDS: HazardDef[] = [
     tagline: "¿Escribe tu amiga?",
     portrait: "/characters/gallaguer.jpg",
     sprite: "/sprites/gallaguer.png",
-    walk: "/sprites/walk-gallaguer.png",
     steps: stepsOf("gallaguer"),
     accent: "#5aa8d4",
-    home: 236,
-    speed: 36,
+    speed: 40,
+    hp: 2,
+    sight: 22,
+    leash: 56,
+    alert: "¡Gallaguer te vio!",
+    lost: "Gallaguer perdió el hilo.",
+    killed: "¡Le explota la cabeza!",
+    chaseLabel: "¿ESCRIBE?",
   },
   {
     id: "onichan",
@@ -197,11 +227,16 @@ export const HAZARDS: HazardDef[] = [
     tagline: "Estoy en vivo.",
     portrait: "/characters/onichan.jpg",
     sprite: "/sprites/onichan.png",
-    walk: "/sprites/walk-onichan.png",
     steps: stepsOf("onichan"),
     accent: "#f4a0c8",
-    home: 210,
-    speed: 28,
+    speed: 30,
+    hp: 2,
+    sight: 40,
+    leash: 66,
+    alert: "¡Onichan está en vivo! ¡Capi tira slime!",
+    lost: "Onichan cortó el live.",
+    killed: "Onichan cortó. Capi sale volando.",
+    chaseLabel: "EN VIVO",
   },
 ];
 
@@ -217,10 +252,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "juan",
       text: "Si hay fuego, voy. Si no, sigo en mi límite.",
-      choices: [
-        { label: "Hoy. Mochila y listo.", join: true },
-        { label: "Después vemos." },
-      ],
+      choices: [{ label: "Hoy. Mochila y listo.", join: true }, { label: "Después vemos." }],
     },
   ],
   richard: [
@@ -229,10 +261,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "richard",
       text: "Si hay fecha, yo llevo la carne. Menos charla.",
-      choices: [
-        { label: "Sábado. Ahora.", join: true },
-        { label: "Aún no hay hora." },
-      ],
+      choices: [{ label: "Sábado. Ahora.", join: true }, { label: "Aún no hay hora." }],
     },
   ],
   hector: [
@@ -250,10 +279,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "rafa",
       text: "Los cuatro. El fuego. No hay otra.",
-      choices: [
-        { label: "Vamos. Vos liderás.", join: true },
-        { label: "Después." },
-      ],
+      choices: [{ label: "Vamos. Vos liderás.", join: true }, { label: "Después." }],
     },
   ],
   carne: [
@@ -261,10 +287,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "narrator",
       text: "¿Llevamos la carne para el equipo?",
-      choices: [
-        { label: "Esto es. Anotá.", item: "carne" },
-        { label: "Después paso." },
-      ],
+      choices: [{ label: "Esto es. Anotá.", item: "carne" }, { label: "Después paso." }],
     },
   ],
   hielo: [
@@ -296,10 +319,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "narrator",
       text: "¿Encendemos el asado?",
-      choices: [
-        { label: "Fuego. Misión 1.", fire: true },
-        { label: "Todavía no." },
-      ],
+      choices: [{ label: "Fuego. Misión 1.", fire: true }, { label: "Todavía no." }],
     },
   ],
   masivo: [
@@ -330,10 +350,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "narrator",
       text: "¿Guardamos la prueba?",
-      choices: [
-        { label: "Esto se lo muestro a Juan.", item: "chat" },
-        { label: "Después." },
-      ],
+      choices: [{ label: "Esto se lo muestro a Juan.", item: "chat" }, { label: "Después." }],
     },
   ],
   apuntes: [
@@ -341,10 +358,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "narrator",
       text: "Richard los necesita para no aplazarse.",
-      choices: [
-        { label: "Esto es para Richard.", item: "apuntes" },
-        { label: "Después." },
-      ],
+      choices: [{ label: "Esto es para Richard.", item: "apuntes" }, { label: "Después." }],
     },
   ],
   cafe: [
@@ -352,10 +366,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "narrator",
       text: "¿Se lo llevamos a Richard?",
-      choices: [
-        { label: "Que se despierte.", item: "cafe" },
-        { label: "Sigo." },
-      ],
+      choices: [{ label: "Que se despierte.", item: "cafe" }, { label: "Sigo." }],
     },
   ],
   cedula: [
@@ -363,10 +374,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "narrator",
       text: "Sin esto no entra a Clínicas.",
-      choices: [
-        { label: "Esto entra al aula.", item: "cedula" },
-        { label: "Después." },
-      ],
+      choices: [{ label: "Esto entra al aula.", item: "cedula" }, { label: "Después." }],
     },
   ],
   foto: [
@@ -374,10 +382,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "narrator",
       text: "¿La guardamos como prueba?",
-      choices: [
-        { label: "Esto se lo muestro a Juan.", item: "foto" },
-        { label: "Después." },
-      ],
+      choices: [{ label: "Esto se lo muestro a Juan.", item: "foto" }, { label: "Después." }],
     },
   ],
   fuerza: [
@@ -395,10 +400,7 @@ export const TALKS: Record<TalkKey, Line[]> = {
     {
       who: "richard",
       text: "Cuando esté listo, vamos a rendir. Fecha: ahora.",
-      choices: [
-        { label: "Voy por los apuntes y el café." },
-        { label: "Rendir ya.", exam: "ok" },
-      ],
+      choices: [{ label: "Voy por los apuntes y el café." }, { label: "Rendir ya.", exam: "ok" }],
     },
   ],
   examen: [
@@ -453,8 +455,14 @@ export const TALKS: Record<TalkKey, Line[]> = {
     },
   ],
   marcos: [
-    { who: "marcos", text: "Ay, nene. Soy Marcos, coordinador de UPAP. Richard me dejó en visto otra vez." },
-    { who: "marcos", text: "Fui su pareja. Todavía lo siento. Si me tocás la panza, me calmo. Si me pegás… no, no me pegues." },
+    {
+      who: "marcos",
+      text: "Ay, nene. Soy Marcos, coordinador de UPAP. Richard me dejó en visto otra vez.",
+    },
+    {
+      who: "marcos",
+      text: "Fui su pareja. Todavía lo siento. Si me tocás la panza, me calmo. Si me pegás… no, no me pegues.",
+    },
     {
       who: "marcos",
       text: "Richard tiene que estar acá. El grupo, el asado, el examen. Yo armo todo. Él es el único que me desarma.",
@@ -465,8 +473,14 @@ export const TALKS: Record<TalkKey, Line[]> = {
     },
   ],
   gallaguer: [
-    { who: "gallaguer", text: "Che, mirá esta mina. ¿Escribe tu amiga? Yo le quiero conocer. Ahora." },
-    { who: "gallaguer", text: "A las novias del equipo les mando audio a las tres. Es investigación. No es celos. Es ciencia." },
+    {
+      who: "gallaguer",
+      text: "Che, mirá esta mina. ¿Escribe tu amiga? Yo le quiero conocer. Ahora.",
+    },
+    {
+      who: "gallaguer",
+      text: "A las novias del equipo les mando audio a las tres. Es investigación. No es celos. Es ciencia.",
+    },
     {
       who: "gallaguer",
       text: "Pasame el Instagram. Si no me lo pasás, yo igual lo encuentro. Siempre lo encuentro.",
@@ -499,7 +513,8 @@ export const TALKS: Record<TalkKey, Line[]> = {
   ],
 };
 
-export type Pickup = { id: string; kind: "coin" | "item" | "weapon"; x: number; talk?: TalkKey; weapon?: "knife" | "pistol" };
+export type PickupKind = "coin" | "item" | "ammo" | "heal" | "knife";
+export type Pickup = { id: string; kind: PickupKind; x: number; talk?: TalkKey; label?: string };
 export type NpcSpot = { id: HeroId; x: number };
 export type Prop = { src: string; x: number; h: number; flip?: boolean };
 export type Zone = { id: string; name: string; bg: string };
@@ -507,7 +522,7 @@ export type Zone = { id: string; name: string; bg: string };
 export type Chapter = {
   chapter: 1 | 2 | 3;
   title: string;
-  grade: "grade-warm" | "grade-day" | "grade-night";
+  grade: "warm" | "day" | "night";
   intro: { src: string; title: string; line: string };
   outro: { src: string; title: string; line: string };
   startX: number;
@@ -518,13 +533,15 @@ export type Chapter = {
   pickups: Pickup[];
   props: Prop[];
   hazardHome: Record<HazardId, number>;
+  /** Target time in seconds for the time bonus / medal. */
+  parTime: number;
 };
 
 export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
   1: {
     chapter: 1,
     title: "Armar asado",
-    grade: "grade-warm",
+    grade: "warm",
     intro: {
       src: "/cinema/asado.mp4",
       title: "El chat está mudo",
@@ -537,6 +554,7 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
     },
     startX: 18,
     grillX: 548,
+    parTime: 180,
     zones: [
       { id: "costanera", name: "Costanera", bg: "/stages/m1-costanera.jpg" },
       { id: "mercado", name: "El mercado", bg: "/stages/m1-mercado.jpg" },
@@ -553,21 +571,26 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
     ],
     pickups: [
       { id: "c1", kind: "coin", x: 36 },
-      { id: "hielo", kind: "item", x: 96, talk: "hielo" },
+      { id: "k1", kind: "knife", x: 62, label: "Cuchillo" },
+      { id: "hielo", kind: "item", x: 96, talk: "hielo", label: "Hielo" },
       { id: "c2", kind: "coin", x: 140 },
-      { id: "carne", kind: "item", x: 210, talk: "carne" },
+      { id: "a1", kind: "ammo", x: 164, label: "Balas" },
+      { id: "carne", kind: "item", x: 210, talk: "carne", label: "Carne" },
       { id: "c3", kind: "coin", x: 268 },
+      { id: "h1", kind: "heal", x: 290, label: "Tereré" },
       { id: "c4", kind: "coin", x: 310 },
-      { id: "terere", kind: "item", x: 368, talk: "terere" },
+      { id: "terere", kind: "item", x: 368, talk: "terere", label: "Tereré" },
+      { id: "a2", kind: "ammo", x: 398, label: "Balas" },
       { id: "c5", kind: "coin", x: 420 },
+      { id: "h2", kind: "heal", x: 440, label: "Tereré" },
       { id: "c6", kind: "coin", x: 470 },
-      { id: "carbon", kind: "item", x: 498, talk: "carbon" },
+      { id: "carbon", kind: "item", x: 498, talk: "carbon", label: "Carbón" },
       { id: "c7", kind: "coin", x: 530 },
     ],
     props: [
       { src: "/sprites/palm.png", x: 12, h: 30 },
       { src: "/sprites/palm.png", x: 58, h: 28, flip: true },
-      { src: "/sprites/dog.png", x: 96, h: 12 },
+      { src: "/sprites/dog.png", x: 86, h: 12 },
       { src: "/sprites/lamp.png", x: 160, h: 24 },
       { src: "/sprites/lamp.png", x: 230, h: 24 },
       { src: "/sprites/palm.png", x: 300, h: 32 },
@@ -580,7 +603,7 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
   2: {
     chapter: 2,
     title: "El examen",
-    grade: "grade-day",
+    grade: "day",
     intro: {
       src: "/cinema/examen.mp4",
       title: "El MEC no espera",
@@ -593,6 +616,7 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
     },
     startX: 18,
     examX: 548,
+    parTime: 150,
     zones: [
       { id: "campus", name: "Campus UPAP", bg: "/stages/m2-campus.jpg" },
       { id: "biblio", name: "La biblioteca", bg: "/stages/m2-biblio.jpg" },
@@ -609,12 +633,17 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
     ],
     pickups: [
       { id: "c1", kind: "coin", x: 40 },
-      { id: "apuntes", kind: "item", x: 128, talk: "apuntes" },
+      { id: "k1", kind: "knife", x: 58, label: "Cuchillo" },
+      { id: "apuntes", kind: "item", x: 128, talk: "apuntes", label: "Apuntes" },
       { id: "c2", kind: "coin", x: 168 },
-      { id: "cafe", kind: "item", x: 228, talk: "cafe" },
+      { id: "a1", kind: "ammo", x: 186, label: "Balas" },
+      { id: "cafe", kind: "item", x: 228, talk: "cafe", label: "Café" },
+      { id: "h1", kind: "heal", x: 292, label: "Tereré" },
       { id: "c3", kind: "coin", x: 310 },
       { id: "c4", kind: "coin", x: 360 },
-      { id: "cedula", kind: "item", x: 438, talk: "cedula" },
+      { id: "a2", kind: "ammo", x: 386, label: "Balas" },
+      { id: "cedula", kind: "item", x: 438, talk: "cedula", label: "Cédula" },
+      { id: "h2", kind: "heal", x: 462, label: "Tereré" },
       { id: "c5", kind: "coin", x: 490 },
       { id: "c6", kind: "coin", x: 520 },
     ],
@@ -631,7 +660,7 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
   3: {
     chapter: 3,
     title: "Juan",
-    grade: "grade-night",
+    grade: "night",
     intro: {
       src: "/cinema/juan.mp4",
       title: "Salvá a Juan",
@@ -643,6 +672,7 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
       line: "El equipo queda. Pablito, fuera de acá.",
     },
     startX: 18,
+    parTime: 210,
     zones: [
       { id: "noche", name: "Costanera noche", bg: "/stages/m3-noche.jpg" },
       { id: "pasillo", name: "El pasillo", bg: "/stages/m3-pasillo.jpg" },
@@ -659,12 +689,18 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
     ],
     pickups: [
       { id: "c1", kind: "coin", x: 40 },
-      { id: "chat", kind: "item", x: 148, talk: "chat" },
+      { id: "k1", kind: "knife", x: 96, label: "Cuchillo" },
+      { id: "chat", kind: "item", x: 148, talk: "chat", label: "Chat" },
+      { id: "a1", kind: "ammo", x: 172, label: "Balas" },
       { id: "c2", kind: "coin", x: 190 },
       { id: "c3", kind: "coin", x: 250 },
-      { id: "foto", kind: "item", x: 318, talk: "foto" },
+      { id: "h1", kind: "heal", x: 280, label: "Tereré" },
+      { id: "foto", kind: "item", x: 318, talk: "foto", label: "Foto" },
+      { id: "a2", kind: "ammo", x: 350, label: "Balas" },
       { id: "c4", kind: "coin", x: 380 },
+      { id: "h2", kind: "heal", x: 412, label: "Tereré" },
       { id: "c5", kind: "coin", x: 440 },
+      { id: "a3", kind: "ammo", x: 468, label: "Balas" },
       { id: "c6", kind: "coin", x: 500 },
     ],
     props: [
@@ -686,24 +722,42 @@ export const MISSIONS = [
     ch: 1 as const,
     title: "Armar el asado",
     blurb:
-      "1. Reuní a Rafa, Juan, Richard y Héctor. 2. Hielo, carne, tereré y carbón. 3. Encendé el fuego. Cuidado: Onichan está en vivo.",
+      "Reuní a Rafa, Juan, Richard y Héctor. Juntá hielo, carne, tereré y carbón. Encendé el fuego en el quincho.",
     img: "/stages/m1-quincho.jpg",
   },
   {
     ch: 2 as const,
     title: "El examen de Richard",
-    blurb:
-      "1. Apuntes. 2. Café. 3. Hablá con Héctor. 4. Cédula. 5. Rendí en el aula. Onichan molesta en el campus.",
+    blurb: "Apuntes, café, la fuerza de Héctor y la cédula. Después, rendí el examen en el aula.",
     img: "/stages/m2-aula.jpg",
   },
   {
     ch: 3 as const,
     title: "Salvá a Juan",
-    blurb:
-      "1. Hablá con Juan. 2. El chat. 3. La foto. 4. Disparale a Pablito en el muelle. 5. Volvé con Juan.",
+    blurb: "Hablá con Juan. Conseguí el chat y la foto. Disparale a Pablito en el muelle y volvé.",
     img: "/stages/m3-muelle.jpg",
   },
 ];
+
+export const ITEM_IMG: Record<string, string> = {
+  hielo: "/sprites/terere.png",
+  carne: "/sprites/grill.png",
+  carbon: "/sprites/fire.png",
+  terere: "/sprites/terere.png",
+  apuntes: "/sprites/book.png",
+  cafe: "/sprites/terere.png",
+  cedula: "/sprites/book.png",
+  chat: "/sprites/book.png",
+  foto: "/sprites/book.png",
+};
+
+export function pickupSprite(p: Pickup) {
+  if (p.kind === "coin") return "/sprites/coin.png";
+  if (p.kind === "ammo") return "/sprites/bullet.png";
+  if (p.kind === "heal") return "/sprites/terere.png";
+  if (p.kind === "knife") return "/sprites/knife.png";
+  return ITEM_IMG[p.id] ?? "/sprites/book.png";
+}
 
 export function chapterOf(n: 1 | 2 | 3) {
   return CHAPTERS[n];
@@ -721,144 +775,84 @@ export function npcHome(n: 1 | 2 | 3) {
   return t;
 }
 
-export type HazardState = {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  rot: number;
-  spin: number;
-  fly: boolean;
-  down: boolean;
-  downAt: number;
-  chasing: boolean;
-  escaped: boolean;
-  caught: boolean;
-  hit: number;
-  exploding: boolean;
-  explodeAt: number;
-  gone: boolean;
-  headless: boolean;
-  calm: boolean;
-  cry: boolean;
-  lastThrow: number;
-  hurt: "" | "gun" | "slash" | "fist";
-  torn: boolean;
-};
-
-export function hazardAt(x: number): HazardState {
-  return {
-    x,
-    y: 0,
-    vx: 0,
-    vy: 0,
-    rot: 0,
-    spin: 0,
-    fly: false,
-    down: false,
-    downAt: 0,
-    chasing: false,
-    escaped: false,
-    caught: false,
-    hit: 0,
-    exploding: false,
-    explodeAt: 0,
-    gone: false,
-    headless: false,
-    calm: false,
-    cry: false,
-    lastThrow: 0,
-    hurt: "",
-    torn: false,
-  };
-}
-
-export function hazardsFor(n: 1 | 2 | 3) {
-  const home = CHAPTERS[n].hazardHome;
-  return {
-    masivo: hazardAt(home.masivo),
-    pablito: hazardAt(home.pablito),
-    marcos: hazardAt(home.marcos),
-    gallaguer: hazardAt(home.gallaguer),
-    onichan: hazardAt(home.onichan),
-  };
-}
-
-export type Blood = { id: number; x: number; y: number; w: number; h: number; rot: number };
-export type Gib = {
-  id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  rot: number;
-  spin: number;
-  src: string;
-};
-let bloodSeq = 1;
-let gibSeq = 1;
-const GIB_SRC = ["/sprites/gib1.png", "/sprites/gib2.png", "/sprites/spray.png"];
-export function splat(x: number, y: number, n = 10): Blood[] {
-  return Array.from({ length: n }, () => ({
-    id: bloodSeq++,
-    x: x + (Math.random() - 0.5) * 10,
-    y: y + Math.random() * 8,
-    w: 14 + Math.random() * 28,
-    h: 10 + Math.random() * 22,
-    rot: Math.random() * 360,
-  }));
-}
-export function rip(x: number, dir: number, n = 9): Gib[] {
-  return Array.from({ length: n }, (_, i) => ({
-    id: gibSeq++,
-    x: x + (Math.random() - 0.5) * 8,
-    y: 8 + Math.random() * 16,
-    vx: dir * (28 + Math.random() * 90) + (Math.random() - 0.5) * 36,
-    vy: 48 + Math.random() * 78,
-    rot: Math.random() * 360,
-    spin: (Math.random() - 0.5) * 980,
-    src: GIB_SRC[i % 3],
-  }));
-}
-
-export function objective(s: {
+/** Everything the HUD needs to render the mission checklist. */
+export type Progress = {
   recruited: string[];
   items: string[];
   hero: HeroId | null;
   chapter: 1 | 2 | 3;
-  hazards: Record<HazardId, HazardState>;
-}) {
-  if (s.hazards.onichan.chasing) return "¡Onichan está en vivo! ¡Capi tira slime!";
-  if (s.hazards.pablito.chasing && s.chapter !== 3) return "¡ESCAPÁ de Pablito!";
-  if (s.hazards.masivo.chasing) return "¡SOS Pobro! ¡CORRÉ!";
-  if (s.hazards.marcos.chasing && !s.hazards.marcos.calm) return "¡Marcos tira libros!";
-  if (s.hazards.gallaguer.chasing) return "¡Gallaguer te vio!";
+  fire: boolean;
+  examScore: number;
+};
+
+export function checksFor(s: Progress): { t: string; ok: boolean }[] {
+  if (s.chapter === 1)
+    return [
+      { t: "Equipo", ok: TEAM.every((id) => id === s.hero || s.recruited.includes(id)) },
+      { t: "Hielo", ok: s.items.includes("hielo") },
+      { t: "Carne", ok: s.items.includes("carne") },
+      { t: "Tereré", ok: s.items.includes("terere") },
+      { t: "Carbón", ok: s.items.includes("carbon") },
+      { t: "Fuego", ok: s.fire },
+    ];
+  if (s.chapter === 2)
+    return [
+      { t: "Apuntes", ok: s.items.includes("apuntes") },
+      { t: "Café", ok: s.items.includes("cafe") },
+      { t: "Héctor", ok: s.items.includes("fuerza") },
+      { t: "Cédula", ok: s.items.includes("cedula") },
+      { t: "Examen", ok: s.examScore > 0 },
+    ];
+  return [
+    { t: "Juan", ok: s.items.includes("aviso") },
+    { t: "Chat", ok: s.items.includes("chat") },
+    { t: "Foto", ok: s.items.includes("foto") },
+    { t: "Pablito", ok: s.items.includes("echar") },
+    { t: "Volver", ok: s.items.includes("honor") },
+  ];
+}
+
+/** Current objective text plus where it is (for the map marker). */
+export function objective(s: Progress): { text: string; x: number | null } {
+  const ch = CHAPTERS[s.chapter];
+  const npcX = (id: HeroId) => ch.npcs.find((n) => n.id === id)?.x ?? null;
+  const itemX = (id: string) => ch.pickups.find((p) => p.id === id)?.x ?? null;
   if (s.chapter === 1) {
     const missing = TEAM.filter((id) => id !== s.hero);
     for (const id of missing) {
       if (!s.recruited.includes(id)) {
-        if (id === "rafa") return "1/6 · Rafa en la costanera";
-        if (id === "juan") return "1/6 · Juan en el mercado";
-        if (id === "richard") return "1/6 · Richard en el barrio";
-        return "1/6 · Héctor en la calle";
+        if (id === "rafa") return { text: "1/6 · Rafa en la costanera", x: npcX("rafa") };
+        if (id === "juan") return { text: "1/6 · Juan en el mercado", x: npcX("juan") };
+        if (id === "richard") return { text: "1/6 · Richard en el barrio", x: npcX("richard") };
+        return { text: "1/6 · Héctor en la calle", x: npcX("hector") };
       }
     }
-    if (!s.items.includes("hielo")) return "2/6 · hielo en la costanera";
-    if (!s.items.includes("carne")) return "3/6 · carne en el mercado";
-    if (!s.items.includes("terere")) return "4/6 · tereré en la despensa";
-    if (!s.items.includes("carbon")) return "5/6 · carbón en la calle";
-    return "6/6 · encendé el fuego en el quincho";
+    if (!s.items.includes("hielo"))
+      return { text: "2/6 · hielo en la costanera", x: itemX("hielo") };
+    if (!s.items.includes("carne")) return { text: "3/6 · carne en el mercado", x: itemX("carne") };
+    if (!s.items.includes("terere"))
+      return { text: "4/6 · tereré en la despensa", x: itemX("terere") };
+    if (!s.items.includes("carbon"))
+      return { text: "5/6 · carbón en la calle", x: itemX("carbon") };
+    return { text: "6/6 · encendé el fuego en el quincho", x: ch.grillX ?? null };
   }
   if (s.chapter === 2) {
-    if (!s.items.includes("apuntes")) return "1/5 · apuntes en la biblioteca";
-    if (!s.items.includes("cafe")) return "2/5 · café en la cancha";
-    if (!s.items.includes("fuerza")) return "3/5 · Héctor en el pasillo";
-    if (!s.items.includes("cedula")) return "4/5 · cédula en el patio";
-    return "5/5 · rendí el examen en el aula";
+    if (!s.items.includes("apuntes"))
+      return { text: "1/5 · apuntes en la biblioteca", x: itemX("apuntes") };
+    if (!s.items.includes("cafe")) return { text: "2/5 · café en la cancha", x: itemX("cafe") };
+    if (!s.items.includes("fuerza"))
+      return { text: "3/5 · Héctor en el pasillo", x: npcX("hector") };
+    if (!s.items.includes("cedula"))
+      return { text: "4/5 · cédula en el patio", x: itemX("cedula") };
+    return { text: "5/5 · rendí el examen en el aula", x: ch.examX ?? null };
   }
-  if (!s.items.includes("aviso")) return "1/5 · hablá con Juan en la costanera";
-  if (!s.items.includes("chat")) return "2/5 · el chat está en el pasillo";
-  if (!s.items.includes("foto")) return "3/5 · la foto está en el bosque";
-  if (!s.items.includes("echar")) return "4/5 · disparale a Pablito en el muelle";
-  return "5/5 · volvé con Juan";
+  if (!s.items.includes("aviso"))
+    return { text: "1/5 · hablá con Juan en la costanera", x: npcX("juan") };
+  if (!s.items.includes("chat"))
+    return { text: "2/5 · el chat está en el pasillo", x: itemX("chat") };
+  if (!s.items.includes("foto"))
+    return { text: "3/5 · la foto está en el bosque", x: itemX("foto") };
+  if (!s.items.includes("echar"))
+    return { text: "4/5 · disparale a Pablito en el muelle", x: ch.hazardHome.pablito };
+  return { text: "5/5 · volvé con Juan", x: npcX("juan") };
 }
