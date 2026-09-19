@@ -37,7 +37,8 @@ function paymentDetails(event: WhopWebhookEvent) {
 
   return {
     paymentId: text(payment?.id),
-    sku: text(metadata?.game_sku) ?? text(planMetadata?.game_sku) ?? text(productMetadata?.game_sku),
+    sku:
+      text(metadata?.game_sku) ?? text(planMetadata?.game_sku) ?? text(productMetadata?.game_sku),
     userId: text(user?.id),
     email:
       text(payment?.email_address) ??
@@ -57,9 +58,12 @@ export async function recordWhopWebhook(event: WhopWebhookEvent, webhookId: stri
   let purchaserEmailHash: string | null = null;
   if (details.email) {
     const { createHmac } = await import("node:crypto");
-    const secret = process.env.LEADERBOARD_SECRET?.trim();
+    const secret =
+      process.env.LEADERBOARD_SECRET?.trim() || process.env.WHOP_WEBHOOK_SECRET?.trim();
     if (!secret && process.env.DATABASE_URL?.trim())
-      throw new Error("LEADERBOARD_SECRET is required when DATABASE_URL is configured");
+      throw new Error(
+        "LEADERBOARD_SECRET or WHOP_WEBHOOK_SECRET is required when DATABASE_URL is configured",
+      );
     purchaserEmailHash = createHmac("sha256", secret ?? "influencers-battle-local-preview")
       .update(`email:${details.email.trim().toLowerCase()}`)
       .digest("hex");
@@ -133,9 +137,8 @@ export async function recordWhopWebhook(event: WhopWebhookEvent, webhookId: stri
     );
   }
 
-  await sql.query(
-    "UPDATE whop_webhook_events SET processed_at = now() WHERE webhook_id = $1",
-    [webhookId],
-  );
+  await sql.query("UPDATE whop_webhook_events SET processed_at = now() WHERE webhook_id = $1", [
+    webhookId,
+  ]);
   return { duplicate: false };
 }

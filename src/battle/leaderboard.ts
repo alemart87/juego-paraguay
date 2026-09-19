@@ -11,6 +11,7 @@ export type LeaderboardEntry = {
   hero: FighterId;
   time: number;
   combo: number;
+  avatarUrl: string | null;
 };
 
 export function normalizeContact(kind: "email" | "phone", value: string): string | null {
@@ -55,9 +56,12 @@ async function contactHash(kind: "email" | "phone", value: string) {
   const normalized = normalizeContact(kind, value);
   if (!normalized) return null;
   const { createHmac } = await import("node:crypto");
-  const configuredSecret = process.env.LEADERBOARD_SECRET?.trim();
+  const configuredSecret =
+    process.env.LEADERBOARD_SECRET?.trim() || process.env.WHOP_WEBHOOK_SECRET?.trim();
   if (process.env.DATABASE_URL?.trim() && !configuredSecret)
-    throw new Error("LEADERBOARD_SECRET is required when DATABASE_URL is configured");
+    throw new Error(
+      "LEADERBOARD_SECRET or WHOP_WEBHOOK_SECRET is required when DATABASE_URL is configured",
+    );
   return createHmac("sha256", configuredSecret ?? "influencers-battle-local-preview")
     .update(`${kind}:${normalized}`)
     .digest("hex");
@@ -65,7 +69,10 @@ async function contactHash(kind: "email" | "phone", value: string) {
 
 async function benefitsToken(hash: string) {
   const { createHmac } = await import("node:crypto");
-  const secret = process.env.LEADERBOARD_SECRET?.trim() ?? "influencers-battle-local-preview";
+  const secret =
+    process.env.LEADERBOARD_SECRET?.trim() ||
+    process.env.WHOP_WEBHOOK_SECRET?.trim() ||
+    "influencers-battle-local-preview";
   return createHmac("sha256", secret).update(`benefits:${hash}`).digest("hex");
 }
 
@@ -173,9 +180,10 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(async ()
     hero: FighterId;
     time: number;
     combo: number;
+    avatar_file: string | null;
   }>(
     `SELECT p.display_name AS name, s.score, s.level, s.hero,
-            s.time_seconds AS time, s.combo
+            s.time_seconds AS time, s.combo, p.avatar_file
        FROM leaderboard_scores s
        JOIN leaderboard_players p ON p.id = s.player_id
       ORDER BY s.score DESC, s.time_seconds ASC, s.updated_at ASC
@@ -183,7 +191,11 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(async ()
   );
   return {
     ok: true as const,
-    entries: rows.map((row, index) => ({ ...row, rank: index + 1 })),
+    entries: rows.map(({ avatar_file, ...row }, index) => ({
+      ...row,
+      avatarUrl: avatar_file ? `/media/players/${avatar_file}` : null,
+      rank: index + 1,
+    })),
   };
 });
 

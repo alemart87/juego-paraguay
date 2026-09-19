@@ -3225,6 +3225,71 @@
   outline: 2px solid #f6e75a25;
   outline-offset: 1px;
 }
+.ranking-photo {
+  grid-template-columns: 62px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px !important;
+  min-height: 74px;
+  padding: 7px;
+  border: 1px dashed #f6e75a66;
+  background: #f6e75a08;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+.ranking-photo:active {
+  transform: scale(0.99);
+}
+.ranking-photo:hover {
+  border-color: #f6e75a;
+  background: #f6e75a0e;
+}
+.ranking-photo-preview {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #ffffff26;
+  background: #08070b;
+  color: #f6e75a;
+}
+.ranking-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ranking-photo-preview svg {
+  width: 25px;
+}
+.ranking-photo > span:nth-child(2) {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.ranking-photo strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #fff3dc;
+  font-size: 12px;
+}
+.ranking-photo strong svg {
+  width: 16px;
+}
+.ranking-photo small {
+  color: #938d9d;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.ranking-form .ranking-photo input[type="file"] {
+  display: none;
+}
 .contact-switch {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -40,7 +40,9 @@ function Privacy() {
         <p>
           Para crear un perfil solicitamos un apodo y un correo electrónico o número de teléfono. El
           contacto se normaliza y se transforma mediante HMAC antes de guardarse; no se muestra
-          públicamente. El ranking publica el apodo, personaje, episodio, tiempo, combo y puntaje.
+          públicamente. Si elegís una foto, la recortamos en el navegador y la guardamos en el
+          almacenamiento persistente del juego. El ranking publica la foto, apodo, personaje,
+          episodio, tiempo, combo y puntaje.
         </p>
         <h3>Compras</h3>
         <p>
