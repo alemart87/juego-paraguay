@@ -58,12 +58,27 @@ type Frame = {
   H: number;
   cam: number;
   t: number;
+  /** Pixels per world unit. */
+  unit: number;
+  /** Pixels per "vh" of the reference 16:9 layout (keeps proportions on any screen). */
+  unitY: number;
+  /** Visible world units. */
+  viewW: number;
+  /** Feet line in pixels. */
+  ground: number;
 };
 
-const X = (f: Frame, x: number) => (x - f.cam) * (f.W / 100);
-const VW = (f: Frame, v: number) => (v * f.W) / 100;
-const VH = (f: Frame, v: number) => (v * f.H) / 100;
-const groundY = (f: Frame) => f.H * GROUND;
+/** Visible world units for a canvas size: the full 100 in landscape, fewer in portrait so sprites stay readable. */
+export function viewWidthFor(W: number, H: number) {
+  return H > W * 1.1 ? 62 : 100;
+}
+
+const X = (f: Frame, x: number) => (x - f.cam) * f.unit;
+const VW = (f: Frame, v: number) => v * f.unit;
+const VH = (f: Frame, v: number) => v * f.unitY;
+const groundY = (f: Frame) => f.ground;
+/** Screen y for a "vh above the screen bottom" coordinate (feet stand at 8). */
+const Y = (f: Frame, v: number) => f.ground - f.unitY * (v - 8);
 
 function drawSprite(
   f: Frame,
@@ -284,25 +299,25 @@ function drawActor(
   if (a.attackKind && a.attackT !== undefined && a.attackT < 1) {
     const bell = Math.sin(a.attackT * Math.PI);
     if (a.attackKind === "aim") {
-      dx = -face * bell * f.W * 0.008;
+      dx = -face * bell * f.unit * 0.8;
       rot = -face * bell * 5;
     } else if (a.attackKind === "punch") {
-      dx = face * bell * f.W * 0.02;
+      dx = face * bell * f.unit * 2;
       rot = face * bell * 14;
     } else if (a.attackKind === "swing") {
-      dx = face * bell * f.W * 0.024;
+      dx = face * bell * f.unit * 2.4;
       rot = face * bell * 30;
     } else if (a.attackKind === "throw") {
-      dx = -face * bell * f.W * 0.01;
+      dx = -face * bell * f.unit * 1;
       rot = -face * bell * 12;
     } else {
-      dx = face * bell * f.W * 0.016;
+      dx = face * bell * f.unit * 1.6;
       rot = face * bell * 22;
     }
   }
   if (a.cry) rot = Math.sin(f.t * 9) * 7;
   drawSprite(f, sp, cx, base, VH(f, hVh), {
-    flip: face === 1,
+    flip: face === -1,
     rot,
     dx,
     dy,
@@ -321,20 +336,21 @@ function drawEnemy(f: Frame, w: World, e: Enemy) {
   const base = groundY(f) - VH(f, e.y);
   const scale = e.isBoss ? 1.22 : 1;
   const H = VH(f, 30) * scale;
+  const H_ = H;
   const body = getSprite(def.sprite);
 
   if (e.exploding) {
     const p = Math.min(1, (w.t - e.explodeAt) / 0.8);
     if (e.torn) {
-      drawSprite(f, body, cx - f.W * 0.03, base - VH(f, 6), H * 0.6, {
-        flip: face === 1,
+      drawSprite(f, body, cx - f.unit * 3, base - VH(f, 6), H * 0.6, {
+        flip: face === -1,
         rot: e.rot * 0.45 - 18,
         alpha: 1 - p,
         clipBottom: 0.52,
         flash: 0.5,
       });
-      drawSprite(f, body, cx + f.W * 0.04, base + VH(f, 2), H * 0.53, {
-        flip: face === 1,
+      drawSprite(f, body, cx + f.unit * 4, base + VH(f, 2), H * 0.53, {
+        flip: face === -1,
         rot: e.rot * 0.7 + 22,
         alpha: 1 - p,
         clipTop: 0.48,
@@ -342,7 +358,7 @@ function drawEnemy(f: Frame, w: World, e: Enemy) {
       });
     } else {
       drawSprite(f, body, cx, base, H, {
-        flip: face === 1,
+        flip: face === -1,
         rot: e.rot * 0.2,
         scale: 1 + p * 0.8,
         alpha: 1 - p,
@@ -355,21 +371,21 @@ function drawEnemy(f: Frame, w: World, e: Enemy) {
 
   if (e.fly || e.down) {
     if (e.torn) {
-      drawSprite(f, body, cx - f.W * 0.03, base - VH(f, 6), H * 0.6, {
-        flip: face === 1,
+      drawSprite(f, body, cx - f.unit * 3, base - VH(f, 6), H * 0.6, {
+        flip: face === -1,
         rot: e.rot * 0.45 - 18,
         clipBottom: 0.52,
         flash: e.flash,
       });
-      drawSprite(f, body, cx + f.W * 0.04, base + VH(f, 2), H * 0.53, {
-        flip: face === 1,
+      drawSprite(f, body, cx + f.unit * 4, base + VH(f, 2), H * 0.53, {
+        flip: face === -1,
         rot: e.rot * 0.7 + 22,
         clipTop: 0.48,
         flash: e.flash,
       });
     } else {
       drawSprite(f, body, cx, base, H, {
-        flip: face === 1,
+        flip: face === -1,
         rot: e.rot,
         flash: e.flash,
         alpha: e.down ? 0.92 : 1,
@@ -406,8 +422,8 @@ function drawEnemy(f: Frame, w: World, e: Enemy) {
     for (let i = 0; i < 4; i++) {
       const yy = base - H * (0.25 + i * 0.18);
       ctx.beginPath();
-      ctx.moveTo(cx - face * (H * 0.3), yy);
-      ctx.lineTo(cx - face * (H * 0.3 + 30 + i * 8), yy + (Math.random() - 0.5) * 4);
+      ctx.moveTo(cx - face * (H_ * 0.3), yy);
+      ctx.lineTo(cx - face * (H_ * 0.3 + 30 + i * 8), yy + (Math.random() - 0.5) * 4);
       ctx.stroke();
     }
     ctx.restore();
@@ -443,9 +459,9 @@ function drawEnemy(f: Frame, w: World, e: Enemy) {
 
 function drawSolids(f: Frame, w: World) {
   const ch = chapterOf(w.chapter);
-  const { ctx } = f;
+  const { ctx, viewW } = f;
   for (const p of ch.platforms) {
-    if (p.x + p.w / 2 < w.camX - 5 || p.x - p.w / 2 > w.camX + 105) continue;
+    if (p.x + p.w / 2 < w.camX - 5 || p.x - p.w / 2 > w.camX + viewW + 5) continue;
     const x = X(f, p.x - p.w / 2);
     const wpx = VW(f, p.w);
     const y = groundY(f) - VH(f, p.h);
@@ -473,7 +489,7 @@ function drawSolids(f: Frame, w: World) {
     ctx.restore();
   }
   for (const c of ch.crates) {
-    if (c.x + c.w / 2 < w.camX - 5 || c.x - c.w / 2 > w.camX + 105) continue;
+    if (c.x + c.w / 2 < w.camX - 5 || c.x - c.w / 2 > w.camX + viewW + 5) continue;
     const x = X(f, c.x - c.w / 2);
     const wpx = VW(f, c.w);
     const hpx = VH(f, c.h);
@@ -517,7 +533,22 @@ export function drawWorld(
   opts: RenderOptions,
 ) {
   const ch = chapterOf(w.chapter);
-  const f: Frame = { ctx, W, H, cam: w.camX, t: w.t };
+  const viewW = viewWidthFor(W, H);
+  const unit = W / viewW;
+  const portrait = H > W * 1.1;
+  const unitY = Math.min(unit * 0.5625, H / 100);
+  const f: Frame = {
+    ctx,
+    W,
+    H,
+    cam: w.camX,
+    t: w.t,
+    unit,
+    unitY,
+    viewW,
+    ground: portrait ? H * 0.64 : H * GROUND,
+  };
+  const zoneW = 100 * unit;
   ctx.save();
   ctx.clearRect(0, 0, W, H);
 
@@ -529,40 +560,40 @@ export function drawWorld(
 
   /* backgrounds: only zones overlapping the camera */
   const first = Math.max(0, Math.floor(w.camX / 100));
-  const last = Math.min(ch.zones.length - 1, Math.floor((w.camX + 100) / 100));
+  const last = Math.min(ch.zones.length - 1, Math.floor((w.camX + viewW) / 100));
   for (let i = first; i <= last; i++) {
     const z = ch.zones[i];
     const sp = getSprite(z.bg);
     const zx = X(f, i * 100);
     if (!sp) {
       ctx.fillStyle = "#101820";
-      ctx.fillRect(zx, 0, W + 2, H);
+      ctx.fillRect(zx, 0, zoneW + 2, H);
       continue;
     }
-    const s = Math.max(W / sp.w, H / sp.h);
-    const sw = W / s;
+    const s = Math.max(zoneW / sp.w, H / sp.h);
+    const sw = zoneW / s;
     const sh = H / s;
-    ctx.drawImage(sp.img, (sp.w - sw) / 2, (sp.h - sh) / 2, sw, sh, zx, 0, W + 2, H);
+    ctx.drawImage(sp.img, (sp.w - sw) / 2, (sp.h - sh) / 2, sw, sh, zx, 0, zoneW + 2, H);
   }
 
   /* props */
   for (const p of ch.props) {
-    if (p.x < w.camX - 20 || p.x > w.camX + 120) continue;
-    drawSprite(f, getSprite(p.src), X(f, p.x), H * 0.9, VH(f, p.h), { flip: p.flip });
+    if (p.x < w.camX - 20 || p.x > w.camX + viewW + 20) continue;
+    drawSprite(f, getSprite(p.src), X(f, p.x), Y(f, 10), VH(f, p.h), { flip: p.flip });
   }
 
   drawSolids(f, w);
 
   /* grill / exam markers */
   if (ch.grillX) {
-    drawSprite(f, getSprite("/sprites/fire.png"), X(f, ch.grillX), H * 0.84, VH(f, 16), {
+    drawSprite(f, getSprite("/sprites/fire.png"), X(f, ch.grillX), Y(f, 16), VH(f, 16), {
       alpha: w.fire ? 1 : 0.45,
     });
-    drawTag(f, w.fire ? "¡Asado!" : "El quincho", X(f, ch.grillX), H * 0.84 - VH(f, 19));
+    drawTag(f, w.fire ? "¡Asado!" : "El quincho", X(f, ch.grillX), Y(f, 35));
   }
   if (ch.examX) {
     const ready = ["apuntes", "cafe", "cedula", "fuerza", "boss"].every((i) => w.items.includes(i));
-    drawTag(f, ready ? "Examen listo" : "El aula", X(f, ch.examX), H * 0.6, {
+    drawTag(f, ready ? "Examen listo" : "El aula", X(f, ch.examX), Y(f, 40), {
       bg: ready ? "rgba(212,164,90,0.95)" : "rgba(0,0,0,0.72)",
       fg: ready ? "#0b0f14" : "#ebe4d6",
       size: 11,
@@ -571,7 +602,7 @@ export function drawWorld(
 
   /* pickups */
   for (const p of ch.pickups) {
-    if (w.items.includes(p.id) || p.x < w.camX - 10 || p.x > w.camX + 110) continue;
+    if (w.items.includes(p.id) || p.x < w.camX - 10 || p.x > w.camX + viewW + 10) continue;
     const bob = Math.sin(w.t * 3.6 + p.x) * VH(f, 0.6);
     const base = groundY(f) - VH(f, (p.y ?? 0) + 8) + bob;
     const src = pickupSprite(p);
@@ -606,7 +637,7 @@ export function drawWorld(
 
   /* drops from enemies */
   for (const d of w.drops) {
-    if (d.x < w.camX - 10 || d.x > w.camX + 110) continue;
+    if (d.x < w.camX - 10 || d.x > w.camX + viewW + 10) continue;
     const age = w.t - d.born;
     const blink = age > 20 && Math.floor(w.t * 6) % 2 === 0;
     if (blink) continue;
@@ -626,11 +657,11 @@ export function drawWorld(
     const blob = bloodSprite();
     if (blob) {
       for (const b of w.blood) {
-        if (b.x < w.camX - 10 || b.x > w.camX + 110) continue;
+        if (b.x < w.camX - 10 || b.x > w.camX + viewW + 10) continue;
         const age = w.t - b.born;
         ctx.save();
         ctx.globalAlpha = age > 10 ? Math.max(0, 0.9 * (1 - (age - 10) / 4)) : 0.9;
-        ctx.translate(X(f, b.x), H - VH(f, b.y));
+        ctx.translate(X(f, b.x), Y(f, b.y));
         ctx.rotate((b.rot * Math.PI) / 180);
         ctx.drawImage(blob, -b.w / 2, -b.h / 2, b.w, b.h);
         ctx.restore();
@@ -642,7 +673,7 @@ export function drawWorld(
   for (const n of ch.npcs) {
     if (!npcVisible(w, n.id)) continue;
     const nx = w.npcX[n.id];
-    if (nx < w.camX - 20 || nx > w.camX + 120) continue;
+    if (nx < w.camX - 20 || nx > w.camX + viewW + 20) continue;
     const hero = HERO_BY_ID[n.id];
     const face: 1 | -1 = nx < w.player.x ? 1 : -1;
     drawActor(f, hero.sprite, hero.steps, nx, 0, 32, face, { idle: true });
@@ -695,16 +726,16 @@ export function drawWorld(
 
   /* projectiles */
   for (const b of w.books)
-    drawSprite(f, getSprite("/sprites/book.png"), X(f, b.x), H - VH(f, b.y), VH(f, 7), {
+    drawSprite(f, getSprite("/sprites/book.png"), X(f, b.x), Y(f, b.y), VH(f, 7), {
       rot: b.rot,
     });
   for (const s of w.slimes)
-    drawSprite(f, getSprite("/sprites/slime.png"), X(f, s.x), H - VH(f, s.y), VH(f, 3.4), {
+    drawSprite(f, getSprite("/sprites/slime.png"), X(f, s.x), Y(f, s.y), VH(f, 3.4), {
       rot: (w.t * 900 + s.x * 30) % 360,
     });
   for (const s of w.shots) {
     const size = s.kind === "shotgun" ? 12 : s.kind === "smg" ? 14 : 18;
-    drawSprite(f, getSprite("/sprites/bullet.png"), X(f, s.x), H - VH(f, s.y) + size / 2, size, {
+    drawSprite(f, getSprite("/sprites/bullet.png"), X(f, s.x), Y(f, s.y) + size / 2, size, {
       flip: s.face === 1,
       rot: ((Math.atan2(-s.vy, Math.abs(s.vx)) * 180) / Math.PI) * (s.face === 1 ? 1 : -1),
     });
@@ -727,14 +758,14 @@ export function drawWorld(
   /* gibs */
   if (opts.gore)
     for (const g of w.gibs)
-      drawSprite(f, getSprite(GIBS[g.src]), X(f, g.x), H - VH(f, g.y) + 19, 38, { rot: g.rot });
+      drawSprite(f, getSprite(GIBS[g.src]), X(f, g.x), Y(f, g.y) + 19, 38, { rot: g.rot });
 
   /* dash trail */
   const hero = HERO_BY_ID[w.hero];
   for (const tr of w.trail) {
     const a = 1 - (w.t - tr.born) / 0.3;
     drawSprite(f, getSprite(hero.sprite), X(f, tr.x), groundY(f) - VH(f, tr.y), VH(f, 34), {
-      flip: tr.face === 1,
+      flip: tr.face === -1,
       alpha: a * 0.35,
       flash: 0.6,
     });
@@ -820,12 +851,12 @@ export function drawWorld(
   for (const e of w.fx) {
     const age = w.t - e.born;
     const cx = X(f, e.x);
-    const cy = H - VH(f, e.y);
+    const cy = Y(f, e.y);
     if (e.kind === "pop" || e.kind === "heal") {
       const pr = age / 0.9;
       ctx.save();
       ctx.globalAlpha = 1 - pr;
-      ctx.font = `800 ${Math.round(Math.min(W, H) * 0.028)}px Figtree, system-ui, sans-serif`;
+      ctx.font = `800 ${Math.round(Math.max(12, f.unit * 1.6))}px Figtree, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillStyle = e.kind === "heal" ? "#8fd46a" : "#ffd27a";
       ctx.strokeStyle = "rgba(0,0,0,0.7)";
@@ -862,7 +893,7 @@ export function drawWorld(
     if (e.kind === "tracer") {
       ctx.save();
       ctx.globalAlpha = 1 - pr;
-      const tw = W * 0.3;
+      const tw = VW(f, 30);
       const th = 14;
       ctx.translate(cx, cy);
       ctx.scale(e.face === 1 ? -1 : 1, 1);
@@ -959,11 +990,11 @@ export function drawWorld(
   /* objective arrow at the screen edge */
   if (opts.objectiveX !== null) {
     const ox = opts.objectiveX;
-    const off = ox < w.camX + 4 ? -1 : ox > w.camX + 96 ? 1 : 0;
+    const off = ox < w.camX + 4 ? -1 : ox > w.camX + viewW - 4 ? 1 : 0;
     if (off !== 0) {
       const dist = Math.round(Math.abs(ox - p.x));
       const ex = off > 0 ? W - 30 : 30;
-      const ey = H * 0.5;
+      const ey = f.ground - VH(f, 20);
       ctx.save();
       ctx.fillStyle = "rgba(212,164,90,0.95)";
       ctx.beginPath();

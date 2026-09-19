@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Swords, c as Play, d as Hand, f as Hammer, g as Bomb, h as CircleHelp, l as Pause, m as Crosshair, n as Wind, o as Settings, p as Gamepad2, r as Trophy, s as RotateCcw, t as X, u as MessageCircle } from "../_libs/lucide-react.mjs";
 import { t as create } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DAteR8gf.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-CNGqBOBs.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var WEAPONS = {
@@ -2792,15 +2792,31 @@ function maxHeightFor(src) {
 	if (src.includes("/sprites/walk/") || /\/sprites\/(rafa|juan|richard|hector|masivo|pablito|marcos|gallaguer|onichan)\.png$/.test(src)) return 720;
 	return 360;
 }
-function shrink(img, maxH) {
-	if (img.naturalHeight <= maxH || typeof document === "undefined") return {
+/** Sprites exported with an opaque magenta "key" background instead of alpha. */
+var KEYED = /* @__PURE__ */ new Set(["/sprites/slash.png"]);
+function keyOutMagenta(g, w, h) {
+	const im = g.getImageData(0, 0, w, h);
+	const d = im.data;
+	for (let i = 0; i < d.length; i += 4) {
+		const r = d[i];
+		const gr = d[i + 1];
+		const b = d[i + 2];
+		const k = Math.min(r, b) - gr;
+		if (k > 150) d[i + 3] = 0;
+		else if (k > 60) d[i + 3] = Math.round(d[i + 3] * (1 - (k - 60) / 90));
+	}
+	g.putImageData(im, 0, 0);
+}
+function shrink(img, maxH, src) {
+	const keyed = KEYED.has(src);
+	if (img.naturalHeight <= maxH && !keyed || typeof document === "undefined") return {
 		img,
 		w: img.naturalWidth,
 		h: img.naturalHeight
 	};
-	const s = maxH / img.naturalHeight;
+	const s = Math.min(1, maxH / img.naturalHeight);
 	const w = Math.max(1, Math.round(img.naturalWidth * s));
-	const h = maxH;
+	const h = Math.max(1, Math.round(img.naturalHeight * s));
 	const c = document.createElement("canvas");
 	c.width = w;
 	c.height = h;
@@ -2813,6 +2829,7 @@ function shrink(img, maxH) {
 	g.imageSmoothingEnabled = true;
 	g.imageSmoothingQuality = "high";
 	g.drawImage(img, 0, 0, w, h);
+	if (keyed) keyOutMagenta(g, w, h);
 	return {
 		img: c,
 		w,
@@ -2829,7 +2846,7 @@ function loadSprite(src) {
 		const img = new Image();
 		img.decoding = "async";
 		img.onload = () => {
-			const sp = shrink(img, maxHeightFor(src));
+			const sp = shrink(img, maxHeightFor(src), src);
 			cache.set(src, sp);
 			pending.delete(src);
 			resolve(sp);
@@ -3073,6 +3090,7 @@ function createWorld(chapter, hero, difficulty) {
 		difficulty,
 		tune,
 		width: worldWidth(chapter),
+		viewW: 100,
 		t: 0,
 		timer: 0,
 		player: {
@@ -4066,7 +4084,7 @@ function stepZones(w, ev) {
 	list.forEach((id, i) => {
 		const e = w.enemies[id];
 		if (!isAlive(e) || e.chasing || e.isBoss || e.calm || e.cry || e.fly || e.down) return;
-		e.x = clamp(w.camX + 106 + i * 10, 8, w.width - 8);
+		e.x = clamp(w.camX + w.viewW + 6 + i * 10, 8, w.width - 8);
 		e.chasing = true;
 		e.caught = false;
 		e.noLeashUntil = w.t + 8;
@@ -4382,7 +4400,7 @@ function stepWorld(world, input, dtRaw, ev) {
 	if (w.trail.length) w.trail = w.trail.filter((tr) => t - tr.born < .3);
 	if (t > w.comboUntil) w.combo = 0;
 	if (t > p.comboUntil + .2) p.finisher = false;
-	const camTarget = clamp(p.x - 38 + p.facing * 4 + p.vx * .08, 0, w.width - 100);
+	const camTarget = clamp(p.x - w.viewW * .4 + p.facing * 4 + p.vx * .08, 0, w.width - w.viewW);
 	w.camX += (camTarget - w.camX) * Math.min(1, 7 * dt);
 }
 function landed(w, ev) {
@@ -4459,7 +4477,7 @@ function respawn(w, ev) {
 			e.x = ch.hazardHome[def.id];
 		}
 	}
-	w.camX = clamp(p.x - 38, 0, w.width - 100);
+	w.camX = clamp(p.x - w.viewW * .4, 0, w.width - w.viewW);
 	w.ended = false;
 	ev.push({
 		t: "toast",
@@ -4711,10 +4729,16 @@ function bloodSprite() {
 	bloodBlob = c;
 	return c;
 }
-var X$1 = (f, x) => (x - f.cam) * (f.W / 100);
-var VW = (f, v) => v * f.W / 100;
-var VH = (f, v) => v * f.H / 100;
-var groundY = (f) => f.H * GROUND;
+/** Visible world units for a canvas size: the full 100 in landscape, fewer in portrait so sprites stay readable. */
+function viewWidthFor(W, H) {
+	return H > W * 1.1 ? 62 : 100;
+}
+var X$1 = (f, x) => (x - f.cam) * f.unit;
+var VW = (f, v) => v * f.unit;
+var VH = (f, v) => v * f.unitY;
+var groundY = (f) => f.ground;
+/** Screen y for a "vh above the screen bottom" coordinate (feet stand at 8). */
+var Y = (f, v) => f.ground - f.unitY * (v - 8);
 function drawSprite(f, sp, cx, baseY, hPx, o = {}) {
 	if (!sp) return;
 	const { ctx } = f;
@@ -4875,25 +4899,25 @@ function drawActor(f, sprite, steps, x, yVh, hVh, face, a = {}) {
 	if (a.attackKind && a.attackT !== void 0 && a.attackT < 1) {
 		const bell = Math.sin(a.attackT * Math.PI);
 		if (a.attackKind === "aim") {
-			dx = -face * bell * f.W * .008;
+			dx = -face * bell * f.unit * .8;
 			rot = -face * bell * 5;
 		} else if (a.attackKind === "punch") {
-			dx = face * bell * f.W * .02;
+			dx = face * bell * f.unit * 2;
 			rot = face * bell * 14;
 		} else if (a.attackKind === "swing") {
-			dx = face * bell * f.W * .024;
+			dx = face * bell * f.unit * 2.4;
 			rot = face * bell * 30;
 		} else if (a.attackKind === "throw") {
-			dx = -face * bell * f.W * .01;
+			dx = -face * bell * f.unit * 1;
 			rot = -face * bell * 12;
 		} else {
-			dx = face * bell * f.W * .016;
+			dx = face * bell * f.unit * 1.6;
 			rot = face * bell * 22;
 		}
 	}
 	if (a.cry) rot = Math.sin(f.t * 9) * 7;
 	drawSprite(f, sp, cx, base, VH(f, hVh), {
-		flip: face === 1,
+		flip: face === -1,
 		rot,
 		dx,
 		dy,
@@ -4911,26 +4935,27 @@ function drawEnemy(f, w, e) {
 	const base = groundY(f) - VH(f, e.y);
 	const scale = e.isBoss ? 1.22 : 1;
 	const H = VH(f, 30) * scale;
+	const H_ = H;
 	const body = getSprite(def.sprite);
 	if (e.exploding) {
 		const p = Math.min(1, (w.t - e.explodeAt) / .8);
 		if (e.torn) {
-			drawSprite(f, body, cx - f.W * .03, base - VH(f, 6), H * .6, {
-				flip: face === 1,
+			drawSprite(f, body, cx - f.unit * 3, base - VH(f, 6), H * .6, {
+				flip: face === -1,
 				rot: e.rot * .45 - 18,
 				alpha: 1 - p,
 				clipBottom: .52,
 				flash: .5
 			});
-			drawSprite(f, body, cx + f.W * .04, base + VH(f, 2), H * .53, {
-				flip: face === 1,
+			drawSprite(f, body, cx + f.unit * 4, base + VH(f, 2), H * .53, {
+				flip: face === -1,
 				rot: e.rot * .7 + 22,
 				alpha: 1 - p,
 				clipTop: .48,
 				flash: .5
 			});
 		} else drawSprite(f, body, cx, base, H, {
-			flip: face === 1,
+			flip: face === -1,
 			rot: e.rot * .2,
 			scale: 1 + p * .8,
 			alpha: 1 - p,
@@ -4941,20 +4966,20 @@ function drawEnemy(f, w, e) {
 	}
 	if (e.fly || e.down) {
 		if (e.torn) {
-			drawSprite(f, body, cx - f.W * .03, base - VH(f, 6), H * .6, {
-				flip: face === 1,
+			drawSprite(f, body, cx - f.unit * 3, base - VH(f, 6), H * .6, {
+				flip: face === -1,
 				rot: e.rot * .45 - 18,
 				clipBottom: .52,
 				flash: e.flash
 			});
-			drawSprite(f, body, cx + f.W * .04, base + VH(f, 2), H * .53, {
-				flip: face === 1,
+			drawSprite(f, body, cx + f.unit * 4, base + VH(f, 2), H * .53, {
+				flip: face === -1,
 				rot: e.rot * .7 + 22,
 				clipTop: .48,
 				flash: e.flash
 			});
 		} else drawSprite(f, body, cx, base, H, {
-			flip: face === 1,
+			flip: face === -1,
 			rot: e.rot,
 			flash: e.flash,
 			alpha: e.down ? .92 : 1
@@ -4986,8 +5011,8 @@ function drawEnemy(f, w, e) {
 		for (let i = 0; i < 4; i++) {
 			const yy = base - H * (.25 + i * .18);
 			ctx.beginPath();
-			ctx.moveTo(cx - face * (H * .3), yy);
-			ctx.lineTo(cx - face * (H * .3 + 30 + i * 8), yy + (Math.random() - .5) * 4);
+			ctx.moveTo(cx - face * (H_ * .3), yy);
+			ctx.lineTo(cx - face * (H_ * .3 + 30 + i * 8), yy + (Math.random() - .5) * 4);
 			ctx.stroke();
 		}
 		ctx.restore();
@@ -5013,9 +5038,9 @@ function drawEnemy(f, w, e) {
 }
 function drawSolids(f, w) {
 	const ch = chapterOf(w.chapter);
-	const { ctx } = f;
+	const { ctx, viewW } = f;
 	for (const p of ch.platforms) {
-		if (p.x + p.w / 2 < w.camX - 5 || p.x - p.w / 2 > w.camX + 105) continue;
+		if (p.x + p.w / 2 < w.camX - 5 || p.x - p.w / 2 > w.camX + viewW + 5) continue;
 		const x = X$1(f, p.x - p.w / 2);
 		const wpx = VW(f, p.w);
 		const y = groundY(f) - VH(f, p.h);
@@ -5042,7 +5067,7 @@ function drawSolids(f, w) {
 		ctx.restore();
 	}
 	for (const c of ch.crates) {
-		if (c.x + c.w / 2 < w.camX - 5 || c.x - c.w / 2 > w.camX + 105) continue;
+		if (c.x + c.w / 2 < w.camX - 5 || c.x - c.w / 2 > w.camX + viewW + 5) continue;
 		const x = X$1(f, c.x - c.w / 2);
 		const wpx = VW(f, c.w);
 		const hpx = VH(f, c.h);
@@ -5077,13 +5102,22 @@ function drawSolids(f, w) {
 }
 function drawWorld(ctx, w, W, H, opts) {
 	const ch = chapterOf(w.chapter);
+	const viewW = viewWidthFor(W, H);
+	const unit = W / viewW;
+	const portrait = H > W * 1.1;
+	const unitY = Math.min(unit * .5625, H / 100);
 	const f = {
 		ctx,
 		W,
 		H,
 		cam: w.camX,
-		t: w.t
+		t: w.t,
+		unit,
+		unitY,
+		viewW,
+		ground: portrait ? H * .64 : H * GROUND
 	};
+	const zoneW = 100 * unit;
 	ctx.save();
 	ctx.clearRect(0, 0, W, H);
 	if (opts.shake && w.t < w.shakeUntil) {
@@ -5091,29 +5125,29 @@ function drawWorld(ctx, w, W, H, opts) {
 		ctx.translate((Math.random() - .5) * k * 2, (Math.random() - .5) * k * 1.4);
 	}
 	const first = Math.max(0, Math.floor(w.camX / 100));
-	const last = Math.min(ch.zones.length - 1, Math.floor((w.camX + 100) / 100));
+	const last = Math.min(ch.zones.length - 1, Math.floor((w.camX + viewW) / 100));
 	for (let i = first; i <= last; i++) {
 		const z = ch.zones[i];
 		const sp = getSprite(z.bg);
 		const zx = X$1(f, i * 100);
 		if (!sp) {
 			ctx.fillStyle = "#101820";
-			ctx.fillRect(zx, 0, W + 2, H);
+			ctx.fillRect(zx, 0, zoneW + 2, H);
 			continue;
 		}
-		const s = Math.max(W / sp.w, H / sp.h);
-		const sw = W / s;
+		const s = Math.max(zoneW / sp.w, H / sp.h);
+		const sw = zoneW / s;
 		const sh = H / s;
-		ctx.drawImage(sp.img, (sp.w - sw) / 2, (sp.h - sh) / 2, sw, sh, zx, 0, W + 2, H);
+		ctx.drawImage(sp.img, (sp.w - sw) / 2, (sp.h - sh) / 2, sw, sh, zx, 0, zoneW + 2, H);
 	}
 	for (const p of ch.props) {
-		if (p.x < w.camX - 20 || p.x > w.camX + 120) continue;
-		drawSprite(f, getSprite(p.src), X$1(f, p.x), H * .9, VH(f, p.h), { flip: p.flip });
+		if (p.x < w.camX - 20 || p.x > w.camX + viewW + 20) continue;
+		drawSprite(f, getSprite(p.src), X$1(f, p.x), Y(f, 10), VH(f, p.h), { flip: p.flip });
 	}
 	drawSolids(f, w);
 	if (ch.grillX) {
-		drawSprite(f, getSprite("/sprites/fire.png"), X$1(f, ch.grillX), H * .84, VH(f, 16), { alpha: w.fire ? 1 : .45 });
-		drawTag(f, w.fire ? "¡Asado!" : "El quincho", X$1(f, ch.grillX), H * .84 - VH(f, 19));
+		drawSprite(f, getSprite("/sprites/fire.png"), X$1(f, ch.grillX), Y(f, 16), VH(f, 16), { alpha: w.fire ? 1 : .45 });
+		drawTag(f, w.fire ? "¡Asado!" : "El quincho", X$1(f, ch.grillX), Y(f, 35));
 	}
 	if (ch.examX) {
 		const ready = [
@@ -5123,14 +5157,14 @@ function drawWorld(ctx, w, W, H, opts) {
 			"fuerza",
 			"boss"
 		].every((i) => w.items.includes(i));
-		drawTag(f, ready ? "Examen listo" : "El aula", X$1(f, ch.examX), H * .6, {
+		drawTag(f, ready ? "Examen listo" : "El aula", X$1(f, ch.examX), Y(f, 40), {
 			bg: ready ? "rgba(212,164,90,0.95)" : "rgba(0,0,0,0.72)",
 			fg: ready ? "#0b0f14" : "#ebe4d6",
 			size: 11
 		});
 	}
 	for (const p of ch.pickups) {
-		if (w.items.includes(p.id) || p.x < w.camX - 10 || p.x > w.camX + 110) continue;
+		if (w.items.includes(p.id) || p.x < w.camX - 10 || p.x > w.camX + viewW + 10) continue;
 		const bob = Math.sin(w.t * 3.6 + p.x) * VH(f, .6);
 		const base = groundY(f) - VH(f, (p.y ?? 0) + 8) + bob;
 		const src = pickupSprite(p);
@@ -5152,18 +5186,18 @@ function drawWorld(ctx, w, W, H, opts) {
 		});
 	}
 	for (const d of w.drops) {
-		if (d.x < w.camX - 10 || d.x > w.camX + 110) continue;
+		if (d.x < w.camX - 10 || d.x > w.camX + viewW + 10) continue;
 		if (w.t - d.born > 20 && Math.floor(w.t * 6) % 2 === 0) continue;
 		drawSprite(f, getSprite(d.kind === "coin" ? "/sprites/coin.png" : d.kind === "ammo" ? "/sprites/bullet.png" : "/sprites/terere.png"), X$1(f, d.x), groundY(f) - VH(f, d.y), d.kind === "heal" ? 30 : 22, { rot: d.kind === "ammo" ? 20 : 0 });
 	}
 	if (opts.gore && w.blood.length) {
 		const blob = bloodSprite();
 		if (blob) for (const b of w.blood) {
-			if (b.x < w.camX - 10 || b.x > w.camX + 110) continue;
+			if (b.x < w.camX - 10 || b.x > w.camX + viewW + 10) continue;
 			const age = w.t - b.born;
 			ctx.save();
 			ctx.globalAlpha = age > 10 ? Math.max(0, .9 * (1 - (age - 10) / 4)) : .9;
-			ctx.translate(X$1(f, b.x), H - VH(f, b.y));
+			ctx.translate(X$1(f, b.x), Y(f, b.y));
 			ctx.rotate(b.rot * Math.PI / 180);
 			ctx.drawImage(blob, -b.w / 2, -b.h / 2, b.w, b.h);
 			ctx.restore();
@@ -5172,7 +5206,7 @@ function drawWorld(ctx, w, W, H, opts) {
 	for (const n of ch.npcs) {
 		if (!npcVisible(w, n.id)) continue;
 		const nx = w.npcX[n.id];
-		if (nx < w.camX - 20 || nx > w.camX + 120) continue;
+		if (nx < w.camX - 20 || nx > w.camX + viewW + 20) continue;
 		const hero = HERO_BY_ID[n.id];
 		const face = nx < w.player.x ? 1 : -1;
 		drawActor(f, hero.sprite, hero.steps, nx, 0, 32, face, { idle: true });
@@ -5207,11 +5241,11 @@ function drawWorld(ctx, w, W, H, opts) {
 			rot: oni.fly ? oni.rot : 0
 		});
 	}
-	for (const b of w.books) drawSprite(f, getSprite("/sprites/book.png"), X$1(f, b.x), H - VH(f, b.y), VH(f, 7), { rot: b.rot });
-	for (const s of w.slimes) drawSprite(f, getSprite("/sprites/slime.png"), X$1(f, s.x), H - VH(f, s.y), VH(f, 3.4), { rot: (w.t * 900 + s.x * 30) % 360 });
+	for (const b of w.books) drawSprite(f, getSprite("/sprites/book.png"), X$1(f, b.x), Y(f, b.y), VH(f, 7), { rot: b.rot });
+	for (const s of w.slimes) drawSprite(f, getSprite("/sprites/slime.png"), X$1(f, s.x), Y(f, s.y), VH(f, 3.4), { rot: (w.t * 900 + s.x * 30) % 360 });
 	for (const s of w.shots) {
 		const size = s.kind === "shotgun" ? 12 : s.kind === "smg" ? 14 : 18;
-		drawSprite(f, getSprite("/sprites/bullet.png"), X$1(f, s.x), H - VH(f, s.y) + size / 2, size, {
+		drawSprite(f, getSprite("/sprites/bullet.png"), X$1(f, s.x), Y(f, s.y) + size / 2, size, {
 			flip: s.face === 1,
 			rot: Math.atan2(-s.vy, Math.abs(s.vx)) * 180 / Math.PI * (s.face === 1 ? 1 : -1)
 		});
@@ -5230,12 +5264,12 @@ function drawWorld(ctx, w, W, H, opts) {
 		ctx.fill();
 		ctx.restore();
 	}
-	if (opts.gore) for (const g of w.gibs) drawSprite(f, getSprite(GIBS[g.src]), X$1(f, g.x), H - VH(f, g.y) + 19, 38, { rot: g.rot });
+	if (opts.gore) for (const g of w.gibs) drawSprite(f, getSprite(GIBS[g.src]), X$1(f, g.x), Y(f, g.y) + 19, 38, { rot: g.rot });
 	const hero = HERO_BY_ID[w.hero];
 	for (const tr of w.trail) {
 		const a = 1 - (w.t - tr.born) / .3;
 		drawSprite(f, getSprite(hero.sprite), X$1(f, tr.x), groundY(f) - VH(f, tr.y), VH(f, 34), {
-			flip: tr.face === 1,
+			flip: tr.face === -1,
 			alpha: a * .35,
 			flash: .6
 		});
@@ -5288,12 +5322,12 @@ function drawWorld(ctx, w, W, H, opts) {
 	for (const e of w.fx) {
 		const age = w.t - e.born;
 		const cx = X$1(f, e.x);
-		const cy = H - VH(f, e.y);
+		const cy = Y(f, e.y);
 		if (e.kind === "pop" || e.kind === "heal") {
 			const pr = age / .9;
 			ctx.save();
 			ctx.globalAlpha = 1 - pr;
-			ctx.font = `800 ${Math.round(Math.min(W, H) * .028)}px Figtree, system-ui, sans-serif`;
+			ctx.font = `800 ${Math.round(Math.max(12, f.unit * 1.6))}px Figtree, system-ui, sans-serif`;
 			ctx.textAlign = "center";
 			ctx.fillStyle = e.kind === "heal" ? "#8fd46a" : "#ffd27a";
 			ctx.strokeStyle = "rgba(0,0,0,0.7)";
@@ -5311,7 +5345,7 @@ function drawWorld(ctx, w, W, H, opts) {
 		if (e.kind === "tracer") {
 			ctx.save();
 			ctx.globalAlpha = 1 - pr;
-			const tw = W * .3;
+			const tw = VW(f, 30);
 			const th = 14;
 			ctx.translate(cx, cy);
 			ctx.scale(e.face === 1 ? -1 : 1, 1);
@@ -5383,11 +5417,11 @@ function drawWorld(ctx, w, W, H, opts) {
 	}
 	if (opts.objectiveX !== null) {
 		const ox = opts.objectiveX;
-		const off = ox < w.camX + 4 ? -1 : ox > w.camX + 96 ? 1 : 0;
+		const off = ox < w.camX + 4 ? -1 : ox > w.camX + viewW - 4 ? 1 : 0;
 		if (off !== 0) {
 			const dist = Math.round(Math.abs(ox - p.x));
 			const ex = off > 0 ? W - 30 : 30;
-			const ey = H * .5;
+			const ey = f.ground - VH(f, 20);
 			ctx.save();
 			ctx.fillStyle = "rgba(212,164,90,0.95)";
 			ctx.beginPath();
@@ -7057,9 +7091,9 @@ function Hud() {
 		className: "pointer-events-none absolute inset-x-0 top-0 z-10 px-2 pt-[max(0.4rem,env(safe-area-inset-top))]",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex items-start justify-between gap-2",
+				className: "flex items-start justify-between gap-1.5",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "max-w-[46%] rounded-xl bg-black/70 px-2.5 py-1.5",
+					className: "min-w-0 max-w-[50%] rounded-xl bg-black/70 px-2.5 py-1.5 sm:max-w-[46%]",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 							className: "truncate text-[9px] font-semibold uppercase tracking-[0.16em] text-accent",
@@ -7086,25 +7120,39 @@ function Hud() {
 						})
 					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex flex-col items-end gap-1",
+					className: "flex min-w-0 flex-col items-end gap-1",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "flex items-center gap-1",
-							children: [TEAM.map((id) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-								src: HERO_BY_ID[id].portrait,
-								alt: "",
-								draggable: false,
-								className: id === hero || recruited.includes(id) ? "size-7 rounded-full object-cover ring-2 ring-accent" : "size-7 rounded-full object-cover opacity-30 grayscale"
-							}, id)), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-								type: "button",
-								"aria-label": "Pausa",
-								onClick: togglePause,
-								className: "pointer-events-auto ml-1 grid size-9 place-items-center rounded-full bg-black/70 text-paper ring-1 ring-line",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pause, { size: 16 })
-							})]
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "hidden items-center gap-1 sm:flex",
+									children: TEAM.map((id) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+										src: HERO_BY_ID[id].portrait,
+										alt: "",
+										draggable: false,
+										className: id === hero || recruited.includes(id) ? "size-7 rounded-full object-cover ring-2 ring-accent" : "size-7 rounded-full object-cover opacity-30 grayscale"
+									}, id))
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-accent sm:hidden",
+									children: [
+										recruited.length,
+										"/",
+										TEAM.length
+									]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									"aria-label": "Pausa",
+									onClick: togglePause,
+									className: "pointer-events-auto ml-1 grid size-9 place-items-center rounded-full bg-black/70 text-paper ring-1 ring-line",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pause, { size: 16 })
+								})
+							]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center gap-1 text-[11px] font-semibold",
+							className: "flex flex-wrap items-center justify-end gap-1 text-[11px] font-semibold",
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 									className: "rounded-md bg-black/70 px-2 py-1 text-accent",
@@ -7116,16 +7164,12 @@ function Hud() {
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 									className: "rounded-md bg-black/70 px-2 py-1 text-paper",
-									children: [
-										score,
-										" pts",
-										combo > 1 ? ` x${combo}` : ""
-									]
+									children: [score, combo > 1 ? ` x${combo}` : ""]
 								})
 							]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center gap-1",
+							className: "flex flex-wrap items-center justify-end gap-1",
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 									className: "flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-paper",
@@ -7148,7 +7192,7 @@ function Hud() {
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Wind, { size: 13 })
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "relative h-5 w-28 overflow-hidden rounded-md bg-black/70 ring-1 ring-line",
+									className: "relative h-5 w-20 overflow-hidden rounded-md bg-black/70 ring-1 ring-line sm:w-28",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 										className: `h-full ${hpColor} transition-[width] duration-200`,
 										style: { width: `${hpFrac * 100}%` }
@@ -7368,6 +7412,7 @@ function Play$1() {
 				st.syncHud();
 			}
 			const { W, H } = sizeRef.current;
+			w.viewW = viewWidthFor(W, H);
 			const dpr = dprRef.current;
 			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 			const s = useGame.getState();
