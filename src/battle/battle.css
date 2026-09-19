@@ -383,6 +383,21 @@
   font-size: 10px;
   letter-spacing: 0;
 }
+.ib-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 9px 16px;
+}
+.ib-footer nav a {
+  color: #d8d1dd;
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.ib-footer nav a:hover {
+  color: var(--yellow);
+}
 .ib-footer > span:first-child {
   white-space: nowrap;
 }
@@ -1921,6 +1936,11 @@
     order: 3;
     width: 100%;
     font-size: 9px;
+  }
+  .ib-footer nav {
+    order: 4;
+    width: 100%;
+    justify-content: flex-start;
   }
   .selection-page,
   .episodes-page {

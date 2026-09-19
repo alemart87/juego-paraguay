@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://www.influencerspy.pro/</loc>
-    <lastmod>2026-09-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
+    <lastmod>2026-09-19</lastmod><changefreq>weekly</changefreq><priority>1.0</priority>
+    <image:image><image:loc>https://www.influencerspy.pro/og.jpg</image:loc><image:title>Influencers Battle Paraguay</image:title></image:image>
   </url>
+  <url><loc>https://www.influencerspy.pro/personajes</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.influencerspy.pro/personajes/masivo-bro</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority><image:image><image:loc>https://www.influencerspy.pro/battle/masivo-bro.webp</image:loc><image:title>Masivo Bro</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/onichan</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority><image:image><image:loc>https://www.influencerspy.pro/battle/onichan.webp</image:loc><image:title>Onichan</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/anatomic-blogs</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority><image:image><image:loc>https://www.influencerspy.pro/battle/anatomic-blogs.webp</image:loc><image:title>ANATOMIC BLOGS</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/la-comadre</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority><image:image><image:loc>https://www.influencerspy.pro/battle/la-comadre.webp</image:loc><image:title>La Comadre</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/el-papu</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority><image:image><image:loc>https://www.influencerspy.pro/battle/el-papu.webp</image:loc><image:title>El Papu</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/la-secre</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority><image:image><image:loc>https://www.influencerspy.pro/battle/la-secre.webp</image:loc><image:title>La Secre</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/padre-apostol</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.75</priority><image:image><image:loc>https://www.influencerspy.pro/battle/padre-apostol.webp</image:loc><image:title>Padre Apóstol</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/lata-parara</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.75</priority><image:image><image:loc>https://www.influencerspy.pro/battle/boss-lata.webp</image:loc><image:title>Lata Parara</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/lulax</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.75</priority><image:image><image:loc>https://www.influencerspy.pro/battle/boss-lulax.webp</image:loc><image:title>LULAX</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/el-dictador</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.75</priority><image:image><image:loc>https://www.influencerspy.pro/battle/dictador-portrait.webp</image:loc><image:title>El Dictador</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/como-jugar</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.influencerspy.pro/privacidad</loc><lastmod>2026-09-19</lastmod><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://www.influencerspy.pro/politica-de-compras</loc><lastmod>2026-09-19</lastmod><changefreq>yearly</changefreq><priority>0.6</priority></url>
 </urlset>

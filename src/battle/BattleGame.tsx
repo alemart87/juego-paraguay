@@ -351,6 +351,12 @@ export function BattleGame() {
           <footer className="ib-footer">
             <BrandLogo className="publisher-footer" />
             <p>{FICTION}</p>
+            <nav aria-label="Información de Influencers Battle">
+              <a href="/personajes">Personajes</a>
+              <a href="/como-jugar">Cómo jugar</a>
+              <a href="/privacidad">Privacidad</a>
+              <a href="/politica-de-compras">Compras</a>
+            </nav>
             <span>18+</span>
           </footer>
         </>

@@ -74,7 +74,6 @@ export const Route = createRootRoute({
       { property: "og:site_name", content: "PY-STAR GAMES" },
       { property: "og:title", content: "Influencers Battle · La batalla por el feed" },
       { property: "og:description", content: DESCRIPTION },
-      { property: "og:url", content: SITE_URL },
       { property: "og:image", content: OG_IMAGE },
       { property: "og:image:secure_url", content: OG_IMAGE },
       { property: "og:image:type", content: "image/jpeg" },
@@ -90,9 +89,6 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "canonical", href: SITE_URL },
-      { rel: "alternate", hrefLang: "es-PY", href: SITE_URL },
-      { rel: "alternate", hrefLang: "x-default", href: SITE_URL },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },

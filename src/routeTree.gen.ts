@@ -10,33 +10,102 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ComoJugarRouteImport } from './routes/como-jugar'
+import { Route as PoliticaDeComprasRouteImport } from './routes/politica-de-compras'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as PersonajesIndexRouteImport } from './routes/personajes.index'
+import { Route as PersonajesSlugRouteImport } from './routes/personajes.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComoJugarRoute = ComoJugarRouteImport.update({
+  id: '/como-jugar',
+  path: '/como-jugar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoliticaDeComprasRoute = PoliticaDeComprasRouteImport.update({
+  id: '/politica-de-compras',
+  path: '/politica-de-compras',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PersonajesIndexRoute = PersonajesIndexRouteImport.update({
+  id: '/personajes/',
+  path: '/personajes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PersonajesSlugRoute = PersonajesSlugRouteImport.update({
+  id: '/personajes/$slug',
+  path: '/personajes/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/como-jugar': typeof ComoJugarRoute
+  '/politica-de-compras': typeof PoliticaDeComprasRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/personajes/$slug': typeof PersonajesSlugRoute
+  '/personajes/': typeof PersonajesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/como-jugar': typeof ComoJugarRoute
+  '/politica-de-compras': typeof PoliticaDeComprasRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/personajes/$slug': typeof PersonajesSlugRoute
+  '/personajes': typeof PersonajesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/como-jugar': typeof ComoJugarRoute
+  '/politica-de-compras': typeof PoliticaDeComprasRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/personajes/$slug': typeof PersonajesSlugRoute
+  '/personajes/': typeof PersonajesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/como-jugar'
+    | '/politica-de-compras'
+    | '/privacidad'
+    | '/personajes/$slug'
+    | '/personajes/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/como-jugar'
+    | '/politica-de-compras'
+    | '/privacidad'
+    | '/personajes/$slug'
+    | '/personajes'
+  id:
+    | '__root__'
+    | '/'
+    | '/como-jugar'
+    | '/politica-de-compras'
+    | '/privacidad'
+    | '/personajes/$slug'
+    | '/personajes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ComoJugarRoute: typeof ComoJugarRoute
+  PoliticaDeComprasRoute: typeof PoliticaDeComprasRoute
+  PrivacidadRoute: typeof PrivacidadRoute
+  PersonajesSlugRoute: typeof PersonajesSlugRoute
+  PersonajesIndexRoute: typeof PersonajesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +117,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/como-jugar': {
+      id: '/como-jugar'
+      path: '/como-jugar'
+      fullPath: '/como-jugar'
+      preLoaderRoute: typeof ComoJugarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politica-de-compras': {
+      id: '/politica-de-compras'
+      path: '/politica-de-compras'
+      fullPath: '/politica-de-compras'
+      preLoaderRoute: typeof PoliticaDeComprasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/personajes/': {
+      id: '/personajes/'
+      path: '/personajes'
+      fullPath: '/personajes/'
+      preLoaderRoute: typeof PersonajesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/personajes/$slug': {
+      id: '/personajes/$slug'
+      path: '/personajes/$slug'
+      fullPath: '/personajes/$slug'
+      preLoaderRoute: typeof PersonajesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ComoJugarRoute: ComoJugarRoute,
+  PoliticaDeComprasRoute: PoliticaDeComprasRoute,
+  PrivacidadRoute: PrivacidadRoute,
+  PersonajesSlugRoute: PersonajesSlugRoute,
+  PersonajesIndexRoute: PersonajesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
