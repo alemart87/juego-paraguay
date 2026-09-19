@@ -9,7 +9,7 @@ La primera campaña está implementada como juego web móvil y de escritorio. Pa
 ## Contenido terminado
 
 - Seis personajes seleccionables: Masivo Bro, Onichan, ANATOMIC BLOGS, La Comadre, El Papu y La Secre.
-- Cuatro episodios: Costanera de Asunción, Mercado 4, IPS y Asunción infestada.
+- Cuatro episodios: Templo del Último Avivamiento, Mercado 4, IPS y Asunción infestada.
 - Combate lateral con salto, dash, ocho armas, granadas, cajas, curación, combo, hype, poder propio y súper por personaje.
 - Cuatro familias de secuaces y cuatro jefes con ataques anunciados; El Dictador suma tanqueta, hondita y doble vida.
 - Decisiones de diálogo, guion local y conversación opcional por IA.
@@ -45,7 +45,7 @@ Después, abrir `http://127.0.0.1:8080/`. La compilación validada queda disponi
 
 ## Jefes de campaña
 
-- **Pastor Luison — Costanera:** rayos sagrados, zonas de castigo e invocación de criaturas sobrenaturales.
+- **Padre Apóstol — Templo del último avivamiento:** rayos, trompetas sobrenaturales e invocación de Luizones.
 - **Lata Parara — Mercado 4:** proyectiles, lluvia y embestidas de latas poseídas sin marcas reales.
 - **LULAX — IPS:** palabras censuradas, ondas oscuras e invocación de micrófonos poseídos.
 - **El Dictador — Asunción infestada:** tanqueta, hondita paraguaya, refuerzos pyragues y dos vidas completas.

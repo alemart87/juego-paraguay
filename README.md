@@ -8,7 +8,7 @@ Juego de acción satírica para móvil ambientado en Paraguay. Seis personajes j
 
 ## Qué incluye
 
-- Campaña de cuatro episodios: Costanera de Asunción, Mercado 4, IPS y Asunción infestada.
+- Campaña de cuatro episodios: Templo del último avivamiento, Mercado 4, IPS y Asunción infestada.
 - Niveles ampliados cerca de 30%, con más recorrido, oleadas y acción.
 - Seis combatientes con estadísticas, arma y poder especial propios.
 - Cuatro jefes, secuaces y lenguajes de ataque; El Dictador tiene dos vidas y hondita paraguaya.

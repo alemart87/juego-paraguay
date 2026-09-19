@@ -279,8 +279,8 @@ export function BattleGame() {
                 <em>Pelealo.</em>
               </h1>
               <p>
-                De la Costanera a una Asunción infestada. Elegí tu personaje, armá el quilombo y
-                derrotá a cuatro jefes imposibles.
+                Del Templo del Último Avivamiento a una Asunción infestada. Elegí tu personaje, armá
+                el quilombo y derrotá a cuatro jefes imposibles.
               </p>
               <button
                 className="primary play-cta"

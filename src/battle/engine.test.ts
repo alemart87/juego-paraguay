@@ -157,7 +157,7 @@ test("all episodes can be completed through real attacks and checkpoint interact
 });
 test("each episode spawns its named boss with a unique projectile language", () => {
   const expected = {
-    1: { name: "PASTOR LUISON", shot: "holy" },
+    1: { name: "PADRE APÓSTOL", shot: "lightning" },
     2: { name: "LATA PARARA", shot: "can" },
     3: { name: "LULAX", shot: "word" },
     4: { name: "EL DICTADOR", shot: "sling" },

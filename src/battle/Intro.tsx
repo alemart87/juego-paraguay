@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { FIGHTERS, BOSSES } from "./content";
 import { BrandLogo } from "./BrandLogo";
 
@@ -18,9 +18,8 @@ export function Intro({ onDone }: { onDone: () => void }) {
       <div className="intro-frame intro-logo">
         <span>PARAGUAY PRESENTA</span>
         <strong>
-          INFLUENCERS
-          <br />
-          BATTLE
+          BATALLA DE
+          <br /> INFLUENCERS
         </strong>
       </div>
       <div className="intro-frame intro-heroes" aria-hidden="true">
@@ -29,16 +28,22 @@ export function Intro({ onDone }: { onDone: () => void }) {
         ))}
       </div>
       <div className="intro-frame intro-bosses" aria-hidden="true">
-        {Object.entries(BOSSES).map(([id, item]) => (
-          <figure key={id}>
+        {Object.entries(BOSSES).map(([id, item], index) => (
+          <figure
+            key={id}
+            style={{ "--boss-index": index, "--boss-color": item.color } as CSSProperties}
+          >
+            <i className="boss-lightning l1" />
+            <i className="boss-lightning l2" />
             <img src={item.portrait} alt="" />
+            <span>JEFE 0{id}</span>
             <b>{item.name}</b>
           </figure>
         ))}
       </div>
       <div className="intro-frame intro-final" aria-hidden="true">
         <img src="/media/characters/cover-v2.webp" alt="" />
-        <strong>PELEÁ POR EL FEED.</strong>
+        <strong>BATALLA DE INFLUENCERS</strong>
       </div>
       <button onClick={onDone}>Saltar intro</button>
     </section>

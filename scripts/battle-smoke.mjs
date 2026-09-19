@@ -17,7 +17,7 @@ async function enterBattle(page) {
   if (await skipIntro.isVisible().catch(() => false)) await skipIntro.click();
   await page.getByRole("button", { name: "Entrar a la batalla", exact: true }).click();
   await page.getByRole("button", { name: "Elegir escenario", exact: true }).click();
-  await page.getByRole("button").filter({ hasText: "En vivo y sin filtro" }).click();
+  await page.getByRole("button").filter({ hasText: "Rayos sobre el altar" }).click();
   await page.getByRole("button", { name: /Jugar con/ }).click();
   await page.waitForFunction(() => window.__battleWorld?.().t > 0.15, null, { timeout: 15000 });
 }
@@ -79,7 +79,7 @@ for (let section = 0; section < 5; section++) {
     await talk.locator(".dialogue-choices button").first().click();
     await talk.getByRole("button", { name: /Volver a la batalla/ }).click();
     if (section === 1) {
-      await desktop.getByText("PASTOR LUISON", { exact: true }).waitFor();
+      await desktop.getByText("PADRE APÓSTOL", { exact: true }).waitFor();
       await desktop.evaluate(() => {
         const w = window.__battleWorld();
         w.player.x = 3900;

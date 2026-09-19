@@ -11,11 +11,11 @@ export interface Boss {
 }
 export const BOSSES: Record<EpisodeId, Boss> = {
   1: {
-    name: "PASTOR LUISON",
-    title: "El pastor del live sagrado",
-    minion: "Criatura del culto",
+    name: "PADRE APÓSTOL",
+    title: "El profeta del último avivamiento",
+    minion: "Luizón del templo",
     color: "#f6e75a",
-    portrait: "/media/characters/boss-luison.webp",
+    portrait: "/battle/padre-apostol.webp",
   },
   2: {
     name: "LATA PARARA",
@@ -168,19 +168,19 @@ export interface Episode {
 export const EPISODES: Episode[] = [
   {
     id: 1,
-    location: "Costanera de Asunción",
-    title: "En vivo y sin filtro",
-    subtitle: "Dos egos. Una sola transmisión.",
-    bg: "/battle/costanera.webp",
+    location: "Templo del último avivamiento",
+    title: "Rayos sobre el altar",
+    subtitle: "Ángeles arriba. Luizones abajo. Cero calma.",
+    bg: "/battle/templo-apostol.webp",
     color: "#efb764",
     intro:
-      "Ñandutí Live prometió el escenario a Masivo y a Onichan. Pero el Pastor Luison tomó la señal y soltó sus mascotas sobrenaturales. Recuperá las antenas antes de su transmisión sagrada.",
+      "Padre Apóstol convirtió su transmisión en un avivamiento sobrenatural. Los ángeles soplan trompetas desde el techo, los Luizones tomaron el templo y cada exorcismo carga otro rayo. Cortá la ceremonia antes del golpe final.",
     twist:
       "La señal vuelve justo cuando cae el último rayo. Entre el humo aparece una lata con una dirección del Mercado 4.",
     rival: "masivo",
     alternate: "onichan",
     npc: "anatomic",
-    objectives: ["Cortá la invasión de criaturas", "Recuperá la señal del live"],
+    objectives: ["Expulsá a los Luizones", "Apagá las trompetas del altar"],
     taunt: "El rating está volátil. Yo te cubro… si no rompés el gráfico.",
     choices: ["Pedile un escudo", "Provocá al rival", "Recuperá energía"],
     replies: [

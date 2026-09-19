@@ -8,6 +8,7 @@ export interface Art {
   bosses: HTMLImageElement;
   minions: HTMLImageElement;
   asuncionCombatants: HTMLImageElement;
+  apostolCombatants: HTMLImageElement;
 }
 const images = new Map<string, Promise<HTMLImageElement>>();
 function load(src: string): Promise<HTMLImageElement> {
@@ -91,15 +92,25 @@ function poses() {
   return posesPromise;
 }
 export async function loadArt(level: World["level"]): Promise<Art> {
-  const [background, items, actionPoses, bosses, minions, asuncionCombatants] = await Promise.all([
-    load(episode(level).bg),
-    frames(),
-    poses(),
-    load("/battle/bosses.webp"),
-    load("/battle/minions.webp"),
-    load("/battle/asuncion-combatants.webp"),
-  ]);
-  return { background, frames: items, poses: actionPoses, bosses, minions, asuncionCombatants };
+  const [background, items, actionPoses, bosses, minions, asuncionCombatants, apostolCombatants] =
+    await Promise.all([
+      load(episode(level).bg),
+      frames(),
+      poses(),
+      load("/battle/bosses.webp"),
+      load("/battle/minions.webp"),
+      load("/battle/asuncion-combatants.webp"),
+      load("/battle/apostol-combatants.webp"),
+    ]);
+  return {
+    background,
+    frames: items,
+    poses: actionPoses,
+    bosses,
+    minions,
+    asuncionCombatants,
+    apostolCombatants,
+  };
 }
 function rect(
   g: CanvasRenderingContext2D,
@@ -183,11 +194,22 @@ function drawMinion(
   g.translate(x, y + bob);
   g.scale(e.face, 1);
   const col = e.hit > t ? 3 : e.windup > 0 ? 2 : Math.floor(t * 7 + e.id) % 2;
-  const sheet = level === 4 ? art.asuncionCombatants : art.minions;
+  const sheet =
+    level === 1 ? art.apostolCombatants : level === 4 ? art.asuncionCombatants : art.minions;
   const cw = sheet.width / 4,
-    ch = sheet.height / (level === 4 ? 2 : 3);
+    ch = sheet.height / (level === 1 || level === 4 ? 2 : 3);
   if (e.hit > t) g.globalAlpha = 0.55;
-  g.drawImage(sheet, col * cw, level === 4 ? 0 : (level - 1) * ch, cw, ch, -66, -124, 132, 124);
+  g.drawImage(
+    sheet,
+    col * cw,
+    level === 1 || level === 4 ? 0 : (level - 1) * ch,
+    cw,
+    ch,
+    -66,
+    -124,
+    132,
+    124,
+  );
   g.restore();
 }
 function drawBoss(
@@ -204,15 +226,16 @@ function drawBoss(
   ellipse(g, 0, 0, 105, 16, "#10121dcc");
   g.scale(e.face, 1);
   const col = e.hit > t ? 3 : e.windup > 0 ? (e.pattern % 3 === 2 ? 2 : 1) : 0;
-  const sheet = level === 4 ? art.asuncionCombatants : art.bosses;
+  const sheet =
+    level === 1 ? art.apostolCombatants : level === 4 ? art.asuncionCombatants : art.bosses;
   const cw = sheet.width / 4,
-    ch = sheet.height / (level === 4 ? 2 : 3);
+    ch = sheet.height / (level === 1 || level === 4 ? 2 : 3);
   if (e.hit > t) g.globalAlpha = 0.65;
   const bossScale = level === 4 ? 276 : level === 1 ? 244 : 224;
   g.drawImage(
     sheet,
     col * cw,
-    level === 4 ? ch : (level - 1) * ch,
+    level === 1 || level === 4 ? ch : (level - 1) * ch,
     cw,
     ch,
     -bossScale / 2,
@@ -273,7 +296,7 @@ export function render(
     rect(g, x - 21, floor - 60, 42, 27, clear ? "#f6e75a" : "#705965", 3);
     label(
       g,
-      w.level === 1 ? "LIVE" : w.level === 2 ? "USB" : w.level === 3 ? "IPS" : "PALACIO",
+      w.level === 1 ? "ALTAR" : w.level === 2 ? "USB" : w.level === 3 ? "IPS" : "PALACIO",
       x,
       floor - 42,
       17,
@@ -428,6 +451,41 @@ export function render(
       g.rotate(Math.sin(s.age * 12) * 0.12);
       rect(g, -21, -12, 42, 24, "#301442dd", 7);
       label(g, "#!%", 0, 6, 16, "#f1c7ff");
+      g.restore();
+    } else if (s.kind === "lightning") {
+      g.save();
+      g.strokeStyle = "#fff7a8";
+      g.shadowColor = "#f6e75a";
+      g.shadowBlur = 16;
+      g.lineWidth = 6;
+      g.beginPath();
+      g.moveTo(x - Math.sign(s.vx) * 28, y - 4);
+      g.lineTo(x - Math.sign(s.vx) * 12, y + 9);
+      g.lineTo(x, y - 8);
+      g.lineTo(x + Math.sign(s.vx) * 16, y + 7);
+      g.lineTo(x + Math.sign(s.vx) * 30, y - 5);
+      g.stroke();
+      g.restore();
+    } else if (s.kind === "trumpet") {
+      g.save();
+      g.translate(x, y);
+      g.scale(Math.sign(s.vx), 1);
+      g.strokeStyle = "#f6e75a";
+      g.lineWidth = 4;
+      for (let ring = 0; ring < 3; ring++) {
+        g.beginPath();
+        g.arc(-ring * 13, 0, 9 + ring * 7, -0.8, 0.8);
+        g.stroke();
+      }
+      g.fillStyle = "#ffd84a";
+      g.beginPath();
+      g.moveTo(15, -8);
+      g.lineTo(34, -15);
+      g.lineTo(34, 15);
+      g.lineTo(15, 8);
+      g.closePath();
+      g.fill();
+      rect(g, 4, -4, 14, 8, "#c98d16", 2);
       g.restore();
     } else if (s.kind === "holy") {
       g.save();

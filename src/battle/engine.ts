@@ -83,7 +83,9 @@ export interface Shot {
     | "word"
     | "cane"
     | "cigarette"
-    | "sling";
+    | "sling"
+    | "lightning"
+    | "trumpet";
   color: string;
   radius: number;
   age: number;
@@ -323,7 +325,8 @@ function spawnStage(w: World) {
   for (let i = 0; i < count; i++)
     spawn(w, start + 380 + i * 130, "minion", rivalFor(w.level, w.hero), 42 + w.level * 7);
   if (w.stage === 2) {
-    spawn(w, 4200, "boss", rivalFor(w.level, w.hero), 760 + w.level * 170);
+    const bossHp = w.level === 1 ? 1120 : 760 + w.level * 170;
+    spawn(w, 4200, "boss", rivalFor(w.level, w.hero), bossHp);
     w.events.push({
       type: "toast",
       text: `${boss(w.level).name} · JEFE FINAL`,
@@ -341,7 +344,7 @@ export function interactLabel(w: World): string | null {
   const target = w.stage === 0 ? CHECKPOINTS[0] : CHECKPOINTS[1];
   if (Math.abs(w.player.x - target) < 125 && w.enemies.every((e) => e.hp <= 0))
     return w.level === 1
-      ? "Activar antena"
+      ? "Apagar trompetas"
       : w.level === 2
         ? "Recuperar USB"
         : w.level === 3
@@ -741,7 +744,7 @@ function enemyStep(w: World, e: Enemy, dt: number) {
                 life: 3,
                 damage: 14,
                 enemy: true,
-                kind: "holy",
+                kind: "lightning",
                 color: "#f6e75a",
                 radius: 10,
               });
@@ -755,16 +758,23 @@ function enemyStep(w: World, e: Enemy, dt: number) {
                 62,
               );
               effect(w, e.x + e.face * 140, 65, "ring", "#f6e75a", 75, 0.55);
-              w.events.push({ type: "toast", text: "LUISON INVOCÓ OTRA CRIATURA" });
+              w.events.push({ type: "toast", text: "PADRE APÓSTOL INVOCÓ UN LUIZÓN" });
             }
           } else {
             for (let i = 0; i < e.phase + 1; i++)
-              w.telegraphs.push({
-                x: clamp(p.x + (i - 1) * 150, STAGE_WIDTH * 2 + 60, WORLD_WIDTH - 170),
-                w: 62,
-                until: w.t + 0.9,
-                fired: false,
+              shoot(w, {
+                x: e.x - 25,
+                y: 35 + i * 38,
+                vx: e.face * (300 + i * 28),
+                vy: (i - 1) * 18,
+                life: 3,
+                damage: 16,
+                enemy: true,
+                kind: "trumpet",
+                color: "#f6e75a",
+                radius: 18,
               });
+            w.events.push({ type: "toast", text: "¡TROMPETAS DEL AVIVAMIENTO!" });
           }
         } else if (w.level === 2) {
           if (pattern === 0) {
@@ -882,7 +892,7 @@ function enemyStep(w: World, e: Enemy, dt: number) {
                 ? e.pattern++ % 2
                   ? "cigarette"
                   : "cane"
-                : "holy";
+                : "trumpet";
         shoot(w, {
           x: e.x,
           y: 52,
