@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Swords, c as Play, d as Hand, f as Hammer, g as Bomb, h as CircleHelp, l as Pause, m as Crosshair, n as Wind, o as Settings, p as Gamepad2, r as Trophy, s as RotateCcw, t as X, u as MessageCircle } from "../_libs/lucide-react.mjs";
 import { t as create } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-CNGqBOBs.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DzgnU8w1.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var WEAPONS = {
@@ -5975,6 +5975,8 @@ var useGame = create((set, get) => ({
 		if (get().fps !== n) set({ fps: n });
 	}
 }));
+/** Shown on the title screen and pause menu so it is obvious which build is running. */
+var APP_VERSION = "v3.1 · móvil vertical";
 function Btn({ children, onClick, variant = "primary", className = "", icon, disabled }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 		type: "button",
@@ -6404,6 +6406,10 @@ function Title() {
 							icon: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleHelp, { size: 18 }),
 							children: "Cómo jugar"
 						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-[10px] uppercase tracking-[0.2em] text-paper/50",
+						children: APP_VERSION
 					})
 				]
 			}),
@@ -7306,6 +7312,10 @@ function PauseMenu() {
 					variant: "danger",
 					onClick: quit,
 					children: "Salir al menú"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-center text-[10px] uppercase tracking-[0.2em] text-paper/40",
+					children: APP_VERSION
 				})
 			]
 		})
