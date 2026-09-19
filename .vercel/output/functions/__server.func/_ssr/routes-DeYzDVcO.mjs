@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Swords, c as Play, d as Hand, f as Hammer, g as Bomb, h as CircleHelp, l as Pause, m as Crosshair, n as Wind, o as Settings, p as Gamepad2, r as Trophy, s as RotateCcw, t as X, u as MessageCircle } from "../_libs/lucide-react.mjs";
 import { t as create } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BCAfti_-.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DeYzDVcO.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var WEAPONS = {
@@ -57,6 +57,19 @@ var WEAPONS = {
 		start: 12,
 		hint: "Precisa. Mantené para disparar seguido."
 	},
+	ak: {
+		id: "ak",
+		name: "AK-47",
+		short: "AK-47",
+		kind: "gun",
+		dmg: 2,
+		cooldown: .11,
+		speed: 330,
+		spread: 1,
+		pickup: 60,
+		start: 1e3,
+		hint: "Arranca cargado con 1000 balas. Mantené apretado y barré la zona."
+	},
 	shotgun: {
 		id: "shotgun",
 		name: "Escopeta",
@@ -101,12 +114,13 @@ var WEAPONS = {
 Object.fromEntries(Object.values(WEAPONS).map((w) => [w.id, w.name]));
 /** Cycle order for the swap button (grenades have their own button). */
 var WEAPON_ORDER = [
-	"fist",
-	"knife",
-	"bat",
+	"ak",
 	"pistol",
 	"shotgun",
-	"smg"
+	"smg",
+	"bat",
+	"knife",
+	"fist"
 ];
 function stepsOf(id) {
 	return [
@@ -1274,28 +1288,7 @@ var CHAPTERS = {
 				h: 12
 			}
 		],
-		crates: [
-			{
-				x: 176,
-				w: 8,
-				h: 9
-			},
-			{
-				x: 300,
-				w: 8,
-				h: 9
-			},
-			{
-				x: 426,
-				w: 10,
-				h: 9
-			},
-			{
-				x: 522,
-				w: 8,
-				h: 9
-			}
-		],
+		crates: [],
 		ambush: {
 			2: ["gallaguer"],
 			3: ["pablito"],
@@ -1573,28 +1566,7 @@ var CHAPTERS = {
 				h: 12
 			}
 		],
-		crates: [
-			{
-				x: 212,
-				w: 8,
-				h: 9
-			},
-			{
-				x: 320,
-				w: 8,
-				h: 9
-			},
-			{
-				x: 450,
-				w: 10,
-				h: 9
-			},
-			{
-				x: 530,
-				w: 8,
-				h: 9
-			}
-		],
+		crates: [],
 		ambush: {
 			2: ["pablito"],
 			3: ["gallaguer"],
@@ -1880,33 +1852,7 @@ var CHAPTERS = {
 				h: 12
 			}
 		],
-		crates: [
-			{
-				x: 160,
-				w: 8,
-				h: 9
-			},
-			{
-				x: 265,
-				w: 8,
-				h: 9
-			},
-			{
-				x: 335,
-				w: 8,
-				h: 9
-			},
-			{
-				x: 425,
-				w: 10,
-				h: 9
-			},
-			{
-				x: 540,
-				w: 8,
-				h: 9
-			}
-		],
+		crates: [],
 		ambush: {
 			1: ["gallaguer"],
 			3: ["masivo"],
@@ -2419,6 +2365,7 @@ function noise(dur, opts = {}) {
 var MIN_GAP = {
 	shot: 40,
 	smg: 30,
+	ak: 40,
 	ally: 200,
 	hit: 60,
 	coin: 30,
@@ -2628,6 +2575,18 @@ function sfx(name) {
 				type: "sawtooth",
 				gain: .35,
 				slide: 30
+			});
+			break;
+		case "ak":
+			noise(.09, {
+				gain: .45,
+				from: 6500,
+				to: 500
+			});
+			tone(160, .07, {
+				type: "sawtooth",
+				gain: .18,
+				slide: 50
 			});
 			break;
 		case "smg":
@@ -3105,11 +3064,16 @@ function createWorld(chapter, hero, difficulty) {
 			invUntil: 0,
 			slowUntil: 0,
 			attackUntil: 0,
-			attackKind: "pistol",
-			weapon: "pistol",
-			weapons: ["fist", "pistol"],
+			attackKind: "ak",
+			weapon: "ak",
+			weapons: [
+				"fist",
+				"pistol",
+				"ak"
+			],
 			ammo: {
 				pistol: Math.round(tune.startAmmo * (perk.ammo / 12)),
+				ak: 1e3,
 				shotgun: 0,
 				smg: 0,
 				grenade: 0
@@ -3625,8 +3589,8 @@ function fireGun(w, gun, ev) {
 		});
 	}
 	fx(w, p.x + dir * 8, y, "muzzle", dir);
-	if (gun !== "smg") fx(w, p.x + dir * 22, y, "tracer", dir);
-	shake(w, gun === "shotgun" ? 7 : gun === "smg" ? 1.5 : 3);
+	if (gun !== "smg" && gun !== "ak") fx(w, p.x + dir * 22, y, "tracer", dir);
+	shake(w, gun === "shotgun" ? 7 : gun === "smg" ? 1.5 : gun === "ak" ? 2.2 : 3);
 	if (gun === "shotgun") p.vx -= dir * 30;
 	ev.push({
 		t: "sfx",
@@ -3753,11 +3717,13 @@ function addWeapon(w, id, ev) {
 	}
 	if (!p.weapons.includes(id)) p.weapons.push(id);
 	if (isGun(id)) p.ammo[id] += Math.max(1, Math.round(def.start * w.tune.startAmmoMul));
-	p.weapon = id;
+	const cur = p.weapon;
+	const curEmpty = isGun(cur) && p.ammo[cur] <= 0;
+	if (cur === "fist" || curEmpty) p.weapon = id;
 	addScore(w, 20);
 	ev.push({
 		t: "toast",
-		msg: `${def.name}. ${def.hint}`
+		msg: `${def.name}. ${def.hint}${p.weapon === id ? "" : " Q para cambiar."}`
 	});
 }
 function grab(w, p, ev) {
@@ -4846,6 +4812,35 @@ function drawWeaponShape(ctx, id, len) {
 		ctx.beginPath();
 		ctx.roundRect(len * .05, -len * .1, len * .22, len * .2, 3);
 		ctx.fill();
+	} else if (id === "ak") {
+		ctx.fillStyle = "#7a4a22";
+		ctx.beginPath();
+		ctx.roundRect(-len / 2, -len * .07, len * .28, len * .15, 3);
+		ctx.fill();
+		ctx.fillStyle = "#2a2d31";
+		ctx.beginPath();
+		ctx.roundRect(-len * .24, -len * .09, len * .42, len * .17, 2);
+		ctx.fill();
+		ctx.fillStyle = "#8a5a2a";
+		ctx.beginPath();
+		ctx.roundRect(len * .14, -len * .07, len * .2, len * .13, 2);
+		ctx.fill();
+		ctx.fillStyle = "#3a3f47";
+		ctx.beginPath();
+		ctx.roundRect(len * .3, -len * .035, len * .2, len * .07, 2);
+		ctx.fill();
+		ctx.fillStyle = "#1b1d21";
+		ctx.beginPath();
+		ctx.moveTo(-len * .06, len * .08);
+		ctx.lineTo(len * .08, len * .08);
+		ctx.lineTo(len * .03, len * .34);
+		ctx.lineTo(-len * .11, len * .3);
+		ctx.closePath();
+		ctx.fill();
+		ctx.fillStyle = "#5a3a1c";
+		ctx.beginPath();
+		ctx.roundRect(-len * .2, len * .06, len * .08, len * .16, 2);
+		ctx.fill();
 	} else if (id === "smg") {
 		ctx.fillStyle = "#23262b";
 		ctx.beginPath();
@@ -5244,7 +5239,7 @@ function drawWorld(ctx, w, W, H, opts) {
 	for (const b of w.books) drawSprite(f, getSprite("/sprites/book.png"), X$1(f, b.x), Y(f, b.y), VH(f, 7), { rot: b.rot });
 	for (const s of w.slimes) drawSprite(f, getSprite("/sprites/slime.png"), X$1(f, s.x), Y(f, s.y), VH(f, 3.4), { rot: (w.t * 900 + s.x * 30) % 360 });
 	for (const s of w.shots) {
-		const size = s.kind === "shotgun" ? 12 : s.kind === "smg" ? 14 : 18;
+		const size = s.kind === "shotgun" ? 12 : s.kind === "smg" ? 14 : s.kind === "ak" ? 16 : 18;
 		drawSprite(f, getSprite("/sprites/bullet.png"), X$1(f, s.x), Y(f, s.y) + size / 2, size, {
 			flip: s.face === 1,
 			rot: Math.atan2(-s.vy, Math.abs(s.vx)) * 180 / Math.PI * (s.face === 1 ? 1 : -1)
@@ -5276,6 +5271,7 @@ function drawWorld(ctx, w, W, H, opts) {
 	}
 	const atkDur = p.attackKind === "grenade" ? .24 : p.attackKind === "bat" ? .36 : p.stomping ? .5 : [
 		"pistol",
+		"ak",
 		"shotgun",
 		"smg"
 	].includes(p.attackKind) ? .16 : .28;
@@ -5310,7 +5306,7 @@ function drawWorld(ctx, w, W, H, opts) {
 			ctx.translate(hx, hy + 6);
 			const swing = p.weapon === "bat" ? attackT < 1 ? -1.6 + attackT * 2.6 : .6 : -kick * .3;
 			ctx.rotate(p.facing === 1 ? -swing : Math.PI + swing);
-			drawWeaponShape(ctx, p.weapon, p.weapon === "bat" ? 62 : p.weapon === "shotgun" ? 64 : 46);
+			drawWeaponShape(ctx, p.weapon, p.weapon === "bat" ? 62 : p.weapon === "shotgun" ? 64 : p.weapon === "ak" ? 70 : 46);
 			ctx.restore();
 		}
 	}
@@ -5477,7 +5473,7 @@ var emptyHud = {
 	maxHp: 100,
 	coins: 0,
 	ammo: 0,
-	weapon: "pistol",
+	weapon: "ak",
 	hasKnife: false,
 	timer: 0,
 	score: 0,
@@ -5496,7 +5492,11 @@ var emptyHud = {
 	enemies: [],
 	markers: [],
 	grenades: 0,
-	weapons: ["fist", "pistol"],
+	weapons: [
+		"fist",
+		"pistol",
+		"ak"
+	],
 	dashReady: true,
 	boss: null
 };
@@ -5765,7 +5765,7 @@ var useGame = create((set, get) => ({
 					overlay: null,
 					clip: null
 				});
-				pushToast("W salta · S agacha · Shift esquiva · E habla · G granada");
+				pushToast("AK-47 cargado: mantené el ataque. W salta · Shift esquiva · E habla");
 			} else set({
 				phase: "loading",
 				clip: null
@@ -6334,7 +6334,7 @@ function HelpPanel({ onClose }) {
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "· Tres golpes seguidos: el tercero remata con el doble de daño." }),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "· Bate y escopeta mandan a volar. La metralleta vacía el cargador en segundos." }),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "· Las cajas de madera frenan balas, libros y slime: usalas de cobertura." }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "· Arrancás con un AK-47 y 1000 balas: mantené apretado y barré la zona." }),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "· Esquivá la embestida del jefe y pegale cuando frena." }),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "· Los compañeros que reclutás pelean a tu lado. Los enemigos sueltan balas y Gs." }),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "· Las Gs suman puntos y el tiempo también: terminá rápido para medalla de oro." })
@@ -6500,8 +6500,8 @@ function Select() {
 						className: "rounded-xl bg-elevated py-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "text-lg font-bold text-paper",
-							children: hero.perk.ammo
-						}), "balas base"]
+							children: "1000"
+						}), "balas AK-47"]
 					})
 				]
 			})]
@@ -7259,7 +7259,7 @@ function PauseMenu() {
 		title: "Te agarraron",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 			className: "text-sm text-muted",
-			children: ["Volvés al inicio de la zona con toda la vida. Perdés 5 Gs y 100 puntos.", falls >= 2 ? " Consejo: esquivá con Shift, agachate (S) ante los libros y saltá el slime. Las cajas frenan proyectiles." : ""]
+			children: ["Volvés al inicio de la zona con toda la vida. Perdés 5 Gs y 100 puntos.", falls >= 2 ? " Consejo: esquivá con Shift, agachate (S) ante los libros y saltá el slime. El AK-47 los frena de lejos." : ""]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "mt-4 grid gap-2",
 			children: [
