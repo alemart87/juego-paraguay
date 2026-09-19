@@ -57,41 +57,50 @@ async function createCheckout(item: ShopItem): Promise<CheckoutRecord> {
     /\/$/,
     "",
   );
-  const client = new WhopClient({
+  const productClient = new WhopClient({
     token: apiKey,
-    idempotencyKey: () => `influencers-battle-${item.sku}-${item.price.toFixed(2)}`,
+    idempotencyKey: () => `influencers-battle-${item.sku}-product-v1`,
   });
-  const checkout = await client.checkoutConfigurations.create({
-    mode: "payment",
-    redirect_url: `${siteUrl}/?compra=${item.sku}`,
+  const product = await productClient.products.create({
+    title: `${item.name} · Influencers Battle`,
+    headline: "Ventaja especial para tu próxima batalla",
+    description: item.description,
+    custom_cta: "purchase",
+    redirect_purchase_url: `${siteUrl}/?compra=${item.sku}`,
+    visibility: "hidden",
+    metadata: {
+      game: "influencers-battle",
+      game_sku: item.sku,
+    },
+  });
+  const planClient = new WhopClient({
+    token: apiKey,
+    idempotencyKey: () =>
+      `influencers-battle-${item.sku}-plan-${item.price.toFixed(2)}-v1`,
+  });
+  const plan = await planClient.plans.create({
+    product_id: product.id,
+    title: item.name,
+    description: item.description,
+    plan_type: "one_time",
+    initial_price: item.price,
+    currency: "usd",
+    release_method: "buy_now",
+    unlimited_stock: true,
+    visibility: "quick_link",
     metadata: {
       game: "influencers-battle",
       game_sku: item.sku,
       source: "marketplace-web",
     },
-    plan: {
-      title: item.name,
-      description: item.description,
-      plan_type: "one_time",
-      initial_price: item.price,
-      currency: "usd",
-      release_method: "buy_now",
-      unlimited_stock: true,
-      visibility: "quick_link",
-      force_create_new_plan: false,
-      metadata: {
-        game: "influencers-battle",
-        game_sku: item.sku,
-      },
-    },
   });
-  if (!checkout.purchase_url) throw new Error("Whop did not return purchase_url");
+  if (!plan.purchase_url) throw new Error("Whop did not return purchase_url");
 
   const record: CheckoutRecord = {
-    id: checkout.id,
-    url: validCheckoutUrl(checkout.purchase_url),
+    id: plan.id,
+    url: validCheckoutUrl(plan.purchase_url),
     price: item.price,
-    createdAt: checkout.created_at,
+    createdAt: plan.created_at,
   };
   await saveCache({ ...existing, [item.sku]: record });
   return record;
