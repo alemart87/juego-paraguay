@@ -35,7 +35,7 @@ const scoreInput = z.object({
   contact: z.string().trim().min(5).max(160),
   consent: z.literal(true),
   score: z.number().int().min(0).max(10_000_000),
-  level: z.number().int().min(1).max(3),
+  level: z.number().int().min(1).max(4),
   hero: z.enum(["masivo", "onichan", "anatomic", "comadre", "papu", "secre"]),
   time: z.number().int().min(1).max(3600),
   combo: z.number().int().min(0).max(999),

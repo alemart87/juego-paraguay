@@ -78,7 +78,7 @@ test("empty gun swaps to an available weapon; melee remains usable", () => {
 });
 test("checkpoint cannot advance before clearing its arena", () => {
   const w = createWorld("masivo", 1, "tranqui");
-  w.player.x = 1010;
+  w.player.x = 1320;
   tick(w, 0.1, 0, false, ["interact"]);
   assert.equal(w.stage, 0);
   w.enemies.forEach((e) => (e.hp = 0));
@@ -89,7 +89,7 @@ test("checkpoint cannot advance before clearing its arena", () => {
 });
 test("selected hero is never assigned as their own rival", () => {
   for (const f of FIGHTERS)
-    for (const level of [1, 2, 3] as EpisodeId[]) assert.notEqual(rivalFor(level, f.id), f.id);
+    for (const level of [1, 2, 3, 4] as EpisodeId[]) assert.notEqual(rivalFor(level, f.id), f.id);
 });
 test("same seed and input produce the same battle", () => {
   const a = createWorld("comadre", 2, "tranqui", 345),
@@ -118,7 +118,7 @@ test("save rejects corrupt records and retains independent best score/time/medal
 });
 test("all episodes can be completed through real attacks and checkpoint interactions", () => {
   for (const hero of FIGHTERS)
-    for (const level of [1, 2, 3] as EpisodeId[]) {
+    for (const level of [1, 2, 3, 4] as EpisodeId[]) {
       const w = createWorld(hero.id, level, "tranqui", 54321);
       for (let frame = 0; frame < 60 * 300 && !w.ended; frame++) {
         if (w.paused) {
@@ -141,7 +141,7 @@ test("all episodes can be completed through real attacks and checkpoint interact
           if (p.super >= 100 || Math.abs(dx) < 230) actions.add("power");
           if (target.windup > w.t && Math.abs(dx) < 100) actions.add("dash");
         } else {
-          const goal = w.stage === 0 ? 1010 : 2180;
+          const goal = w.stage === 0 ? 1320 : 2820;
           move = Math.abs(p.x - goal) > 25 ? Math.sign(goal - p.x) : 0;
           actions.add("interact");
         }
@@ -160,10 +160,11 @@ test("each episode spawns its named boss with a unique projectile language", () 
     1: { name: "PASTOR LUISON", shot: "holy" },
     2: { name: "LATA PARARA", shot: "can" },
     3: { name: "LULAX", shot: "word" },
+    4: { name: "EL DICTADOR", shot: "sling" },
   } as const;
-  for (const level of [1, 2, 3] as EpisodeId[]) {
+  for (const level of [1, 2, 3, 4] as EpisodeId[]) {
     const w = createWorld("onichan", level, "tranqui", 99);
-    for (const checkpoint of [1010, 2180]) {
+    for (const checkpoint of [1320, 2820]) {
       w.enemies.forEach((enemy) => (enemy.hp = 0));
       w.player.x = checkpoint;
       tick(w, 0.05, 0, false, ["interact"]);
@@ -175,7 +176,7 @@ test("each episode spawns its named boss with a unique projectile language", () 
     w.enemies.forEach((enemy) => {
       if (enemy.kind === "minion") enemy.hp = 0;
     });
-    w.player.x = 2920;
+    w.player.x = 3900;
     w.player.inv = Infinity;
     let seen = false;
     for (let frame = 0; frame < 60 * 4 && !seen; frame++) {
@@ -184,4 +185,32 @@ test("each episode spawns its named boss with a unique projectile language", () 
     }
     assert(seen, `${expected[level].name} did not use ${expected[level].shot}`);
   }
+});
+
+test("El Dictador consumes a full second life before the episode can end", () => {
+  const w = createWorld("masivo", 4, "tranqui", 404);
+  for (const checkpoint of [1320, 2820]) {
+    w.enemies.forEach((enemy) => (enemy.hp = 0));
+    w.player.x = checkpoint;
+    tick(w, 0.05, 0, false, ["interact"]);
+    applyChoice(w, 1);
+  }
+  const finalBoss = w.enemies.find((enemy) => enemy.kind === "boss");
+  assert(finalBoss);
+  w.enemies.forEach((enemy) => {
+    if (enemy.kind === "minion") enemy.hp = 0;
+  });
+  w.player.x = finalBoss.x - 80;
+  finalBoss.hp = 1;
+  w.player.super = 100;
+  activatePower(w);
+  assert.equal(finalBoss.lives, 1);
+  assert.equal(finalBoss.hp, finalBoss.maxHp);
+  assert.equal(w.ended, false);
+  finalBoss.hp = 1;
+  w.player.x = finalBoss.x - 80;
+  w.player.super = 100;
+  activatePower(w);
+  assert.equal(finalBoss.hp, 0);
+  assert.equal(w.ended, true);
 });

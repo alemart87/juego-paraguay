@@ -9,9 +9,9 @@ La primera campaña está implementada como juego web móvil y de escritorio. Pa
 ## Contenido terminado
 
 - Seis personajes seleccionables: Masivo Bro, Onichan, ANATOMIC BLOGS, La Comadre, El Papu y La Secre.
-- Tres episodios: Costanera de Asunción, Mercado 4 e IPS.
+- Cuatro episodios: Costanera de Asunción, Mercado 4, IPS y Asunción infestada.
 - Combate lateral con salto, dash, ocho armas, granadas, cajas, curación, combo, hype, poder propio y súper por personaje.
-- Tres familias de secuaces y tres jefes con ataques anunciados y tres fases.
+- Cuatro familias de secuaces y cuatro jefes con ataques anunciados; El Dictador suma tanqueta, hondita y doble vida.
 - Decisiones de diálogo, guion local y conversación opcional por IA.
 - Guardado local de ajustes, puntuaciones, tiempos y medallas.
 - Tarjeta vertical para compartir y enlace reproducible con personaje y semilla.
@@ -35,7 +35,7 @@ Después, abrir `http://127.0.0.1:8080/`. La compilación validada queda disponi
 
 - TypeScript sin errores.
 - ESLint sin errores en todos los módulos modificados.
-- 11 pruebas del motor: pasan las 18 combinaciones de personaje y episodio y validan los ataques propios de cada jefe.
+- 14 pruebas del motor: pasan las 24 combinaciones de personaje y episodio, validan los ataques propios y la doble vida del jefe final.
 - 55 pruebas heredadas del proyecto: pasan.
 - Compilación de producción: completa.
 - Navegador de producción: escritorio y móvil sin errores de consola ni desbordamiento.
@@ -48,8 +48,9 @@ Después, abrir `http://127.0.0.1:8080/`. La compilación validada queda disponi
 - **Pastor Luison — Costanera:** rayos sagrados, zonas de castigo e invocación de criaturas sobrenaturales.
 - **Lata Parara — Mercado 4:** proyectiles, lluvia y embestidas de latas poseídas sin marcas reales.
 - **LULAX — IPS:** palabras censuradas, ondas oscuras e invocación de micrófonos poseídos.
+- **El Dictador — Asunción infestada:** tanqueta, hondita paraguaya, refuerzos pyragues y dos vidas completas.
 
-Las tres representaciones y sus poderes pertenecen a la ficción satírica del videojuego.
+Las cuatro representaciones y sus poderes pertenecen a la ficción satírica del videojuego.
 
 ## Dependencia pendiente de entorno
 

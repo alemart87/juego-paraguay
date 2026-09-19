@@ -23,6 +23,16 @@ services:
         value: /persistent
       - key: VITE_AUTH_ENABLED
         value: "false"
+      - key: WHOP_CHECKOUT_ARSENAL
+        sync: false
+      - key: WHOP_CHECKOUT_TERERE
+        sync: false
+      - key: WHOP_CHECKOUT_POMBERO
+        sync: false
+      - key: WHOP_CHECKOUT_ENERGIA
+        sync: false
+      - key: WHOP_CHECKOUT_INMUNIDAD
+        sync: false
 
 databases:
   - name: influencers-battle-db

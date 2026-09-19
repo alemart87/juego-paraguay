@@ -12,7 +12,9 @@ import {
 } from "./content";
 import type { SfxName } from "../game/audio";
 
-export const WORLD_WIDTH = 3600;
+export const STAGE_WIDTH = 1500;
+export const WORLD_WIDTH = 4650;
+export const CHECKPOINTS = [1320, 2820] as const;
 export type Action = "jump" | "dash" | "power" | "swap" | "grenade" | "interact";
 export interface Input {
   move: number;
@@ -59,6 +61,8 @@ export interface Enemy {
   pattern: number;
   charge: number;
   chargeDir: number;
+  lives: number;
+  maxLives: number;
 }
 export interface Shot {
   x: number;
@@ -68,7 +72,18 @@ export interface Shot {
   life: number;
   damage: number;
   enemy: boolean;
-  kind: "bullet" | "grenade" | "usb" | "wave" | "paper" | "holy" | "can" | "word";
+  kind:
+    | "bullet"
+    | "grenade"
+    | "usb"
+    | "wave"
+    | "paper"
+    | "holy"
+    | "can"
+    | "word"
+    | "cane"
+    | "cigarette"
+    | "sling";
   color: string;
   radius: number;
   age: number;
@@ -152,7 +167,14 @@ export interface Snapshot {
   stage: number;
   objective: string;
   interact: string | null;
-  boss: { name: string; hp: number; maxHp: number; phase: number } | null;
+  boss: {
+    name: string;
+    hp: number;
+    maxHp: number;
+    phase: number;
+    lives: number;
+    maxLives: number;
+  } | null;
   progress: number;
   enemies: number;
 }
@@ -233,6 +255,8 @@ export function createWorld(
       { x: 1390, w: 190, y: 86 },
       { x: 1820, w: 160, y: 110 },
       { x: 2570, w: 170, y: 85 },
+      { x: 3340, w: 190, y: 95 },
+      { x: 3970, w: 150, y: 118 },
     ],
     t: 0,
     stage: 0,
@@ -289,15 +313,17 @@ function spawn(w: World, x: number, kind: Enemy["kind"], id: FighterId, hp: numb
     pattern: 0,
     charge: 0,
     chargeDir: -1,
+    lives: kind === "boss" && w.level === 4 ? 2 : 1,
+    maxLives: kind === "boss" && w.level === 4 ? 2 : 1,
   });
 }
 function spawnStage(w: World) {
-  const start = w.stage * 1160;
-  const count = w.stage === 2 ? 2 : 4 + (w.level > 1 ? 1 : 0);
+  const start = w.stage * STAGE_WIDTH;
+  const count = w.stage === 2 ? 3 : 6 + (w.level > 1 ? 1 : 0);
   for (let i = 0; i < count; i++)
     spawn(w, start + 380 + i * 130, "minion", rivalFor(w.level, w.hero), 42 + w.level * 7);
   if (w.stage === 2) {
-    spawn(w, 3200, "boss", rivalFor(w.level, w.hero), 760 + w.level * 170);
+    spawn(w, 4200, "boss", rivalFor(w.level, w.hero), 760 + w.level * 170);
     w.events.push({
       type: "toast",
       text: `${boss(w.level).name} · JEFE FINAL`,
@@ -312,9 +338,15 @@ function spawnStage(w: World) {
 }
 export function interactLabel(w: World): string | null {
   if (w.stage >= 2) return null;
-  const target = w.stage === 0 ? 1010 : 2180;
+  const target = w.stage === 0 ? CHECKPOINTS[0] : CHECKPOINTS[1];
   if (Math.abs(w.player.x - target) < 125 && w.enemies.every((e) => e.hp <= 0))
-    return w.level === 1 ? "Activar antena" : w.level === 2 ? "Recuperar USB" : "Autorizar sello";
+    return w.level === 1
+      ? "Activar antena"
+      : w.level === 2
+        ? "Recuperar USB"
+        : w.level === 3
+          ? "Autorizar sello"
+          : "Abrir acceso";
   return null;
 }
 export function snapshot(w: World): Snapshot {
@@ -347,10 +379,14 @@ export function snapshot(w: World): Snapshot {
           hp: Math.ceil(activeBoss.hp),
           maxHp: activeBoss.maxHp,
           phase: activeBoss.phase,
+          lives: activeBoss.lives,
+          maxLives: activeBoss.maxLives,
         }
       : null,
     progress: clamp(
-      (w.stage + (alive === 0 ? 0.8 : Math.max(0, (p.x - w.stage * 1160) / 1160) * 0.7)) / 3,
+      (w.stage +
+        (alive === 0 ? 0.8 : Math.max(0, (p.x - w.stage * STAGE_WIDTH) / STAGE_WIDTH) * 0.7)) /
+        3,
       0,
       1,
     ),
@@ -361,12 +397,26 @@ function hitEnemy(w: World, e: Enemy, damage: number, knock = 0) {
   if (e.hp <= 0) return;
   e.hp -= damage;
   e.hit = w.t + 0.12;
-  e.x = clamp(e.x + knock, w.stage * 1160 + 30, WORLD_WIDTH - 80);
+  e.x = clamp(e.x + knock, w.stage * STAGE_WIDTH + 30, WORLD_WIDTH - 80);
   w.player.super = clamp(w.player.super + (e.kind === "minion" ? 3 : 1.5), 0, 100);
   effect(w, e.x, e.y + 65, "spark", fighter(w.hero).color, 5, 0.25);
   if (damage >= 22)
     effect(w, e.x, e.y + 115, "text", "#fff3dc", 16, 0.55, String(Math.round(damage)));
   if (e.hp <= 0) {
+    if (e.kind === "boss" && e.lives > 1) {
+      e.lives--;
+      e.hp = e.maxHp;
+      e.phase = 3;
+      e.hit = w.t + 1;
+      e.ready = w.t + 1.4;
+      e.pattern = 0;
+      w.shots = [];
+      w.shake = 0.45;
+      effect(w, e.x, 90, "ring", "#ff3b30", 220, 1.1);
+      w.events.push({ type: "toast", text: "EL DICTADOR · SEGUNDA VIDA" });
+      event(w, "bossIntro");
+      return;
+    }
     e.hp = 0;
     w.kills++;
     w.streak = w.t - w.streakAt < 5 ? w.streak + 1 : 1;
@@ -588,7 +638,7 @@ export function activatePower(w: World) {
       blast(w, p.x + p.face * 115, 50, 170, 80, f.color);
       break;
     case "onichan":
-      p.x = clamp(p.x + p.face * 155, w.stage * 1160 + 30, (w.stage + 1) * 1160 - 20);
+      p.x = clamp(p.x + p.face * 155, w.stage * STAGE_WIDTH + 30, (w.stage + 1) * STAGE_WIDTH - 20);
       p.inv = w.t + 1;
       blast(w, p.x, 45, 140, 55, f.color);
       break;
@@ -658,7 +708,16 @@ function enemyStep(w: World, e: Enemy, dt: number) {
   const p = w.player;
   const distance = Math.abs(e.x - p.x);
   e.face = e.x > p.x ? -1 : 1;
-  e.phase = e.kind === "minion" ? 1 : e.hp / e.maxHp > 0.66 ? 1 : e.hp / e.maxHp > 0.33 ? 2 : 3;
+  e.phase =
+    e.kind === "minion"
+      ? 1
+      : e.lives < e.maxLives
+        ? 3
+        : e.hp / e.maxHp > 0.66
+          ? 1
+          : e.hp / e.maxHp > 0.33
+            ? 2
+            : 3;
   const slow = e.slow > w.t ? 0.3 : 1;
   if (e.charge > w.t) {
     e.x += e.chargeDir * 470 * dt * slow;
@@ -688,14 +747,20 @@ function enemyStep(w: World, e: Enemy, dt: number) {
               });
           } else if (pattern === 1) {
             if (w.enemies.filter((enemy) => enemy.kind === "minion" && enemy.hp > 0).length < 4) {
-              spawn(w, clamp(e.x + e.face * 150, 2400, 3420), "minion", e.fighter, 62);
+              spawn(
+                w,
+                clamp(e.x + e.face * 150, STAGE_WIDTH * 2 + 60, WORLD_WIDTH - 180),
+                "minion",
+                e.fighter,
+                62,
+              );
               effect(w, e.x + e.face * 140, 65, "ring", "#f6e75a", 75, 0.55);
               w.events.push({ type: "toast", text: "LUISON INVOCÓ OTRA CRIATURA" });
             }
           } else {
             for (let i = 0; i < e.phase + 1; i++)
               w.telegraphs.push({
-                x: clamp(p.x + (i - 1) * 150, 2360, 3480),
+                x: clamp(p.x + (i - 1) * 150, STAGE_WIDTH * 2 + 60, WORLD_WIDTH - 170),
                 w: 62,
                 until: w.t + 0.9,
                 fired: false,
@@ -722,13 +787,13 @@ function enemyStep(w: World, e: Enemy, dt: number) {
           } else {
             for (let i = 0; i < e.phase + 2; i++)
               w.telegraphs.push({
-                x: clamp(p.x + (i - 1.5) * 115, 2360, 3480),
+                x: clamp(p.x + (i - 1.5) * 115, STAGE_WIDTH * 2 + 60, WORLD_WIDTH - 170),
                 w: 48,
                 until: w.t + 0.78,
                 fired: false,
               });
           }
-        } else if (pattern === 0) {
+        } else if (w.level === 3 && pattern === 0) {
           for (let i = 0; i < 3 + e.phase; i++)
             shoot(w, {
               x: e.x - 30,
@@ -742,7 +807,7 @@ function enemyStep(w: World, e: Enemy, dt: number) {
               color: "#b578ff",
               radius: 8,
             });
-        } else if (pattern === 1) {
+        } else if (w.level === 3 && pattern === 1) {
           shoot(w, {
             x: e.x,
             y: 24,
@@ -756,12 +821,50 @@ function enemyStep(w: World, e: Enemy, dt: number) {
             radius: 24,
           });
         } else if (
+          w.level === 3 &&
           w.enemies.filter((enemy) => enemy.kind === "minion" && enemy.hp > 0).length < 5
         ) {
           for (let i = 0; i < Math.min(2, e.phase); i++)
-            spawn(w, clamp(e.x + e.face * (130 + i * 85), 2400, 3420), "minion", e.fighter, 68);
+            spawn(
+              w,
+              clamp(e.x + e.face * (130 + i * 85), STAGE_WIDTH * 2 + 60, WORLD_WIDTH - 180),
+              "minion",
+              e.fighter,
+              68,
+            );
           effect(w, e.x, 75, "ring", "#b578ff", 105, 0.55);
           w.events.push({ type: "toast", text: "EL CHAT POSEYÓ LOS MICRÓFONOS" });
+        } else if (w.level === 4 && pattern === 0) {
+          for (let i = 0; i < 2 + e.phase; i++)
+            shoot(w, {
+              x: e.x - 30,
+              y: 58 + i * 24,
+              vx: e.face * (330 + i * 22),
+              vy: (i - 1.5) * 18,
+              life: 3,
+              damage: 17,
+              enemy: true,
+              kind: "sling",
+              color: "#e8483f",
+              radius: 9,
+            });
+        } else if (w.level === 4 && pattern === 1) {
+          e.charge = w.t + (e.lives === 1 ? 1.05 : 0.72);
+          e.chargeDir = e.face;
+          w.events.push({ type: "toast", text: "¡CARGA DE TANQUETA!" });
+        } else if (
+          w.level === 4 &&
+          w.enemies.filter((enemy) => enemy.kind === "minion" && enemy.hp > 0).length < 6
+        ) {
+          for (let i = 0; i < 2; i++)
+            spawn(
+              w,
+              clamp(e.x + e.face * (150 + i * 100), STAGE_WIDTH * 2 + 60, WORLD_WIDTH - 180),
+              "minion",
+              e.fighter,
+              78,
+            );
+          w.events.push({ type: "toast", text: "¡LLEGARON MÁS PYRAGUES!" });
         }
         event(w, "boom");
       } else if (w.level === 1 && distance < 92 && p.y < 100) {
@@ -770,7 +873,16 @@ function enemyStep(w: World, e: Enemy, dt: number) {
         e.chargeDir = e.face;
         event(w, "slash");
       } else {
-        const minionKind = w.level === 2 ? "can" : w.level === 3 ? "word" : "holy";
+        const minionKind =
+          w.level === 2
+            ? "can"
+            : w.level === 3
+              ? "word"
+              : w.level === 4
+                ? e.pattern++ % 2
+                  ? "cigarette"
+                  : "cane"
+                : "holy";
         shoot(w, {
           x: e.x,
           y: 52,
@@ -783,6 +895,8 @@ function enemyStep(w: World, e: Enemy, dt: number) {
           color: boss(w.level).color,
           radius: 7,
         });
+        if (w.level === 4 && e.pattern % 3 === 0)
+          effect(w, e.x, 145, "text", "#fff3dc", 15, 0.9, "¡VOTÁ POR LOS COLOO!");
         event(w, w.level === 1 ? "slash" : "shot");
       }
     }
@@ -792,7 +906,7 @@ function enemyStep(w: World, e: Enemy, dt: number) {
     e.x += e.face * (75 + w.level * 8) * dt * slow;
   if (e.kind === "boss" && distance > 280 && distance < 900)
     e.x += e.face * (58 + e.phase * 8) * dt * slow;
-  e.x = clamp(e.x, w.stage * 1160 + 35, WORLD_WIDTH - 70);
+  e.x = clamp(e.x, w.stage * STAGE_WIDTH + 35, WORLD_WIDTH - 70);
   if (distance < 780 && w.t > e.ready)
     e.windup = w.t + (e.kind === "minion" ? 0.62 : 0.92 - e.phase * 0.08) / slow;
 }
@@ -831,8 +945,8 @@ export function step(w: World, input: Input, dt: number) {
   } else p.vx += (input.move * speed - p.vx) * Math.min(1, (p.y === 0 ? 20 : 10) * dt);
   p.x = clamp(
     p.x + p.vx * dt,
-    w.stage === 0 ? 35 : w.stage * 1160 - 220,
-    w.stage === 2 ? WORLD_WIDTH - 40 : (w.stage + 1) * 1160 - 35,
+    w.stage === 0 ? 35 : w.stage * STAGE_WIDTH - 220,
+    w.stage === 2 ? WORLD_WIDTH - 40 : (w.stage + 1) * STAGE_WIDTH - 35,
   );
   if (p.jumpBuffer > 0 && p.coyote > 0) {
     p.vy = 535;

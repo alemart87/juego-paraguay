@@ -15,6 +15,7 @@ import {
   Play,
   RotateCcw,
   Settings2,
+  ShoppingBag,
   Share2,
   Shield,
   Star,
@@ -42,12 +43,13 @@ import { challengeUrl, downloadCard, resultCard, type ShareResult } from "./shar
 import { Intro } from "./Intro";
 import { Leaderboard } from "./LeaderboardPanel";
 import { BrandLogo } from "./BrandLogo";
+import { ShopPanel } from "./ShopPanel";
 import { chatWithNpc, type AgentTurn } from "../game/agent";
 import { unlockAudio, sfx } from "../game/audio";
 import "./battle.css";
 
 type Screen = "home" | "fighters" | "episodes" | "brief" | "play" | "result";
-type Dialog = "settings" | "help" | "pause" | "talk" | "share" | "ranking" | null;
+type Dialog = "settings" | "help" | "pause" | "talk" | "share" | "ranking" | "shop" | null;
 const formatTime = (time: number) =>
   `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, "0")}`;
 const statStyle = (color: string) => ({ "--fighter-color": color }) as CSSProperties;
@@ -81,7 +83,7 @@ export function BattleGame() {
     const id = Number(params.get("battle"));
     const selected = params.get("fighter");
     const challengeSeed = Number(params.get("seed"));
-    if ([1, 2, 3].includes(id) && FIGHTERS.some((f) => f.id === selected)) {
+    if ([1, 2, 3, 4].includes(id) && FIGHTERS.some((f) => f.id === selected)) {
       setLevel(id as EpisodeId);
       setSave({ ...local, hero: selected as FighterId });
       setSeed(
@@ -231,6 +233,9 @@ export function BattleGame() {
             <i /> Hecho para el quilombo. <span>Paraguay.</span>
           </div>
           <nav>
+            <button className="header-shop" onClick={() => setDialog("shop")}>
+              <ShoppingBag size={17} /> Tienda
+            </button>
             <button className="header-ranking" onClick={() => setDialog("ranking")}>
               <Trophy size={17} /> Ranking
             </button>
@@ -274,8 +279,8 @@ export function BattleGame() {
                 <em>Pelealo.</em>
               </h1>
               <p>
-                De la Costanera al IPS. Elegí tu personaje, armá el quilombo y derrotá a tres jefes
-                imposibles.
+                De la Costanera a una Asunción infestada. Elegí tu personaje, armá el quilombo y
+                derrotá a cuatro jefes imposibles.
               </p>
               <button
                 className="primary play-cta"
@@ -291,7 +296,7 @@ export function BattleGame() {
                   <Gamepad2 size={15} /> Móvil & PC
                 </span>
                 <span>
-                  <Swords size={15} /> 3 episodios
+                  <Swords size={15} /> 4 episodios
                 </span>
                 <span>
                   <MessageCircle size={15} /> Conversaciones IA
@@ -301,7 +306,7 @@ export function BattleGame() {
             <div className="hero-footer">
               <span>UNA CAMPAÑA. DEMASIADO DRAMA.</span>
               <span>
-                01 — 03 <ArrowRight size={16} />
+                01 — 04 <ArrowRight size={16} />
               </span>
             </div>
           </section>
@@ -449,7 +454,7 @@ export function BattleGame() {
               <div>
                 <small>VAS CON</small>
                 <strong>{hero.name}</strong>
-                <span>{completed}/3 episodios completados</span>
+                <span>{completed}/4 episodios completados</span>
               </div>
             </div>
           </div>
@@ -606,12 +611,12 @@ export function BattleGame() {
               <button
                 className="primary"
                 onClick={() =>
-                  won && level < 3
+                  won && level < 4
                     ? (setLevel((level + 1) as EpisodeId), setScreen("brief"))
                     : play()
                 }
               >
-                {won && level < 3 ? "Siguiente episodio" : "Revancha"}
+                {won && level < 4 ? "Siguiente episodio" : "Revancha"}
                 <ArrowRight size={19} />
               </button>
               <button className="secondary" onClick={() => void openShare()}>
@@ -655,7 +660,7 @@ export function BattleGame() {
             />
           ) : (
             <section
-              className={`ib-modal ${dialog === "share" ? "share-modal" : ""} ${dialog === "ranking" ? "ranking-modal" : ""}`}
+              className={`ib-modal ${dialog === "share" ? "share-modal" : ""} ${dialog === "ranking" ? "ranking-modal" : ""} ${dialog === "shop" ? "shop-modal" : ""}`}
               role="dialog"
               aria-modal="true"
               aria-label={
@@ -667,7 +672,9 @@ export function BattleGame() {
                       ? "Compartir partida"
                       : dialog === "ranking"
                         ? "Ranking de jugadores"
-                        : "Pausa"
+                        : dialog === "shop"
+                          ? "Tienda PY-STAR"
+                          : "Pausa"
               }
             >
               <button
@@ -853,6 +860,7 @@ export function BattleGame() {
                   }}
                 />
               )}
+              {dialog === "shop" && <ShopPanel />}
             </section>
           )}
         </div>

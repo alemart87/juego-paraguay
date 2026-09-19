@@ -1,5 +1,5 @@
 import { episode, fighter } from "./content";
-import type { World, Enemy } from "./engine";
+import { CHECKPOINTS, STAGE_WIDTH, type World, type Enemy } from "./engine";
 
 export interface Art {
   background: HTMLImageElement;
@@ -7,6 +7,7 @@ export interface Art {
   poses: HTMLCanvasElement[][];
   bosses: HTMLImageElement;
   minions: HTMLImageElement;
+  asuncionCombatants: HTMLImageElement;
 }
 const images = new Map<string, Promise<HTMLImageElement>>();
 function load(src: string): Promise<HTMLImageElement> {
@@ -90,14 +91,15 @@ function poses() {
   return posesPromise;
 }
 export async function loadArt(level: World["level"]): Promise<Art> {
-  const [background, items, actionPoses, bosses, minions] = await Promise.all([
+  const [background, items, actionPoses, bosses, minions, asuncionCombatants] = await Promise.all([
     load(episode(level).bg),
     frames(),
     poses(),
     load("/battle/bosses.webp"),
     load("/battle/minions.webp"),
+    load("/battle/asuncion-combatants.webp"),
   ]);
-  return { background, frames: items, poses: actionPoses, bosses, minions };
+  return { background, frames: items, poses: actionPoses, bosses, minions, asuncionCombatants };
 }
 function rect(
   g: CanvasRenderingContext2D,
@@ -181,10 +183,11 @@ function drawMinion(
   g.translate(x, y + bob);
   g.scale(e.face, 1);
   const col = e.hit > t ? 3 : e.windup > 0 ? 2 : Math.floor(t * 7 + e.id) % 2;
-  const cw = art.minions.width / 4,
-    ch = art.minions.height / 3;
+  const sheet = level === 4 ? art.asuncionCombatants : art.minions;
+  const cw = sheet.width / 4,
+    ch = sheet.height / (level === 4 ? 2 : 3);
   if (e.hit > t) g.globalAlpha = 0.55;
-  g.drawImage(art.minions, col * cw, (level - 1) * ch, cw, ch, -66, -124, 132, 124);
+  g.drawImage(sheet, col * cw, level === 4 ? 0 : (level - 1) * ch, cw, ch, -66, -124, 132, 124);
   g.restore();
 }
 function drawBoss(
@@ -201,14 +204,15 @@ function drawBoss(
   ellipse(g, 0, 0, 105, 16, "#10121dcc");
   g.scale(e.face, 1);
   const col = e.hit > t ? 3 : e.windup > 0 ? (e.pattern % 3 === 2 ? 2 : 1) : 0;
-  const cw = art.bosses.width / 4,
-    ch = art.bosses.height / 3;
+  const sheet = level === 4 ? art.asuncionCombatants : art.bosses;
+  const cw = sheet.width / 4,
+    ch = sheet.height / (level === 4 ? 2 : 3);
   if (e.hit > t) g.globalAlpha = 0.65;
-  const bossScale = level === 1 ? 244 : 224;
+  const bossScale = level === 4 ? 276 : level === 1 ? 244 : 224;
   g.drawImage(
-    art.bosses,
+    sheet,
     col * cw,
-    (level - 1) * ch,
+    level === 4 ? ch : (level - 1) * ch,
     cw,
     ch,
     -bossScale / 2,
@@ -240,7 +244,8 @@ export function render(
     bw = Math.max(view + 180, (bh * bg.width) / bg.height);
   const bx = -(bw - view) / 2 - Math.sin((w.camera / 3600) * Math.PI) * 55;
   g.drawImage(bg, bx, 0, bw, bh);
-  const floorColor = w.level === 1 ? "#33202a" : w.level === 2 ? "#29241e" : "#26383a";
+  const floorColor =
+    w.level === 1 ? "#33202a" : w.level === 2 ? "#29241e" : w.level === 3 ? "#26383a" : "#241d2d";
   rect(g, 0, bh - 1, view, Math.max(1, logicalHeight - bh + 1), floorColor);
   const shade = g.createLinearGradient(0, 0, 0, logicalHeight);
   shade.addColorStop(0, "#11101880");
@@ -262,13 +267,13 @@ export function render(
   }
   // Checkpoint installations are real interactive objects, not background decoration.
   if (w.stage < 2) {
-    const x = sx(w.stage === 0 ? 1010 : 2180);
+    const x = sx(w.stage === 0 ? CHECKPOINTS[0] : CHECKPOINTS[1]);
     const clear = w.enemies.every((e) => e.hp <= 0);
     rect(g, x - 25, floor - 65, 50, 61, "#242433", 5);
     rect(g, x - 21, floor - 60, 42, 27, clear ? "#f6e75a" : "#705965", 3);
     label(
       g,
-      w.level === 1 ? "LIVE" : w.level === 2 ? "USB" : "IPS",
+      w.level === 1 ? "LIVE" : w.level === 2 ? "USB" : w.level === 3 ? "IPS" : "PALACIO",
       x,
       floor - 42,
       17,
@@ -291,7 +296,7 @@ export function render(
       g.lineTo(x + 7, floor - 150);
       g.stroke();
     }
-    const gate = sx((w.stage + 1) * 1160 - 25);
+    const gate = sx((w.stage + 1) * STAGE_WIDTH - 25);
     for (let i = 0; i < 3; i++) rect(g, gate, floor - 155 + i * 48, 7, 31, "#ff725faa", 2);
   }
   for (const drop of w.drops) {
@@ -431,6 +436,32 @@ export function render(
       ellipse(g, 0, 0, s.radius + 6, s.radius + 6, "#fff3a8");
       rect(g, -2, -11, 4, 22, "#b98320", 2);
       rect(g, -8, -4, 16, 4, "#b98320", 2);
+      g.restore();
+    } else if (s.kind === "cane") {
+      g.save();
+      g.translate(x, y);
+      g.rotate(s.age * 10 * Math.sign(s.vx));
+      rect(g, -6, -16, 12, 32, "#6c321f", 4);
+      rect(g, -5, -13, 10, 19, "#d28a3b", 3);
+      rect(g, -4, -19, 8, 5, "#e8d1a8", 2);
+      g.restore();
+    } else if (s.kind === "cigarette") {
+      g.save();
+      g.translate(x, y);
+      g.rotate(Math.atan2(s.vy, s.vx));
+      rect(g, -13, -2, 22, 4, "#fff3dc", 2);
+      rect(g, 8, -2, 5, 4, "#ff725f", 2);
+      g.restore();
+    } else if (s.kind === "sling") {
+      g.save();
+      g.translate(x, y);
+      g.rotate(s.age * 16);
+      ellipse(g, 0, 0, 9, 9, "#56515b");
+      g.strokeStyle = "#f6e75a";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(0, 0, 14, 0, Math.PI * 1.4);
+      g.stroke();
       g.restore();
     } else if (s.kind === "paper" || s.kind === "usb") {
       g.save();

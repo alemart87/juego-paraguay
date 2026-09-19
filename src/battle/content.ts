@@ -1,5 +1,5 @@
 export type FighterId = "masivo" | "onichan" | "anatomic" | "comadre" | "papu" | "secre";
-export type EpisodeId = 1 | 2 | 3;
+export type EpisodeId = 1 | 2 | 3 | 4;
 export type WeaponId = "fist" | "knife" | "bat" | "pistol" | "ak" | "shotgun" | "smg" | "grenade";
 export type Difficulty = "tranqui" | "picante";
 export interface Boss {
@@ -30,6 +30,13 @@ export const BOSSES: Record<EpisodeId, Boss> = {
     minion: "Micrófono poseído",
     color: "#b578ff",
     portrait: "/media/characters/boss-lulax.webp",
+  },
+  4: {
+    name: "EL DICTADOR",
+    title: "El patrón de la tanqueta",
+    minion: "Pyrague del barrio",
+    color: "#e8483f",
+    portrait: "/battle/dictador-portrait.webp",
   },
 };
 export const boss = (id: EpisodeId) => BOSSES[id];
@@ -227,6 +234,30 @@ export const EPISODES: Episode[] = [
       "Por una vez, vamos a estar del mismo lado. Tenés un escudo.",
       "Autorizado. Que lo atienda tu poder especial.",
       "Esto sí hay: descanso y tereré. Seguí cuando estés listo.",
+    ],
+  },
+  {
+    id: 4,
+    location: "Asunción infestada",
+    title: "La noche de los pyragues",
+    subtitle: "La ciudad escucha. La ciudad también acusa.",
+    bg: "/battle/asuncion-infestada.webp",
+    color: "#e8483f",
+    intro:
+      "Una tormenta dejó el centro a oscuras y los pyragues ocuparon cada bache. Lanzan caña, cigarrillos y consignas desde las esquinas. Cruzá la avenida y llegá al Palacio antes que arranque la tanqueta.",
+    twist:
+      "La tanqueta se apaga, la hondita cae al asfalto y Asunción recupera sus luces. El feed proclama ganador a todo el mundo al mismo tiempo.",
+    rival: "comadre",
+    alternate: "masivo",
+    npc: "secre",
+    objectives: ["Despejá la avenida de pyragues", "Abrí el acceso al Palacio"],
+    taunt:
+      "El archivo dice que esta calle estaba reparada. La calle dice otra cosa. Llegá al Palacio y terminemos el trámite.",
+    choices: ["Sellá mi inmunidad", "Cargá el súper", "Dame tereré medicinal"],
+    replies: [
+      "Inmunidad provisoria aprobada. Ocho segundos, ni uno más.",
+      "Sello rojo. Súper completo. Que atienda el siguiente.",
+      "Receta paraguaya: tereré, descanso y seguir peleando.",
     ],
   },
 ];

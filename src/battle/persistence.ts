@@ -36,7 +36,7 @@ export function loadSave(): Save {
       if (typeof s[k] === "boolean") d[k] = s[k];
     if (s.quality === "low") d.quality = "low";
     if (s.difficulty === "picante") d.difficulty = "picante";
-    for (const id of [1, 2, 3] as EpisodeId[]) {
+    for (const id of [1, 2, 3, 4] as EpisodeId[]) {
       const r = s.records?.[id];
       if (
         r &&

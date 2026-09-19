@@ -1,6 +1,6 @@
 # Influencers Battle — Paraguay
 
-Juego de acción satírica para móvil ambientado en Paraguay. Seis personajes jugables atraviesan tres episodios, conversan con NPC mediante Venice AI y se enfrentan a Pastor Luison, Lata Parara y LULAX con sus respectivos secuaces.
+Juego de acción satírica para móvil ambientado en Paraguay. Seis personajes jugables atraviesan cuatro episodios, conversan con NPC mediante Venice AI y terminan en una Asunción infestada frente a El Dictador y su tanqueta.
 
 ![Portada de Influencers Battle](public/battle/cover-v2.webp)
 
@@ -8,9 +8,11 @@ Juego de acción satírica para móvil ambientado en Paraguay. Seis personajes j
 
 ## Qué incluye
 
-- Campaña completa de tres episodios: Costanera de Asunción, Mercado 4 e IPS.
+- Campaña de cuatro episodios: Costanera de Asunción, Mercado 4, IPS y Asunción infestada.
+- Niveles ampliados cerca de 30%, con más recorrido, oleadas y acción.
 - Seis combatientes con estadísticas, arma y poder especial propios.
-- Tres jefes, secuaces y lenguajes de ataque diferentes.
+- Cuatro jefes, secuaces y lenguajes de ataque; El Dictador tiene dos vidas y hondita paraguaya.
+- Tienda móvil preparada para checkouts Whop de pago único, sin precios ni cobros hasta configurarlos.
 - Controles multitáctiles, teclado, pausa y modo para zurdos.
 - Intro cinematográfica de tres segundos con flashes de personajes y jefes.
 - Identidad de estudio **PY-STAR GAMES** animada en intro, finales, ranking y tarjetas sociales.
@@ -49,8 +51,18 @@ Para habilitar las conversaciones generativas, completá `VENICE_API_KEY` en `.e
 | `PERSISTENT_DIR`     | Directorio persistente de personajes; en Render es `/persistent`.             |
 | `PUBLIC_SITE_URL`    | URL pública del juego.                                                        |
 | `VITE_AUTH_ENABLED`  | Debe permanecer `false`; el ranking usa registro opcional propio.             |
+| `WHOP_CHECKOUT_*`    | Cinco enlaces HTTPS de checkout para los artículos de la tienda.              |
 
 Nunca subas `.env`; el repositorio solo contiene [.env.example](.env.example).
+
+### Activar la tienda Whop
+
+1. En Whop creá cinco productos o planes de pago único: Armamento especial, Tereré medicinal, Ayuda del Pombero, Energía mística y Poder político.
+2. Definí vos los precios y condiciones en Whop; el proyecto no inventa importes.
+3. Copiá cada `purchase_url` en la variable `WHOP_CHECKOUT_*` correspondiente en Render.
+4. Volvé a desplegar. La tienda valida HTTPS y abre el checkout oficial en una pestaña segura.
+
+La UI permanece visible en modo preparación, pero no inicia compras mientras las variables estén vacías. Antes de habilitar ventajas persistentes, conectá la confirmación de pago por webhook y asociá la compra con la cuenta del jugador; la versión actual abre el checkout y no concede artículos sin verificación.
 
 ## Docker local
 
@@ -90,7 +102,7 @@ Las pruebas cubren física, salto, dash, armas, poderes, campaña, jefes, determ
 ```text
 src/battle/                    juego, UI, ranking y tarjeta social
 src/game/                      audio y conversación con Venice AI
-migrations/0001_leaderboard.sql
+migrations/                     ranking y ampliación al episodio 4
 server/routes/health.ts        health check de Render
 server/routes/media/           imágenes desde /persistent
 public/battle/                 recursos fuente empaquetados

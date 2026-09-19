@@ -12,7 +12,7 @@ import {
   type World,
 } from "./engine";
 import { loadArt, render } from "./render";
-import { fighter, WEAPON_LABEL } from "./content";
+import { episode, fighter, WEAPON_LABEL } from "./content";
 import type { Save } from "./persistence";
 
 type ControlsProbe = {
@@ -249,10 +249,7 @@ export function Scene({
   const f = fighter(world.hero);
   return (
     <div className={`battle-stage ${settings.leftHanded ? "left-handed" : ""}`} ref={stage}>
-      <canvas
-        ref={canvas}
-        aria-label={`Batalla en ${world.level === 1 ? "la Costanera" : world.level === 2 ? "Mercado 4" : "IPS"}`}
-      />
+      <canvas ref={canvas} aria-label={`Batalla en ${episode(world.level).location}`} />
       {!ready && (
         <div className="stage-loading">
           <span className="loading-mark">IB</span>
@@ -295,7 +292,7 @@ export function Scene({
         </button>
       </div>
       <div className="mission-hud">
-        <span>{String(world.level).padStart(2, "0")} / 03</span>
+        <span>{String(world.level).padStart(2, "0")} / 04</span>
         <p>{hud.objective}</p>
         <div className="mission-track">
           <i style={{ width: `${hud.progress * 100}%` }} />
@@ -305,7 +302,10 @@ export function Scene({
         <div className="boss-hud">
           <div>
             <strong>{hud.boss.name}</strong>
-            <span>FASE {hud.boss.phase}</span>
+            <span>
+              FASE {hud.boss.phase}
+              {hud.boss.maxLives > 1 ? ` · VIDA ${hud.boss.lives}/${hud.boss.maxLives}` : ""}
+            </span>
           </div>
           <div className="boss-track">
             <i style={{ width: `${(hud.boss.hp / hud.boss.maxHp) * 100}%` }} />
