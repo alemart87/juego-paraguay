@@ -45,8 +45,17 @@ let volume = 0.8;
 let warmed = false;
 const lastPlay: Partial<Record<SfxName, number>> = {};
 
+function resetClosedContext() {
+  if (ctx?.state !== "closed") return;
+  ctx = null;
+  master = null;
+  noiseBuf = null;
+  warmed = false;
+}
+
 function ensure() {
   if (typeof window === "undefined") return null;
+  resetClosedContext();
   if (!ctx) {
     const AC =
       window.AudioContext ??
@@ -77,18 +86,29 @@ function ensure() {
 export function unlockAudio(): Promise<void> {
   const c = ensure();
   if (!c) return Promise.resolve();
-  // iOS Safari needs a source node to start during the trusted gesture. Calling
-  // resume() alone can resolve while the output route remains muted.
-  if (!warmed) {
-    const silent = c.createBuffer(1, 1, c.sampleRate);
-    const source = c.createBufferSource();
-    source.buffer = silent;
-    source.connect(c.destination);
-    source.start(0);
+  // iOS Safari needs a real source node to start during the trusted gesture.
+  // A one-sample silent buffer is sometimes optimised away, so use a very short
+  // inaudible oscillator and keep it connected through the game's audio graph.
+  const warm = () => {
+    if (warmed || !master) return;
+    const oscillator = c.createOscillator();
+    const gain = c.createGain();
+    gain.gain.value = 0.00001;
+    oscillator.frequency.value = 220;
+    oscillator.connect(gain).connect(master);
+    oscillator.start(c.currentTime);
+    oscillator.stop(c.currentTime + 0.035);
     warmed = true;
-  }
+  };
+  warm();
   if (c.state === "running") return Promise.resolve();
-  return c.resume().then(() => undefined).catch(() => undefined);
+  // resume() is intentionally invoked synchronously from the touch handler.
+  return c
+    .resume()
+    .then(() => {
+      warm();
+    })
+    .catch(() => undefined);
 }
 
 /**
@@ -104,13 +124,19 @@ export function installMobileAudioUnlock(): () => void {
   const visible = () => {
     if (document.visibilityState === "visible") wake();
   };
+  document.addEventListener("touchstart", wake, { capture: true, passive: true });
   document.addEventListener("pointerdown", wake, { capture: true, passive: true });
   document.addEventListener("touchend", wake, { capture: true, passive: true });
+  document.addEventListener("click", wake, { capture: true, passive: true });
+  document.addEventListener("keydown", wake, { capture: true });
   document.addEventListener("visibilitychange", visible);
   window.addEventListener("pageshow", wake);
   return () => {
+    document.removeEventListener("touchstart", wake, true);
     document.removeEventListener("pointerdown", wake, true);
     document.removeEventListener("touchend", wake, true);
+    document.removeEventListener("click", wake, true);
+    document.removeEventListener("keydown", wake, true);
     document.removeEventListener("visibilitychange", visible);
     window.removeEventListener("pageshow", wake);
   };
@@ -327,8 +353,7 @@ export function sfx(name: SfxName) {
   // The first tap on iOS/Android often creates a suspended context. Resume it
   // from that gesture and keep the sound that triggered the unlock instead of
   // silently dropping the first shot or menu confirmation.
-  void c
-    .resume()
+  void unlockAudio()
     .then(() => playSfx(name))
     .catch(() => undefined);
 }

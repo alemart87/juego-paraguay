@@ -303,19 +303,40 @@ export function BattleGame() {
             <i /> Hecho para el quilombo. <span>Paraguay.</span>
           </div>
           <nav>
-            <button className="header-shop" onClick={() => setDialog("shop")}>
+            <button
+              className="header-shop"
+              onClick={() => {
+                sfx("ui");
+                setDialog("shop");
+              }}
+            >
               <ShoppingBag size={17} /> Tienda
             </button>
-            <button className="header-ranking" onClick={() => setDialog("ranking")}>
+            <button
+              className="header-ranking"
+              onClick={() => {
+                sfx("ui");
+                setDialog("ranking");
+              }}
+            >
               <Trophy size={17} /> Ranking
             </button>
-            <button className="header-help" onClick={() => setDialog("help")}>
+            <button
+              className="header-help"
+              onClick={() => {
+                sfx("ui");
+                setDialog("help");
+              }}
+            >
               Cómo jugar
             </button>
             <button
               className="icon-button"
               aria-label="Ajustes"
-              onClick={() => setDialog("settings")}
+              onClick={() => {
+                sfx("ui");
+                setDialog("settings");
+              }}
             >
               <Settings2 size={20} />
             </button>
@@ -355,7 +376,7 @@ export function BattleGame() {
               <button
                 className="primary play-cta"
                 onClick={() => {
-                  unlockAudio();
+                  sfx("ui");
                   setScreen("fighters");
                 }}
               >
@@ -391,6 +412,7 @@ export function BattleGame() {
                   key={f.id}
                   className="roster-mini"
                   onClick={() => {
+                    sfx("ui");
                     updateSave({ ...save, hero: f.id });
                     setScreen("fighters");
                   }}
@@ -760,8 +782,14 @@ export function BattleGame() {
                           : "Pausa"
               }
             >
-              <button className="modal-close icon-button" aria-label="Cerrar" onClick={closeDialog}>
+              <button
+                type="button"
+                className="modal-close icon-button"
+                aria-label="Cerrar"
+                onClick={closeDialog}
+              >
                 <X size={21} />
+                <span className="modal-close-label">Cerrar</span>
               </button>
               {dialog === "pause" && (
                 <>

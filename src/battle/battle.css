@@ -1325,6 +1325,12 @@
   top: 16px;
   width: 33px;
   height: 33px;
+  z-index: 20;
+  touch-action: manipulation;
+  pointer-events: auto;
+}
+.modal-close-label {
+  display: none;
 }
 .ib-modal > .primary,
 .ib-modal > .secondary {
@@ -3781,8 +3787,30 @@
     width: 100%;
     max-width: 100%;
     max-height: calc(100dvh - 16px);
-    padding: 25px 12px 18px;
+    padding: 12px 12px 18px;
     overflow-x: hidden;
+  }
+  .ranking-modal > .modal-close {
+    position: sticky;
+    top: 0;
+    right: auto;
+    display: flex;
+    width: auto;
+    min-width: 104px;
+    height: 46px;
+    margin: 0 0 10px auto;
+    padding: 0 14px;
+    gap: 8px;
+    border: 1px solid #f6e75a66;
+    background: #211e29;
+    color: #fffbe4;
+    box-shadow: 0 8px 24px #09071073;
+  }
+  .ranking-modal > .modal-close .modal-close-label {
+    display: inline;
+    font: 850 12px/1 var(--font-sans);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
   .ranking-layout {
     grid-template-columns: 1fr;
