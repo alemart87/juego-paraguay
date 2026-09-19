@@ -36,7 +36,7 @@ export function ShopPanel() {
         {SHOP_ITEMS.map((item) => (
           <article key={item.sku} className="shop-item">
             <div className="shop-item-top">
-              <b aria-hidden="true">{item.icon}</b>
+              <img src={item.image} alt="" loading="lazy" />
               <span>{item.badge}</span>
             </div>
             <div className="shop-item-copy">
@@ -63,7 +63,7 @@ export function ShopPanel() {
         </p>
       )}
       <small>
-        El cobro se confirma en Whop. Los botones se habilitan al cargar los ocho enlaces en Render.
+        El cobro se confirma en Whop. El servidor crea y reutiliza cada checkout mediante su API.
       </small>
     </div>
   );

@@ -24,22 +24,8 @@ services:
       - key: VITE_AUTH_ENABLED
         value: "false"
       - key: PUBLIC_SITE_URL
-        value: https://juego-paraguay.onrender.com
-      - key: WHOP_CHECKOUT_ARSENAL
-        sync: false
-      - key: WHOP_CHECKOUT_TERERE
-        sync: false
-      - key: WHOP_CHECKOUT_POMBERO
-        sync: false
-      - key: WHOP_CHECKOUT_ENERGIA
-        sync: false
-      - key: WHOP_CHECKOUT_INMUNIDAD
-        sync: false
-      - key: WHOP_CHECKOUT_ARMADURA
-        sync: false
-      - key: WHOP_CHECKOUT_LUISON
-        sync: false
-      - key: WHOP_CHECKOUT_AVANCE
+        value: https://www.influencerspy.pro
+      - key: WHOP_API_KEY
         sync: false
 
 databases:

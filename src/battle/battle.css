@@ -3174,14 +3174,15 @@
   align-items: flex-start;
   justify-content: space-between;
 }
-.shop-item-top > b {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
+.shop-item-top > img {
+  width: 86px;
+  height: 86px;
+  object-fit: cover;
   border: 1px solid #f6e75a55;
   background: #f6e75a0d;
-  font-size: 27px;
+  box-shadow:
+    5px 5px 0 #ed2b8f,
+    0 10px 26px #0009;
   transform: rotate(-3deg);
 }
 .shop-item-top > span {

@@ -6,6 +6,7 @@ export const SHOP_ITEMS = [
     sku: "arsenal",
     name: "Arsenal guaraní",
     icon: "💥",
+    image: "/battle/shop/arsenal.webp",
     description: "Bazuca, granadas y hondita paraguaya para dominar una partida.",
     price: 3.99,
     badge: "MÁS VENDIDO",
@@ -15,6 +16,7 @@ export const SHOP_ITEMS = [
     sku: "terere",
     name: "Tereré medicinal",
     icon: "🧉",
+    image: "/battle/shop/terere.webp",
     description: "Recuperación total y una reserva extra de vida.",
     price: 3.99,
     badge: "SALVAVIDAS",
@@ -24,6 +26,7 @@ export const SHOP_ITEMS = [
     sku: "pombero",
     name: "Ayuda del Pombero",
     icon: "🌿",
+    image: "/battle/shop/pombero.webp",
     description: "Un guardián espiritual bloquea el próximo golpe decisivo.",
     price: 4.99,
     badge: "MÍSTICO",
@@ -33,6 +36,7 @@ export const SHOP_ITEMS = [
     sku: "energia",
     name: "Energía desatada",
     icon: "⚡",
+    image: "/battle/shop/energia.webp",
     description: "Más energía, súper cargado y daño aumentado durante la partida.",
     price: 3.99,
     badge: "RÁPIDO",
@@ -42,6 +46,7 @@ export const SHOP_ITEMS = [
     sku: "inmunidad",
     name: "Poder político",
     icon: "🛡️",
+    image: "/battle/shop/inmunidad.webp",
     description: "Inmunidad temporal para atravesar el caos sin recibir daño.",
     price: 7.99,
     badge: "LEGENDARIO",
@@ -51,6 +56,7 @@ export const SHOP_ITEMS = [
     sku: "armadura",
     name: "Armadura de acero",
     icon: "🦾",
+    image: "/battle/shop/armadura.webp",
     description: "Blindaje pesado: escudo inicial y reducción de daño en combate.",
     price: 5.99,
     badge: "TANQUE",
@@ -60,6 +66,7 @@ export const SHOP_ITEMS = [
     sku: "luison",
     name: "Poder del Luizón",
     icon: "🐺",
+    image: "/battle/shop/luison.webp",
     description: "Invocá un Luizón aliado que persigue enemigos y protege tu avance.",
     price: 6.99,
     badge: "PROHIBIDO",
@@ -69,6 +76,7 @@ export const SHOP_ITEMS = [
     sku: "avance",
     name: "Avance relámpago",
     icon: "🚀",
+    image: "/battle/shop/avance.webp",
     description: "Empezá con combo, munición y ventaja para avanzar más rápido.",
     price: 4.99,
     badge: "BOOST",
@@ -104,16 +112,26 @@ export const getWhopCheckout = createServerFn({ method: "POST" })
       avance: process.env.WHOP_CHECKOUT_AVANCE,
     };
     const url = env[data.sku]?.trim();
-    if (!url)
+    if (url) {
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== "https:") throw new Error("protocol");
+        return { ok: true as const, url: parsed.toString() };
+      } catch {
+        return { ok: false as const, message: "El enlace de Whop configurado no es válido." };
+      }
+    }
+    try {
+      const item = SHOP_ITEMS.find((entry) => entry.sku === data.sku);
+      if (!item) throw new Error("unknown sku");
+      const { getOrCreateWhopCheckout } = await import("./whop.server");
+      const checkout = await getOrCreateWhopCheckout(item);
+      return { ok: true as const, url: checkout.url };
+    } catch (error) {
+      console.error("[whop] checkout unavailable", error);
       return {
         ok: false as const,
-        message: "Este artículo se habilitará cuando PY-STAR conecte su checkout de Whop.",
+        message: "Whop todavía no está conectado. Configurá WHOP_API_KEY en Render.",
       };
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "https:") throw new Error("protocol");
-      return { ok: true as const, url: parsed.toString() };
-    } catch {
-      return { ok: false as const, message: "El enlace de Whop configurado no es válido." };
     }
   });

@@ -1,31 +1,31 @@
 # Configuración de Whop — PY-STAR GAMES
 
-La tienda abre enlaces oficiales de Whop desde el servidor. No necesita una API key para cobrar: necesita un `purchase_url` válido por artículo. Todos los planes son de pago único.
+La tienda usa el SDK oficial `@whop/sdk` exclusivamente en el servidor. Al primer clic de cada artículo crea una configuración de checkout reutilizable con un plan de pago único inline, recibe el `purchase_url` y lo guarda en `/persistent/whop-checkouts.json`. No hace falta crear ocho productos manualmente.
 
 ## Catálogo definitivo
 
-| Producto          |   Precio | Metadata `game_sku` | Variable en Render        |
-| ----------------- | -------: | ------------------- | ------------------------- |
-| Arsenal guaraní   | USD 3.99 | `arsenal`           | `WHOP_CHECKOUT_ARSENAL`   |
-| Tereré medicinal  | USD 3.99 | `terere`            | `WHOP_CHECKOUT_TERERE`    |
-| Ayuda del Pombero | USD 4.99 | `pombero`           | `WHOP_CHECKOUT_POMBERO`   |
-| Energía desatada  | USD 3.99 | `energia`           | `WHOP_CHECKOUT_ENERGIA`   |
-| Poder político    | USD 7.99 | `inmunidad`         | `WHOP_CHECKOUT_INMUNIDAD` |
-| Armadura de acero | USD 5.99 | `armadura`          | `WHOP_CHECKOUT_ARMADURA`  |
-| Poder del Luizón  | USD 6.99 | `luison`            | `WHOP_CHECKOUT_LUISON`    |
-| Avance relámpago  | USD 4.99 | `avance`            | `WHOP_CHECKOUT_AVANCE`    |
+| Producto          |   Precio | Metadata `game_sku` |
+| ----------------- | -------: | ------------------- |
+| Arsenal guaraní   | USD 3.99 | `arsenal`           |
+| Tereré medicinal  | USD 3.99 | `terere`            |
+| Ayuda del Pombero | USD 4.99 | `pombero`           |
+| Energía desatada  | USD 3.99 | `energia`           |
+| Poder político    | USD 7.99 | `inmunidad`         |
+| Armadura de acero | USD 5.99 | `armadura`          |
+| Poder del Luizón  | USD 6.99 | `luison`            |
+| Avance relámpago  | USD 4.99 | `avance`            |
 
 ## Puesta en marcha
 
-1. Entrá a tu negocio en Whop y completá la verificación y el método de cobro directamente en Whop.
-2. Creá un producto por fila. En cada producto creá un plan con `One-time`, moneda `USD`, método `Buy now`, stock ilimitado y el precio indicado.
-3. Si el editor permite metadata, agregá `game_sku` con el valor de la tabla. La metadata viaja en eventos de pago y permite acreditar el artículo correcto después.
-4. Abrí **Dashboard → Checkout links → Create checkout link**, elegí el producto y creá el enlace. En la configuración del enlace podés dejar desactivado **Show on store page** si querés venderlo solamente desde el juego.
-5. Copiá el `purchase_url` completo de cada plan. Tiene un formato similar a `https://whop.com/tu-producto/checkout/plan_...`; no inventes ni edites esa URL.
-6. En Render abrí `influencers-battle-paraguay` → **Environment**. Pegá cada URL en la variable correspondiente y guardá. Render iniciará un despliegue nuevo.
-7. Abrí `https://juego-paraguay.onrender.com`, entrá a **Tienda** y probá los ocho botones. Cada uno debe abrir el producto correcto y mostrar el mismo precio que el juego.
+1. Entrá a tu negocio en Whop y completá la verificación y el método de cobro directamente allí.
+2. Abrí **Developer → Account API Keys → Create**. Para el primer setup elegí el rol **Admin**, como recomienda el quickstart para empezar; después podés sustituirlo por una política más limitada que permita crear checkout configurations y planes, y leer los recursos resultantes.
+3. Copiá la clave una sola vez. En Render abrí `influencers-battle-paraguay` → **Environment**, agregá `WHOP_API_KEY` y guardá. Nunca uses esta clave en una variable `VITE_*`.
+4. Confirmá `PUBLIC_SITE_URL=https://www.influencerspy.pro` y `PERSISTENT_DIR=/persistent`.
+5. Abrí `https://www.influencerspy.pro`, entrá a **Tienda** y tocá cada producto. El primer clic puede tardar un instante mientras el servidor crea el checkout; después reutiliza la URL guardada.
 
-Guía oficial: [crear checkout links](https://docs.whop.com/payments/create-checkout-link). La API también devuelve el campo `purchase_url` para cada plan: [planes de Whop](https://docs.whop.com/api-reference/plans/retrieve-plan).
+La guía oficial confirma que una sola llamada a `checkoutConfigurations.create` puede recibir un plan inline `one_time` y devolver un checkout en `purchase_url`: [Quickstart de Whop](https://docs.whop.com/developer/quickstart). El SDK también aplica la versión fechada de la API automáticamente.
+
+Los enlaces `WHOP_CHECKOUT_*` permanecen como overrides opcionales para migrar checkouts ya existentes. Si están vacíos, se usa el SDK.
 
 ## Acreditación automática dentro del juego
 

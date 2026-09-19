@@ -20,6 +20,7 @@ Juego de acción satírica para móvil ambientado en Paraguay. Seis personajes j
 - Tarjeta vertical de resultado para descargar o compartir desde el teléfono.
 - Desafíos reproducibles por URL con episodio, personaje y semilla.
 - Conversaciones dinámicas con Venice AI y respuestas locales de respaldo.
+- SEO técnico para `www.influencerspy.pro`: canonical, Open Graph 1200×630, Twitter Card, JSON-LD `VideoGame`, sitemap y robots.
 - PWA instalable, Docker multi-stage, `render.yaml`, health check y disco `/persistent`.
 
 ## Stack
@@ -49,21 +50,21 @@ Para habilitar las conversaciones generativas, completá `VENICE_API_KEY` en `.e
 | `VENICE_API_KEY`     | Clave privada de Venice AI.                                                   |
 | `VENICE_MODEL`       | Modelo de conversación; el valor de ejemplo conserva la configuración actual. |
 | `PERSISTENT_DIR`     | Directorio persistente de personajes; en Render es `/persistent`.             |
-| `PUBLIC_SITE_URL`    | URL pública del juego.                                                        |
+| `PUBLIC_SITE_URL`    | URL pública: `https://www.influencerspy.pro`.                                 |
 | `VITE_AUTH_ENABLED`  | Debe permanecer `false`; el ranking usa registro opcional propio.             |
-| `WHOP_CHECKOUT_*`    | Ocho enlaces HTTPS `purchase_url` para los artículos de la tienda.            |
+| `WHOP_API_KEY`       | Account API key privada para crear checkouts de Whop desde el servidor.       |
+| `WHOP_CHECKOUT_*`    | Overrides opcionales para enlaces existentes; ya no son obligatorios.         |
 
 Nunca subas `.env`; el repositorio solo contiene [.env.example](.env.example).
 
 ### Activar la tienda Whop
 
-1. En Whop creá ocho productos con planes **One-time**, moneda **USD**, opción **Buy now** y stock ilimitado.
-2. Usá exactamente los nombres, precios y SKU de [CONFIGURACION-WHOP.md](docs/influencers-battle/CONFIGURACION-WHOP.md).
-3. En **Dashboard → Checkout links**, creá un enlace por producto y copiá su `purchase_url`.
-4. En Render, abrí el Web Service → **Environment**, cargá cada URL en su variable `WHOP_CHECKOUT_*` y guardá los cambios.
-5. Esperá el redeploy y probá cada botón de compra desde la tienda del juego.
+1. En Whop creá una **Account API key** para el negocio y autorizá creación de checkout configurations y planes.
+2. En Render → Web Service → **Environment**, cargá la clave como `WHOP_API_KEY` y guardá.
+3. Entrá a la tienda. Al primer clic de cada SKU, el servidor usa `@whop/sdk` para crear un plan `one_time` inline y obtiene su `purchase_url`.
+4. El resultado se guarda en `/persistent/whop-checkouts.json`; los siguientes clics reutilizan el mismo checkout.
 
-La tienda bloquea únicamente el artículo cuyo enlace falte. El checkout ya funciona al cargar las URLs. Para acreditar automáticamente poderes dentro de una cuenta se necesita la segunda fase documentada: webhook firmado, identidad del jugador e inventario persistente.
+La clave nunca llega al navegador. Los `WHOP_CHECKOUT_*` siguen aceptándose como overrides, pero no hace falta crear ocho productos manualmente. Para acreditar automáticamente poderes dentro de una cuenta se necesita la segunda fase documentada: webhook firmado, identidad del jugador e inventario persistente.
 
 ## Docker local
 
@@ -79,7 +80,7 @@ El archivo [render.yaml](render.yaml) crea un Web Service Docker, una base Postg
 
 1. Elegí **New → Blueprint** y conectá este repositorio.
 2. Confirmá el plan del servicio y de PostgreSQL.
-3. Cargá `VENICE_API_KEY` cuando Render lo solicite.
+3. Cargá `VENICE_API_KEY` y `WHOP_API_KEY` cuando Render lo solicite.
 4. Desplegá y comprobá `https://TU-SERVICIO.onrender.com/health`.
 
 Render monta el disco en `/persistent`; el contenedor solo persiste archivos ubicados debajo de ese punto. Este proyecto sirve los personajes desde `/media/characters/:archivo`, primero buscando `/persistent/characters` y usando el recurso empaquetado como respaldo. Un servicio con disco persistente queda limitado a una instancia y pierde el despliegue sin interrupción, según la documentación oficial de [Persistent Disks](https://render.com/docs/disks). La definición del Blueprint sigue la [Blueprint YAML Reference](https://render.com/docs/blueprint-spec), usa la URL interna de [Render Postgres](https://render.com/docs/postgresql-creating-connecting) y ejecuta el contenedor según la guía de [Docker on Render](https://render.com/docs/docker).
