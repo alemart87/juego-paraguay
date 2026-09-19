@@ -2,11 +2,14 @@ import { create } from "zustand";
 import {
   HAZARDS,
   TALKS,
+  WEAPONS,
   chapterOf,
   checksFor,
   objective,
   zoneAt,
+  type GunId,
   type HeroId,
+  type Line,
   type TalkKey,
   type WeaponId,
 } from "./content";
@@ -30,7 +33,9 @@ import {
   createWorld,
   interactTarget,
   isAlive,
+  markMet,
   respawn,
+  scriptFor,
   type World,
   type WorldEvent,
 } from "./world";
@@ -63,6 +68,10 @@ export type Hud = {
   width: number;
   enemies: { x: number; chasing: boolean }[];
   markers: number[];
+  grenades: number;
+  weapons: WeaponId[];
+  dashReady: boolean;
+  boss: { name: string; hp: number; maxHp: number } | null;
 };
 
 export type Result = {
@@ -87,8 +96,10 @@ type State = {
   chapter: 1 | 2 | 3;
   clip: Clip | null;
   talkKey: TalkKey | null;
+  script: Line[];
   line: number;
   toast: string;
+  banner: { text: string; key: number; kind: "zone" | "boss" } | null;
   hud: Hud;
   settings: Settings;
   save: Save;
@@ -127,7 +138,21 @@ export function getWorld() {
 }
 
 let toastTimer = 0;
+let bannerTimer = 0;
+let bannerSeq = 0;
 let loadToken = 0;
+
+function pushBanner(text: string, kind: "zone" | "boss") {
+  useGame.setState({ banner: { text, key: ++bannerSeq, kind } });
+  if (bannerTimer) window.clearTimeout(bannerTimer);
+  bannerTimer = window.setTimeout(
+    () => {
+      useGame.setState({ banner: null });
+      bannerTimer = 0;
+    },
+    kind === "boss" ? 2600 : 1800,
+  );
+}
 
 const emptyHud: Hud = {
   hp: 100,
@@ -152,6 +177,10 @@ const emptyHud: Hud = {
   width: 600,
   enemies: [],
   markers: [],
+  grenades: 0,
+  weapons: ["fist", "pistol"],
+  dashReady: true,
+  boss: null,
 };
 
 function buildHud(w: World): Hud {
@@ -168,13 +197,15 @@ function buildHud(w: World): Hud {
   const ch = chapterOf(w.chapter);
   const markers: number[] = [];
   for (const p of ch.pickups) if (p.kind === "item" && !w.items.includes(p.id)) markers.push(p.x);
+  const bossEnemy = w.boss.active ? w.enemies[ch.boss.id] : null;
+  const weapon = w.player.weapon;
   return {
     hp: Math.round(w.player.hp),
     maxHp: w.player.maxHp,
     coins: w.coins,
-    ammo: w.player.ammo,
-    weapon: w.player.weapon,
-    hasKnife: w.player.hasKnife,
+    ammo: WEAPONS[weapon].kind === "melee" ? 0 : w.player.ammo[weapon as GunId],
+    weapon,
+    hasKnife: w.player.weapons.includes("knife"),
     timer: Math.floor(w.timer),
     score: w.score,
     kills: w.kills,
@@ -196,6 +227,13 @@ function buildHud(w: World): Hud {
       chasing: w.enemies[h.id].chasing,
     })),
     markers,
+    grenades: w.player.ammo.grenade,
+    weapons: [...w.player.weapons],
+    dashReady: w.t >= w.player.dashReadyAt,
+    boss:
+      bossEnemy && isAlive(bossEnemy)
+        ? { name: ch.boss.title, hp: Math.max(0, bossEnemy.hp), maxHp: bossEnemy.maxHp }
+        : null,
   };
 }
 
@@ -222,7 +260,12 @@ function hudEqual(a: Hud, b: Hud) {
     a.chasing.join() === b.chasing.join() &&
     a.markers.join() === b.markers.join() &&
     a.enemies.length === b.enemies.length &&
-    a.enemies.every((e, i) => b.enemies[i].x === e.x && b.enemies[i].chasing === e.chasing)
+    a.enemies.every((e, i) => b.enemies[i].x === e.x && b.enemies[i].chasing === e.chasing) &&
+    a.grenades === b.grenades &&
+    a.weapons.join() === b.weapons.join() &&
+    a.dashReady === b.dashReady &&
+    (a.boss === b.boss ||
+      (!!a.boss && !!b.boss && a.boss.hp === b.boss.hp && a.boss.name === b.boss.name))
   );
 }
 
@@ -308,8 +351,10 @@ export const useGame = create<State>((set, get) => ({
   chapter: 1,
   clip: null,
   talkKey: null,
+  script: [],
   line: 0,
   toast: "",
+  banner: null,
   hud: emptyHud,
   settings: DEFAULT_SETTINGS,
   save: DEFAULT_SAVE,
@@ -392,7 +437,7 @@ export const useGame = create<State>((set, get) => ({
       if (!world) return set({ phase: "missions", clip: null });
       if (isChapterLoaded(chapter)) {
         set({ phase: "play", overlay: null, clip: null });
-        pushToast("Saltá (W) para esquivar. E para hablar.");
+        pushToast("W salta · S agacha · Shift esquiva · E habla · G granada");
       } else {
         set({ phase: "loading", clip: null });
       }
@@ -466,31 +511,38 @@ export const useGame = create<State>((set, get) => ({
   },
 
   startTalk: (key) => {
-    if (!TALKS[key]) return;
+    const w = world;
+    if (!TALKS[key] || !w) return;
+    const script = scriptFor(w, key);
+    if (!script.length) return;
+    markMet(w, key);
     flushInput();
     sfx("blip");
-    set({ overlay: "talk", talkKey: key, line: 0 });
+    set({ overlay: "talk", talkKey: key, script, line: 0 });
   },
   advance: (choice) => {
     const s = get();
     const w = world;
     if (!s.talkKey || !w) return;
-    const script = TALKS[s.talkKey];
+    const script = s.script;
     const line = script[s.line];
+    if (!line) return;
     sfx("blip");
     const close = () => {
       closeTalk(w);
-      set({ overlay: null, talkKey: null, line: 0 });
+      set({ overlay: null, talkKey: null, script: [], line: 0 });
       get().syncHud();
     };
     if (line.choices && choice !== undefined && line.choices[choice]) {
       const ev: WorldEvent[] = [];
-      const res = applyChoice(w, s.talkKey, s.line, line.choices[choice], ev);
+      const res = applyChoice(w, s.talkKey, script, s.line, line.choices[choice], ev);
       get().handleEvents(ev);
       if (res.next === "close") close();
       else if (res.next === "line") set({ line: s.line + 1 });
-      else if (res.next === "talk") set({ talkKey: res.key, line: 0 });
-      else if (res.next === "win") finishMission();
+      else if (res.next === "talk") {
+        const next = scriptFor(w, res.key);
+        set({ talkKey: res.key, script: next, line: 0 });
+      } else if (res.next === "win") finishMission();
       return;
     }
     if (s.line + 1 < script.length) set({ line: s.line + 1 });
@@ -502,7 +554,7 @@ export const useGame = create<State>((set, get) => ({
     if (!w || get().overlay !== "talk") return;
     closeTalk(w);
     flushInput();
-    set({ overlay: null, talkKey: null, line: 0 });
+    set({ overlay: null, talkKey: null, script: [], line: 0 });
     get().syncHud();
   },
 
@@ -536,6 +588,14 @@ export const useGame = create<State>((set, get) => ({
           break;
         case "win":
           finishMission();
+          break;
+        case "zone":
+          pushBanner(e.name, "zone");
+          break;
+        case "boss":
+          if (e.title) pushBanner(e.title, "boss");
+          else pushBanner("¡JEFE VENCIDO!", "boss");
+          hud = true;
           break;
       }
     }

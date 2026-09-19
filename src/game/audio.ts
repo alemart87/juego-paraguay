@@ -24,7 +24,17 @@ export type SfxName =
   | "win"
   | "ko"
   | "swap"
-  | "recruit";
+  | "recruit"
+  | "dash"
+  | "shotgun"
+  | "smg"
+  | "bat"
+  | "grenade"
+  | "explode"
+  | "stomp"
+  | "bossIntro"
+  | "drop"
+  | "ally";
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -116,6 +126,8 @@ function noise(
 
 const MIN_GAP: Partial<Record<SfxName, number>> = {
   shot: 40,
+  smg: 30,
+  ally: 200,
   hit: 60,
   coin: 30,
   blip: 30,
@@ -192,6 +204,46 @@ export function sfx(name: SfxName) {
     case "swap":
       tone(500, 0.05, { type: "square", gain: 0.1 });
       tone(750, 0.07, { type: "square", gain: 0.1, delay: 0.05 });
+      break;
+    case "dash":
+      noise(0.14, { gain: 0.25, from: 2500, to: 6000, q: 1.5 });
+      tone(200, 0.12, { type: "sine", gain: 0.12, slide: 520 });
+      break;
+    case "shotgun":
+      noise(0.3, { gain: 0.8, from: 5000, to: 200 });
+      tone(90, 0.2, { type: "sawtooth", gain: 0.35, slide: 30 });
+      break;
+    case "smg":
+      noise(0.06, { gain: 0.35, from: 7000, to: 700 });
+      tone(260, 0.05, { type: "square", gain: 0.12, slide: 80 });
+      break;
+    case "bat":
+      noise(0.12, { gain: 0.45, from: 900, to: 120 });
+      tone(70, 0.16, { type: "sine", gain: 0.4, slide: 30 });
+      break;
+    case "grenade":
+      tone(520, 0.08, { type: "triangle", gain: 0.12, slide: 300 });
+      break;
+    case "explode":
+      noise(0.7, { gain: 0.9, from: 2000, to: 40 });
+      tone(55, 0.6, { type: "sine", gain: 0.6, slide: 25 });
+      break;
+    case "stomp":
+      noise(0.2, { gain: 0.5, from: 1500, to: 80 });
+      tone(60, 0.25, { type: "sine", gain: 0.5, slide: 30 });
+      break;
+    case "bossIntro":
+      [110, 110, 98, 82].forEach((f, i) =>
+        tone(f, 0.35, { type: "sawtooth", gain: 0.25, delay: i * 0.22 }),
+      );
+      noise(0.5, { gain: 0.25, from: 400, to: 60, delay: 0.7 });
+      break;
+    case "drop":
+      tone(880, 0.05, { type: "square", gain: 0.08 });
+      tone(1320, 0.08, { type: "square", gain: 0.08, delay: 0.05 });
+      break;
+    case "ally":
+      noise(0.07, { gain: 0.25, from: 1000, to: 200 });
       break;
     case "recruit":
       [523, 659, 784, 1046].forEach((f, i) =>

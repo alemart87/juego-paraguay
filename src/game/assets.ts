@@ -90,7 +90,10 @@ export function chapterAssets(ch: Chapter): string[] {
   const set = new Set<string>();
   for (const z of ch.zones) set.add(z.bg);
   for (const p of ch.props) set.add(p.src);
-  for (const p of ch.pickups) set.add(pickupSprite(p));
+  for (const p of ch.pickups) {
+    const src = pickupSprite(p);
+    if (src) set.add(src);
+  }
   for (const h of HEROES) {
     set.add(h.sprite);
     h.steps.forEach((s) => set.add(s));

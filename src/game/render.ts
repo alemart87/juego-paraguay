@@ -7,9 +7,11 @@ import {
   chapterOf,
   pickupSprite,
   type HeroId,
+  type WeaponId,
 } from "./content";
 import {
   canTalk,
+  followerX,
   followers,
   interactTarget,
   isAlive,
@@ -59,6 +61,7 @@ type Frame = {
 };
 
 const X = (f: Frame, x: number) => (x - f.cam) * (f.W / 100);
+const VW = (f: Frame, v: number) => (v * f.W) / 100;
 const VH = (f: Frame, v: number) => (v * f.H) / 100;
 const groundY = (f: Frame) => f.H * GROUND;
 
@@ -72,6 +75,7 @@ function drawSprite(
     flip?: boolean;
     rot?: number;
     scale?: number;
+    scaleY?: number;
     alpha?: number;
     clipTop?: number;
     clipBottom?: number;
@@ -87,7 +91,7 @@ function drawSprite(
   ctx.translate(cx + (o.dx ?? 0), baseY + (o.dy ?? 0));
   if (o.rot) ctx.rotate((o.rot * Math.PI) / 180);
   const s = o.scale ?? 1;
-  ctx.scale(o.flip ? -s : s, s);
+  ctx.scale(o.flip ? -s : s, s * (o.scaleY ?? 1));
   if (o.alpha !== undefined) ctx.globalAlpha = Math.max(0, Math.min(1, o.alpha));
   const top = o.clipTop ?? 0;
   const bottom = o.clipBottom ?? 0;
@@ -130,16 +134,126 @@ function drawTag(
   ctx.restore();
 }
 
+function drawBubble(f: Frame, text: string, cx: number, cy: number, hot = false) {
+  const { ctx } = f;
+  ctx.save();
+  ctx.font = `700 11px Figtree, "Segoe UI", system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const tw = ctx.measureText(text).width;
+  const w = tw + 18;
+  const h = 22;
+  const x = cx - w / 2;
+  const y = cy - h;
+  ctx.fillStyle = hot ? "#ffe8e8" : "#fff8ee";
+  ctx.strokeStyle = "rgba(0,0,0,0.5)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, 10);
+  ctx.moveTo(cx - 5, y + h);
+  ctx.lineTo(cx, y + h + 7);
+  ctx.lineTo(cx + 5, y + h);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#1b1410";
+  ctx.fillText(text, cx, cy - h / 2 + 0.5);
+  ctx.restore();
+}
+
+/* ---------------- procedural weapons ---------------- */
+
+/** Draws a weapon centred at the origin, pointing to +x, about `len` px long. */
+function drawWeaponShape(ctx: CanvasRenderingContext2D, id: WeaponId, len: number) {
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  if (id === "bat") {
+    const g = ctx.createLinearGradient(-len / 2, 0, len / 2, 0);
+    g.addColorStop(0, "#8a5a2b");
+    g.addColorStop(1, "#d9a066");
+    ctx.strokeStyle = g;
+    ctx.lineWidth = len * 0.16;
+    ctx.beginPath();
+    ctx.moveTo(-len / 2, 0);
+    ctx.lineTo(len * 0.1, 0);
+    ctx.stroke();
+    ctx.lineWidth = len * 0.26;
+    ctx.beginPath();
+    ctx.moveTo(len * 0.05, 0);
+    ctx.lineTo(len / 2, 0);
+    ctx.stroke();
+    ctx.strokeStyle = "#2b1a0e";
+    ctx.lineWidth = len * 0.05;
+    ctx.beginPath();
+    ctx.moveTo(-len / 2 + 2, 0);
+    ctx.lineTo(-len / 2 + 8, 0);
+    ctx.stroke();
+  } else if (id === "shotgun") {
+    ctx.fillStyle = "#5a3a1e";
+    ctx.beginPath();
+    ctx.roundRect(-len / 2, -len * 0.09, len * 0.38, len * 0.18, 3);
+    ctx.fill();
+    ctx.fillStyle = "#2f3237";
+    ctx.beginPath();
+    ctx.roundRect(-len * 0.15, -len * 0.07, len * 0.65, len * 0.09, 2);
+    ctx.roundRect(-len * 0.15, 0.02 * len, len * 0.65, len * 0.08, 2);
+    ctx.fill();
+    ctx.fillStyle = "#8a6a3a";
+    ctx.beginPath();
+    ctx.roundRect(len * 0.05, -len * 0.1, len * 0.22, len * 0.2, 3);
+    ctx.fill();
+  } else if (id === "smg") {
+    ctx.fillStyle = "#23262b";
+    ctx.beginPath();
+    ctx.roundRect(-len * 0.4, -len * 0.12, len * 0.7, len * 0.22, 3);
+    ctx.fill();
+    ctx.fillStyle = "#3a3f47";
+    ctx.beginPath();
+    ctx.roundRect(len * 0.25, -len * 0.06, len * 0.25, len * 0.1, 2);
+    ctx.fill();
+    ctx.fillStyle = "#15171a";
+    ctx.beginPath();
+    ctx.roundRect(-len * 0.1, len * 0.08, len * 0.12, len * 0.3, 2);
+    ctx.roundRect(-len * 0.4, len * 0.05, len * 0.1, len * 0.14, 2);
+    ctx.fill();
+  } else if (id === "grenade") {
+    const r = len / 2;
+    const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.2, 0, 0, r);
+    g.addColorStop(0, "#8fbf5a");
+    g.addColorStop(1, "#2f5a22");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-r, 0);
+    ctx.lineTo(r, 0);
+    ctx.moveTo(0, -r);
+    ctx.lineTo(0, r);
+    ctx.stroke();
+    ctx.fillStyle = "#c9c9c9";
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.25, -r - r * 0.5, r * 0.5, r * 0.55, 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 /* ---------------- actors ---------------- */
 
 type ActorAnim = {
   walk?: boolean;
   idle?: boolean;
-  attackKind?: "punch" | "slash" | "aim";
+  attackKind?: "punch" | "slash" | "aim" | "swing" | "throw";
   attackT?: number; // 0..1 progress
   cry?: boolean;
   flash?: number;
   alpha?: number;
+  crouch?: boolean;
+  spin?: number;
+  scale?: number;
 };
 
 function actorFrame(f: Frame, sprite: string, steps: string[] | undefined, walk: boolean) {
@@ -165,7 +279,7 @@ function drawActor(
   const base = groundY(f) - VH(f, yVh);
   let dy = 0;
   let dx = 0;
-  let rot = 0;
+  let rot = a.spin ?? 0;
   if (a.idle && !a.walk) dy = Math.sin(f.t * 2.9 + x) * VH(f, 0.35);
   if (a.attackKind && a.attackT !== undefined && a.attackT < 1) {
     const bell = Math.sin(a.attackT * Math.PI);
@@ -175,6 +289,12 @@ function drawActor(
     } else if (a.attackKind === "punch") {
       dx = face * bell * f.W * 0.02;
       rot = face * bell * 14;
+    } else if (a.attackKind === "swing") {
+      dx = face * bell * f.W * 0.024;
+      rot = face * bell * 30;
+    } else if (a.attackKind === "throw") {
+      dx = -face * bell * f.W * 0.01;
+      rot = -face * bell * 12;
     } else {
       dx = face * bell * f.W * 0.016;
       rot = face * bell * 22;
@@ -188,6 +308,8 @@ function drawActor(
     dy,
     flash: a.flash,
     alpha: a.alpha,
+    scale: a.scale,
+    scaleY: a.crouch ? 0.66 : 1,
   });
 }
 
@@ -197,7 +319,8 @@ function drawEnemy(f: Frame, w: World, e: Enemy) {
   const face: 1 | -1 = e.x < w.player.x ? 1 : -1;
   const cx = X(f, e.x);
   const base = groundY(f) - VH(f, e.y);
-  const H = VH(f, 30);
+  const scale = e.isBoss ? 1.22 : 1;
+  const H = VH(f, 30) * scale;
   const body = getSprite(def.sprite);
 
   if (e.exploding) {
@@ -256,24 +379,44 @@ function drawEnemy(f: Frame, w: World, e: Enemy) {
   }
 
   const walking = e.chasing && !e.calm && !e.cry;
+  const charging = e.isBoss && w.t < e.chargeUntil;
   drawActor(f, def.sprite, def.steps, e.x, e.y, 30, face, {
     walk: walking,
     idle: !walking,
     cry: e.cry,
-    flash: e.flash,
+    flash: charging ? 0.35 + e.flash : e.flash,
+    scale,
+    spin: charging ? face * 8 : 0,
   });
-  // Label + health pips.
+  if (charging) {
+    // Speed lines while a boss charges.
+    const { ctx } = f;
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,230,120,0.7)";
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 4; i++) {
+      const yy = base - H * (0.25 + i * 0.18);
+      ctx.beginPath();
+      ctx.moveTo(cx - face * (H * 0.3), yy);
+      ctx.lineTo(cx - face * (H * 0.3 + 30 + i * 8), yy + (Math.random() - 0.5) * 4);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
   const top = base - H;
-  const label = e.chasing
-    ? `${def.name} · ${def.chaseLabel}`
-    : e.calm
-      ? `${def.name} · calmado`
-      : def.name;
+  const label = e.isBoss
+    ? `JEFE · ${def.name}`
+    : e.chasing
+      ? `${def.name} · ${def.chaseLabel}`
+      : e.calm
+        ? `${def.name} · calmado`
+        : def.name;
   drawTag(f, label, cx, top - 16, {
-    bg: e.chasing ? "rgba(194,65,59,0.92)" : "rgba(0,0,0,0.72)",
-    fg: e.chasing ? "#fff" : "#ebe4d6",
+    bg: e.isBoss ? "rgba(120,10,40,0.95)" : e.chasing ? "rgba(194,65,59,0.92)" : "rgba(0,0,0,0.72)",
+    fg: e.chasing || e.isBoss ? "#fff" : "#ebe4d6",
+    size: e.isBoss ? 11 : 10,
   });
-  if (e.maxHp > 1 && !e.calm) {
+  if (e.maxHp > 1 && !e.calm && !e.isBoss) {
     const { ctx } = f;
     const pw = 10;
     const total = e.maxHp * (pw + 3) - 3;
@@ -283,6 +426,75 @@ function drawEnemy(f: Frame, w: World, e: Enemy) {
       ctx.roundRect(cx - total / 2 + i * (pw + 3), top - 6, pw, 4, 2);
       ctx.fill();
     }
+  }
+  if (e.bark && w.t < e.barkUntil) drawBubble(f, e.bark, cx, top - 32, e.isBoss);
+}
+
+/* ---------------- solids ---------------- */
+
+function drawSolids(f: Frame, w: World) {
+  const ch = chapterOf(w.chapter);
+  const { ctx } = f;
+  for (const p of ch.platforms) {
+    if (p.x + p.w / 2 < w.camX - 5 || p.x - p.w / 2 > w.camX + 105) continue;
+    const x = X(f, p.x - p.w / 2);
+    const wpx = VW(f, p.w);
+    const y = groundY(f) - VH(f, p.h);
+    const th = Math.max(8, VH(f, 2.2));
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillRect(x + 3, y + 4, wpx, th);
+    const g = ctx.createLinearGradient(0, y, 0, y + th);
+    g.addColorStop(0, "#9a6a3a");
+    g.addColorStop(1, "#5a3a1c");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.roundRect(x, y, wpx, th, 3);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,220,160,0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y + 1.5);
+    ctx.lineTo(x + wpx - 2, y + 1.5);
+    ctx.stroke();
+    // Legs.
+    ctx.fillStyle = "#4a2e14";
+    ctx.fillRect(x + 4, y + th, 4, groundY(f) - y - th);
+    ctx.fillRect(x + wpx - 8, y + th, 4, groundY(f) - y - th);
+    ctx.restore();
+  }
+  for (const c of ch.crates) {
+    if (c.x + c.w / 2 < w.camX - 5 || c.x - c.w / 2 > w.camX + 105) continue;
+    const x = X(f, c.x - c.w / 2);
+    const wpx = VW(f, c.w);
+    const hpx = VH(f, c.h);
+    const y = groundY(f) - hpx;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillRect(x + 4, y + 5, wpx, hpx);
+    const g = ctx.createLinearGradient(x, y, x + wpx, y + hpx);
+    g.addColorStop(0, "#b8834a");
+    g.addColorStop(1, "#7a4f26");
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, wpx, hpx);
+    ctx.strokeStyle = "rgba(60,30,10,0.8)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, wpx - 2, hpx - 2);
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y + 2);
+    ctx.lineTo(x + wpx - 2, y + hpx - 2);
+    ctx.moveTo(x + wpx - 2, y + 2);
+    ctx.lineTo(x + 2, y + hpx - 2);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(255,230,180,0.25)";
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + (hpx * i) / 3);
+      ctx.lineTo(x + wpx, y + (hpx * i) / 3);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 }
 
@@ -330,6 +542,8 @@ export function drawWorld(
     drawSprite(f, getSprite(p.src), X(f, p.x), H * 0.9, VH(f, p.h), { flip: p.flip });
   }
 
+  drawSolids(f, w);
+
   /* grill / exam markers */
   if (ch.grillX) {
     drawSprite(f, getSprite("/sprites/fire.png"), X(f, ch.grillX), H * 0.84, VH(f, 16), {
@@ -338,7 +552,7 @@ export function drawWorld(
     drawTag(f, w.fire ? "¡Asado!" : "El quincho", X(f, ch.grillX), H * 0.84 - VH(f, 19));
   }
   if (ch.examX) {
-    const ready = ["apuntes", "cafe", "cedula", "fuerza"].every((i) => w.items.includes(i));
+    const ready = ["apuntes", "cafe", "cedula", "fuerza", "boss"].every((i) => w.items.includes(i));
     drawTag(f, ready ? "Examen listo" : "El aula", X(f, ch.examX), H * 0.6, {
       bg: ready ? "rgba(212,164,90,0.95)" : "rgba(0,0,0,0.72)",
       fg: ready ? "#0b0f14" : "#ebe4d6",
@@ -350,20 +564,27 @@ export function drawWorld(
   for (const p of ch.pickups) {
     if (w.items.includes(p.id) || p.x < w.camX - 10 || p.x > w.camX + 110) continue;
     const bob = Math.sin(w.t * 3.6 + p.x) * VH(f, 0.6);
-    const size =
-      p.kind === "coin"
-        ? 24
-        : p.kind === "ammo"
-          ? 26
-          : p.kind === "heal"
-            ? 34
-            : p.kind === "knife"
-              ? 10
-              : 38;
-    const base = H * 0.84 + bob;
-    drawSprite(f, getSprite(pickupSprite(p)), X(f, p.x), base, size, {
-      rot: p.kind === "knife" ? -30 : 0,
-    });
+    const base = groundY(f) - VH(f, (p.y ?? 0) + 8) + bob;
+    const src = pickupSprite(p);
+    if (src) {
+      const size =
+        p.kind === "coin"
+          ? 24
+          : p.kind === "ammo"
+            ? 26
+            : p.kind === "heal"
+              ? 34
+              : p.kind === "knife"
+                ? 10
+                : 38;
+      drawSprite(f, getSprite(src), X(f, p.x), base, size, { rot: p.kind === "knife" ? -30 : 0 });
+    } else {
+      ctx.save();
+      ctx.translate(X(f, p.x), base - 14);
+      ctx.rotate(-0.5 + Math.sin(w.t * 2 + p.x) * 0.1);
+      drawWeaponShape(ctx, p.kind as WeaponId, p.kind === "grenade" ? 22 : 54);
+      ctx.restore();
+    }
     if (p.kind !== "coin" && p.label) {
       drawTag(f, p.label, X(f, p.x), base + 12, {
         size: 9,
@@ -372,6 +593,23 @@ export function drawWorld(
         fg: p.kind === "item" ? "#0b0f14" : "#ebe4d6",
       });
     }
+  }
+
+  /* drops from enemies */
+  for (const d of w.drops) {
+    if (d.x < w.camX - 10 || d.x > w.camX + 110) continue;
+    const age = w.t - d.born;
+    const blink = age > 20 && Math.floor(w.t * 6) % 2 === 0;
+    if (blink) continue;
+    const src =
+      d.kind === "coin"
+        ? "/sprites/coin.png"
+        : d.kind === "ammo"
+          ? "/sprites/bullet.png"
+          : "/sprites/terere.png";
+    drawSprite(f, getSprite(src), X(f, d.x), groundY(f) - VH(f, d.y), d.kind === "heal" ? 30 : 22, {
+      rot: d.kind === "ammo" ? 20 : 0,
+    });
   }
 
   /* blood */
@@ -417,8 +655,14 @@ export function drawWorld(
   const fl = followers(w);
   fl.forEach((id, i) => {
     const hero = HERO_BY_ID[id as HeroId];
-    const fx = p.x - p.facing * (9 + i * 8);
-    drawActor(f, hero.sprite, hero.steps, fx, 0, 26, p.facing, { walk: p.walking, idle: true });
+    const ax = followerX(w, i);
+    const punching = w.t < (w.allyHitAt[i] ?? 0) - 1.4;
+    drawActor(f, hero.sprite, hero.steps, ax, 0, 26, p.facing, {
+      walk: p.walking,
+      idle: true,
+      attackKind: "punch",
+      attackT: punching ? 1 - ((w.allyHitAt[i] ?? 0) - 1.4 - w.t) / 0.3 : 1,
+    });
   });
 
   /* enemies */
@@ -449,47 +693,118 @@ export function drawWorld(
     drawSprite(f, getSprite("/sprites/slime.png"), X(f, s.x), H - VH(f, s.y), VH(f, 3.4), {
       rot: (w.t * 900 + s.x * 30) % 360,
     });
-  for (const s of w.shots)
-    drawSprite(f, getSprite("/sprites/bullet.png"), X(f, s.x), H - VH(f, s.y) + 9, 18, {
+  for (const s of w.shots) {
+    const size = s.kind === "shotgun" ? 12 : s.kind === "smg" ? 14 : 18;
+    drawSprite(f, getSprite("/sprites/bullet.png"), X(f, s.x), H - VH(f, s.y) + size / 2, size, {
       flip: s.face === 1,
+      rot: ((Math.atan2(-s.vy, Math.abs(s.vx)) * 180) / Math.PI) * (s.face === 1 ? 1 : -1),
     });
+  }
+  for (const g of w.grenades) {
+    ctx.save();
+    ctx.translate(X(f, g.x), groundY(f) - VH(f, g.y) - 8);
+    ctx.rotate(w.t * 9);
+    drawWeaponShape(ctx, "grenade", 16);
+    ctx.restore();
+    const fuse = 1 - Math.min(1, (w.t - g.born) / 1.5);
+    ctx.save();
+    ctx.fillStyle = Math.floor(w.t * (8 + (1 - fuse) * 20)) % 2 ? "#ff4a3a" : "#ffd27a";
+    ctx.beginPath();
+    ctx.arc(X(f, g.x), groundY(f) - VH(f, g.y) - 20, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   /* gibs */
   if (opts.gore)
     for (const g of w.gibs)
       drawSprite(f, getSprite(GIBS[g.src]), X(f, g.x), H - VH(f, g.y) + 19, 38, { rot: g.rot });
 
-  /* player */
-  const attackT =
-    p.attackUntil > w.t ? 1 - (p.attackUntil - w.t) / (p.attackKind === "pistol" ? 0.16 : 0.28) : 1;
-  const invisible = w.t < p.invUntil && Math.floor(w.t * 18) % 2 === 0;
+  /* dash trail */
   const hero = HERO_BY_ID[w.hero];
+  for (const tr of w.trail) {
+    const a = 1 - (w.t - tr.born) / 0.3;
+    drawSprite(f, getSprite(hero.sprite), X(f, tr.x), groundY(f) - VH(f, tr.y), VH(f, 34), {
+      flip: tr.face === 1,
+      alpha: a * 0.35,
+      flash: 0.6,
+    });
+  }
+
+  /* player */
+  const atkDur =
+    p.attackKind === "grenade"
+      ? 0.24
+      : p.attackKind === "bat"
+        ? 0.36
+        : p.stomping
+          ? 0.5
+          : ["pistol", "shotgun", "smg"].includes(p.attackKind)
+            ? 0.16
+            : 0.28;
+  const attackT = p.attackUntil > w.t ? 1 - (p.attackUntil - w.t) / atkDur : 1;
+  const invisible = w.t < p.invUntil && w.t >= p.dashUntil && Math.floor(w.t * 18) % 2 === 0;
+  const kind: ActorAnim["attackKind"] =
+    p.attackKind === "grenade"
+      ? "throw"
+      : p.attackKind === "bat"
+        ? "swing"
+        : p.attackKind === "knife"
+          ? "slash"
+          : p.attackKind === "fist"
+            ? "punch"
+            : "aim";
   drawActor(f, hero.sprite, hero.steps, p.x, p.y, 34, p.facing, {
     walk: p.walking && attackT >= 1,
     idle: true,
-    attackKind: p.attackKind === "pistol" ? "aim" : p.attackKind === "knife" ? "slash" : "punch",
+    attackKind: kind,
     attackT,
     alpha: invisible ? 0.45 : 1,
-    flash: w.t - p.hurtAt < 0.2 ? 0.8 : 0,
+    flash: w.t - p.hurtAt < 0.2 ? 0.8 : w.t < p.dashUntil ? 0.3 : 0,
+    crouch: p.crouching,
+    spin: p.stomping ? p.facing * 18 : w.t < p.dashUntil ? p.dashDir * 10 : 0,
   });
   /* held weapon */
-  if (p.weapon !== "fist") {
-    const wsp = getSprite(p.weapon === "pistol" ? "/sprites/pistol.png" : "/sprites/knife.png");
+  if (p.weapon !== "fist" && !p.stomping) {
     const kick = attackT < 1 ? Math.sin(attackT * Math.PI) : 0;
-    const rot =
-      p.weapon === "pistol"
-        ? -kick * 18 * p.facing
-        : attackT < 1
-          ? (-80 + attackT * 150) * p.facing
-          : 12 * p.facing;
-    drawSprite(
-      f,
-      wsp,
-      X(f, p.x + p.facing * 3.4),
-      groundY(f) - VH(f, p.y + 20) + (p.weapon === "pistol" ? 12 : 8),
-      p.weapon === "pistol" ? 38 : 12,
-      { flip: p.facing === 1, rot, alpha: invisible ? 0.45 : 1 },
-    );
+    const hy = groundY(f) - VH(f, p.y + (p.crouching ? 12 : 20));
+    const hx = X(f, p.x + p.facing * 3.4);
+    if (p.weapon === "pistol" || p.weapon === "knife") {
+      const wsp = getSprite(p.weapon === "pistol" ? "/sprites/pistol.png" : "/sprites/knife.png");
+      const rot =
+        p.weapon === "pistol"
+          ? -kick * 18 * p.facing
+          : attackT < 1
+            ? (-80 + attackT * 150) * p.facing
+            : 12 * p.facing;
+      drawSprite(
+        f,
+        wsp,
+        hx,
+        hy + (p.weapon === "pistol" ? 12 : 8),
+        p.weapon === "pistol" ? 38 : 12,
+        {
+          flip: p.facing === 1,
+          rot,
+          alpha: invisible ? 0.45 : 1,
+        },
+      );
+    } else {
+      ctx.save();
+      ctx.globalAlpha = invisible ? 0.45 : 1;
+      ctx.translate(hx, hy + 6);
+      const swing = p.weapon === "bat" ? (attackT < 1 ? -1.6 + attackT * 2.6 : 0.6) : -kick * 0.3;
+      ctx.rotate(p.facing === 1 ? -swing : Math.PI + swing);
+      drawWeaponShape(ctx, p.weapon, p.weapon === "bat" ? 62 : p.weapon === "shotgun" ? 64 : 46);
+      ctx.restore();
+    }
+  }
+  if (p.finisher && w.t < p.comboUntil) {
+    drawTag(f, "REMATE", X(f, p.x), groundY(f) - VH(f, p.y + 42), {
+      bg: "rgba(255,80,60,0.95)",
+      fg: "#fff",
+      size: 11,
+    });
   }
 
   /* fx */
@@ -621,6 +936,13 @@ export function drawWorld(
     g.addColorStop(0, "rgba(180,0,20,0)");
     g.addColorStop(1, "rgba(180,0,20,1)");
     ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  if (w.boss.active && w.t - w.boss.introAt < 1.2) {
+    ctx.save();
+    ctx.globalAlpha = (1 - (w.t - w.boss.introAt) / 1.2) * 0.5;
+    ctx.fillStyle = "#7a0a28";
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }

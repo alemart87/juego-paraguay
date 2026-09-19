@@ -7,10 +7,10 @@ import {
   type ReactNode,
 } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
+  Bomb,
   Crosshair,
   Gamepad2,
+  Hammer,
   Hand,
   HelpCircle,
   MessageCircle,
@@ -20,6 +20,7 @@ import {
   Settings as SettingsIcon,
   Swords,
   Trophy,
+  Wind,
   X,
 } from "lucide-react";
 import {
@@ -27,12 +28,12 @@ import {
   HERO_BY_ID,
   HEROES,
   MISSIONS,
-  TALKS,
   TEAM,
-  WEAPON_NAME,
+  WEAPONS,
   chapterOf,
   type HazardId,
   type HeroId,
+  type WeaponId,
 } from "./content";
 import {
   axis,
@@ -43,9 +44,9 @@ import {
   pollInput,
   press,
   setKeys,
-  setPad,
-  swipe,
+  stick,
 } from "./input";
+import { vibrate } from "./audio";
 import { drawWorld } from "./render";
 import { TUNING, formatTime, type Difficulty, type Quality } from "./settings";
 import { getWorld, useGame } from "./store";
@@ -362,7 +363,8 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
           </p>
           <p className="text-muted">
             Seguí la flecha dorada. Hablá con la gente (<Key>E</Key>), agarrá lo que brilla y cumplí
-            la lista de la misión. Si te queda sin vida volvés al inicio de la zona.
+            la lista de la misión. Cada misión termina con un jefe. Si te quedás sin vida volvés al
+            inicio de la zona.
           </p>
         </div>
         <div className="rounded-2xl bg-elevated p-3">
@@ -374,11 +376,22 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
               <Key>A</Key> <Key>D</Key> o <Key>←</Key> <Key>→</Key> moverse
             </li>
             <li>
-              <Key>W</Key> <Key>↑</Key> o <Key>Espacio</Key> saltar (esquiva libros y slime)
+              <Key>W</Key> <Key>↑</Key> o <Key>Espacio</Key> saltar · esquiva el slime y sube a
+              plataformas
             </li>
             <li>
-              <Key>J</Key> <Key>K</Key> <Key>X</Key> o <Key>F</Key> atacar · mantené para disparar
-              seguido
+              <Key>S</Key> o <Key>↓</Key> agacharse · esquiva libros · con salto bajás de la
+              plataforma
+            </li>
+            <li>
+              <Key>Shift</Key> o <Key>L</Key> esquivar (dash) · invulnerable un instante
+            </li>
+            <li>
+              <Key>J</Key> <Key>K</Key> <Key>X</Key> o <Key>F</Key> atacar · mantené con armas de
+              fuego · en el aire es pisotón
+            </li>
+            <li>
+              <Key>G</Key> tirar granada
             </li>
             <li>
               <Key>E</Key> o <Key>Enter</Key> hablar / agarrar
@@ -394,15 +407,16 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
         <div className="rounded-2xl bg-elevated p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-accent">Táctil</p>
           <p className="text-muted">
-            Flechas para moverte o arrastrá el dedo en la mitad izquierda. Tocá la mitad derecha
-            para disparar. Botones de saltar, arma y hablar abajo a la derecha.
+            Apoyá el dedo en la mitad izquierda y arrastrá: aparece un joystick. Arrastrá hacia
+            arriba para saltar y hacia abajo para agacharte. Tocá la mitad derecha para atacar.
+            Botones de saltar, esquivar, granada, arma y hablar abajo a la derecha.
           </p>
         </div>
         <div className="rounded-2xl bg-elevated p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-accent">Mando</p>
           <p className="text-muted">
-            Stick o cruceta mueve · A salta · X / RT ataca · B habla · LB/RB cambia arma · Start
-            pausa.
+            Stick o cruceta mueve · A salta · X / RT ataca · B esquiva · Y habla · RB cambia arma ·
+            LB granada · LT o abajo agacha · Start pausa.
           </p>
         </div>
         <div className="rounded-2xl bg-elevated p-3">
@@ -410,9 +424,13 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
             Consejos
           </p>
           <ul className="grid gap-1.5 text-muted">
-            <li>· Masivo aguanta 3 balas. El cuchillo hace el doble de daño que el puño.</li>
-            <li>· Los enemigos vuelven a los pocos segundos. Aprovechá para avanzar.</li>
-            <li>· El tereré cura. Las balas se agarran solas al pasar.</li>
+            <li>· Tres golpes seguidos: el tercero remata con el doble de daño.</li>
+            <li>· Bate y escopeta mandan a volar. La metralleta vacía el cargador en segundos.</li>
+            <li>· Las cajas de madera frenan balas, libros y slime: usalas de cobertura.</li>
+            <li>· Esquivá la embestida del jefe y pegale cuando frena.</li>
+            <li>
+              · Los compañeros que reclutás pelean a tu lado. Los enemigos sueltan balas y Gs.
+            </li>
             <li>· Las Gs suman puntos y el tiempo también: terminá rápido para medalla de oro.</li>
           </ul>
         </div>
@@ -725,7 +743,7 @@ function Loading() {
           />
         </div>
         <p className="mt-2 text-xs text-muted">
-          {Math.round(p * 100)}% · saltá (W) para esquivar libros y slime
+          {Math.round(p * 100)}% · W salta · S agacha · Shift esquiva · G granada
         </p>
       </div>
     </div>
@@ -804,10 +822,11 @@ function Win() {
 
 function Talk() {
   const talkKey = useGame((s) => s.talkKey);
+  const script = useGame((s) => s.script);
   const idx = useGame((s) => s.line);
   const advance = useGame((s) => s.advance);
   const [shown, setShown] = useState(0);
-  const line = talkKey ? TALKS[talkKey][idx] : null;
+  const line = talkKey ? (script[idx] ?? null) : null;
   const text = line?.text ?? "";
   useEffect(() => {
     setShown(0);
@@ -934,31 +953,26 @@ function PadButton({
   );
 }
 
+function WeaponIcon({ weapon, size }: { weapon: WeaponId; size: number }) {
+  if (weapon === "fist") return <Hand size={size} />;
+  if (weapon === "knife") return <Swords size={size} />;
+  if (weapon === "bat") return <Hammer size={size} />;
+  return <Crosshair size={size} />;
+}
+
 function TouchControls() {
   const prompt = useGame((s) => s.hud.prompt);
   const weapon = useGame((s) => s.hud.weapon);
   const ammo = useGame((s) => s.hud.ammo);
+  const grenades = useGame((s) => s.hud.grenades);
+  const dashReady = useGame((s) => s.hud.dashReady);
   const leftHanded = useGame((s) => s.settings.leftHanded);
-  const move = (
-    <div className="pointer-events-auto flex items-end gap-3">
-      <PadButton
-        label="Izquierda"
-        icon={<ChevronLeft size={30} />}
-        onDown={() => setPad("left", true)}
-        onUp={() => setPad("left", false)}
-        size="size-[4.4rem]"
-        className="bg-black/55"
-      />
-      <PadButton
-        label="Derecha"
-        icon={<ChevronRight size={30} />}
-        onDown={() => setPad("right", true)}
-        onUp={() => setPad("right", false)}
-        size="size-[4.4rem]"
-        className="bg-black/55"
-      />
-    </div>
-  );
+  const haptic = useGame((s) => s.settings.vibrate);
+  const tap = (a: () => void) => () => {
+    if (haptic) vibrate(12);
+    a();
+  };
+  const isGunWeapon = WEAPONS[weapon].kind !== "melee";
   const act = (
     <div className="pointer-events-auto flex flex-col items-end gap-2">
       {prompt ? (
@@ -968,6 +982,7 @@ function TouchControls() {
           onPointerDown={(e) => {
             e.stopPropagation();
             unlockAudio();
+            if (haptic) vibrate(12);
             press("interact");
           }}
         >
@@ -979,14 +994,46 @@ function TouchControls() {
           <PadButton
             label="Cambiar arma"
             icon={<Swords size={20} />}
-            onDown={() => press("swap")}
+            onDown={tap(() => press("swap"))}
             size="size-12"
-            className="bg-black/55 text-xs"
+            className="bg-black/55"
+          />
+          <PadButton
+            label="Granada"
+            icon={
+              <span className="flex flex-col items-center leading-none">
+                <Bomb size={20} />
+                <span className="mt-0.5 text-[10px] font-bold">{grenades}</span>
+              </span>
+            }
+            onDown={tap(() => press("grenade"))}
+            size="size-14"
+            className={
+              grenades > 0
+                ? "bg-emerald-800/80 ring-2 ring-emerald-300/40"
+                : "bg-black/45 opacity-60"
+            }
+          />
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <PadButton
+            label="Esquivar"
+            icon={
+              <span className="flex flex-col items-center leading-none">
+                <Wind size={20} />
+                <span className="mt-0.5 text-[10px] font-bold">Dash</span>
+              </span>
+            }
+            onDown={tap(() => press("dash"))}
+            size="size-14"
+            className={
+              dashReady ? "bg-sky-800/80 ring-2 ring-sky-300/40" : "bg-black/45 opacity-60"
+            }
           />
           <PadButton
             label="Saltar"
             icon={<span className="text-sm font-bold">Saltar</span>}
-            onDown={() => press("jump")}
+            onDown={tap(() => press("jump"))}
             size="size-16"
             className="bg-black/60 ring-2 ring-paper/30"
           />
@@ -995,19 +1042,14 @@ function TouchControls() {
           label="Atacar"
           icon={
             <span className="flex flex-col items-center leading-none">
-              {weapon === "pistol" ? (
-                <Crosshair size={26} />
-              ) : weapon === "knife" ? (
-                <Swords size={26} />
-              ) : (
-                <Hand size={26} />
-              )}
+              <WeaponIcon weapon={weapon} size={26} />
               <span className="mt-1 text-[11px] font-bold">
-                {weapon === "pistol" ? `${ammo}` : WEAPON_NAME[weapon]}
+                {isGunWeapon ? `${ammo}` : WEAPONS[weapon].short}
               </span>
             </span>
           }
           onDown={() => {
+            if (haptic) vibrate(10);
             pads.attack = true;
             press("attack");
           }}
@@ -1024,7 +1066,9 @@ function TouchControls() {
     <div
       className={`pointer-events-none absolute inset-x-0 bottom-[max(0.6rem,env(safe-area-inset-bottom))] z-20 flex items-end justify-between px-4 ${leftHanded ? "flex-row-reverse" : ""}`}
     >
-      {move}
+      <p className="pointer-events-none mb-4 max-w-[9rem] text-[10px] leading-tight text-paper/60">
+        Arrastrá acá para moverte · arriba salta · abajo agacha
+      </p>
       {act}
     </div>
   );
@@ -1084,6 +1128,9 @@ function Hud() {
   const coins = useGame((s) => s.hud.coins);
   const ammo = useGame((s) => s.hud.ammo);
   const weapon = useGame((s) => s.hud.weapon);
+  const grenades = useGame((s) => s.hud.grenades);
+  const dashReady = useGame((s) => s.hud.dashReady);
+  const boss = useGame((s) => s.hud.boss);
   const timer = useGame((s) => s.hud.timer);
   const score = useGame((s) => s.hud.score);
   const combo = useGame((s) => s.hud.combo);
@@ -1154,14 +1201,21 @@ function Hud() {
           </div>
           <div className="flex items-center gap-1">
             <span className="flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-paper">
-              {weapon === "pistol" ? (
-                <Crosshair size={13} />
-              ) : weapon === "knife" ? (
-                <Swords size={13} />
-              ) : (
-                <Hand size={13} />
-              )}
-              {weapon === "pistol" ? `${ammo} balas` : WEAPON_NAME[weapon]}
+              <WeaponIcon weapon={weapon} size={13} />
+              {WEAPONS[weapon].kind === "melee"
+                ? WEAPONS[weapon].name
+                : `${WEAPONS[weapon].short} ${ammo}`}
+            </span>
+            {grenades > 0 ? (
+              <span className="flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-emerald-300">
+                <Bomb size={13} /> {grenades}
+              </span>
+            ) : null}
+            <span
+              className={`flex items-center rounded-md bg-black/70 px-1.5 py-1 text-[11px] ${dashReady ? "text-sky-300" : "text-paper/30"}`}
+              title="Esquive"
+            >
+              <Wind size={13} />
             </span>
             <div className="relative h-5 w-28 overflow-hidden rounded-md bg-black/70 ring-1 ring-line">
               <div
@@ -1181,6 +1235,22 @@ function Hud() {
         </div>
       </div>
       <MiniMap />
+      {boss ? (
+        <div className="mx-auto mt-1.5 w-full max-w-md rounded-xl bg-black/70 px-3 py-1.5 ring-1 ring-red-500/40">
+          <p className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-red-300">
+            <span>{boss.name}</span>
+            <span>
+              {boss.hp}/{boss.maxHp}
+            </span>
+          </p>
+          <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-black/60">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-red-700 to-red-400 transition-[width] duration-200"
+              style={{ width: `${(boss.hp / boss.maxHp) * 100}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1202,7 +1272,7 @@ function PauseMenu() {
         <p className="text-sm text-muted">
           Volvés al inicio de la zona con toda la vida. Perdés 5 Gs y 100 puntos.
           {falls >= 2
-            ? " Consejo: saltá (W) para esquivar libros y slime, y disparale a Masivo desde lejos."
+            ? " Consejo: esquivá con Shift, agachate (S) ante los libros y saltá el slime. Las cajas frenan proyectiles."
             : ""}
         </p>
         <div className="mt-4 grid gap-2">
@@ -1255,6 +1325,7 @@ function Play() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const toast = useGame((s) => s.toast);
+  const banner = useGame((s) => s.banner);
   const overlay = useGame((s) => s.overlay);
   const quality = useGame((s) => s.settings.quality);
   const touchPref = useGame((s) => s.settings.touchControls);
@@ -1386,18 +1457,38 @@ function Play() {
     return () => cancelAnimationFrame(raf);
   }, [resize]);
 
-  /* Touch on the canvas: drag on the left half moves, tap on the right half attacks. */
-  const dragRef = useRef<{ id: number; x: number } | null>(null);
+  /* Touch on the canvas: a virtual stick on the move half, tap on the other half attacks. */
+  const dragRef = useRef<{ id: number; x: number; y: number; jumped: boolean } | null>(null);
+  const stickBase = useRef<HTMLDivElement>(null);
+  const stickKnob = useRef<HTMLDivElement>(null);
+  const showStick = (x: number, y: number, dx: number, dy: number, on: boolean) => {
+    const b = stickBase.current;
+    const k = stickKnob.current;
+    if (!b || !k) return;
+    b.style.opacity = on ? "1" : "0";
+    b.style.transform = `translate(${x - 44}px, ${y - 44}px)`;
+    const len = Math.hypot(dx, dy);
+    const m = len > 34 ? 34 / len : 1;
+    k.style.transform = `translate(${x - 22 + dx * m}px, ${y - 22 + dy * m}px)`;
+    k.style.opacity = on ? "1" : "0";
+  };
   const onDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     unlockAudio();
     if (e.pointerType === "mouse") return;
     e.preventDefault();
-    const half = e.currentTarget.clientWidth / 2;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const half = rect.width / 2;
     const lh = useGame.getState().settings.leftHanded;
-    const moveSide = lh ? e.clientX > half : e.clientX < half;
+    const lx = e.clientX - rect.left;
+    const ly = e.clientY - rect.top;
+    const moveSide = lh ? lx > half : lx < half;
     if (moveSide) {
-      dragRef.current = { id: e.pointerId, x: e.clientX };
+      dragRef.current = { id: e.pointerId, x: lx, y: ly, jumped: false };
       e.currentTarget.setPointerCapture?.(e.pointerId);
+      stick.active = true;
+      stick.x = 0;
+      stick.down = false;
+      showStick(lx, ly, 0, 0, true);
     } else {
       pads.attack = true;
       press("attack");
@@ -1406,14 +1497,25 @@ function Play() {
   const onMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const d = dragRef.current;
     if (!d || d.id !== e.pointerId) return;
-    const dx = e.clientX - d.x;
-    swipe.dir = dx > 14 ? 1 : dx < -14 ? -1 : 0;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const dx = e.clientX - rect.left - d.x;
+    const dy = e.clientY - rect.top - d.y;
+    stick.x = Math.abs(dx) < 8 ? 0 : Math.max(-1, Math.min(1, dx / 36));
+    stick.down = dy > 30;
+    if (dy < -38 && !d.jumped) {
+      d.jumped = true;
+      press("jump");
+    } else if (dy > -16) d.jumped = false;
+    showStick(d.x, d.y, dx, dy, true);
   };
   const onUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const d = dragRef.current;
     if (d && d.id === e.pointerId) {
       dragRef.current = null;
-      swipe.dir = 0;
+      stick.active = false;
+      stick.x = 0;
+      stick.down = false;
+      showStick(d.x, d.y, 0, 0, false);
     } else pads.attack = false;
   };
 
@@ -1431,6 +1533,18 @@ function Play() {
         onPointerUp={onUp}
         onPointerCancel={onUp}
       />
+      {touch ? (
+        <>
+          <div
+            ref={stickBase}
+            className="pointer-events-none absolute left-0 top-0 z-[9] size-[88px] rounded-full border-2 border-paper/40 bg-black/25 opacity-0 transition-opacity"
+          />
+          <div
+            ref={stickKnob}
+            className="pointer-events-none absolute left-0 top-0 z-[9] size-11 rounded-full bg-paper/80 opacity-0 shadow-soft"
+          />
+        </>
+      ) : null}
       <Hud />
       {toast ? (
         <div
@@ -1440,11 +1554,24 @@ function Play() {
           {toast}
         </div>
       ) : null}
+      {banner ? (
+        <div
+          key={banner.key}
+          className={`banner-in pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 px-6 py-2 text-center ${
+            banner.kind === "boss"
+              ? "rounded-2xl bg-red-900/85 font-display text-2xl text-white ring-2 ring-red-400/60"
+              : "rounded-full bg-black/70 font-display text-xl text-paper"
+          }`}
+        >
+          {banner.kind === "boss" ? "JEFE · " : ""}
+          {banner.text}
+        </div>
+      ) : null}
       {touch && overlay !== "talk" ? <TouchControls /> : null}
       {!touch && overlay === null ? (
         <p className="pointer-events-none absolute bottom-[max(0.6rem,env(safe-area-inset-bottom))] left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] text-paper/80">
-          A/D mover · W saltar · J atacar · E hablar · Q arma · Esc pausa
-          {hasGamepad() ? " · mando conectado" : ""}
+          A/D mover · W saltar · S agachar · Shift esquivar · J atacar · G granada · E hablar · Q
+          arma · Esc pausa{hasGamepad() ? " · mando conectado" : ""}
         </p>
       ) : null}
       {overlay === "talk" ? <Talk /> : null}

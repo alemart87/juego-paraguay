@@ -82,20 +82,22 @@ var createLucideIcon = (iconName, iconNode) => {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
-var ChevronLeft = createLucideIcon("chevron-left", [["path", {
-	d: "m15 18-6-6 6-6",
-	key: "1wnfg3"
-}]]);
-/**
-* @license lucide-react v0.510.0 - ISC
-*
-* This source code is licensed under the ISC license.
-* See the LICENSE file in the root directory of this source tree.
-*/
-var ChevronRight = createLucideIcon("chevron-right", [["path", {
-	d: "m9 18 6-6-6-6",
-	key: "mthhwq"
-}]]);
+var Bomb = createLucideIcon("bomb", [
+	["circle", {
+		cx: "11",
+		cy: "13",
+		r: "9",
+		key: "hd149"
+	}],
+	["path", {
+		d: "M14.35 4.65 16.3 2.7a2.41 2.41 0 0 1 3.4 0l1.6 1.6a2.4 2.4 0 0 1 0 3.4l-1.95 1.95",
+		key: "jp4j1b"
+	}],
+	["path", {
+		d: "m22 2-1.5 1.5",
+		key: "ay92ug"
+	}]
+]);
 /**
 * @license lucide-react v0.510.0 - ISC
 *
@@ -198,6 +200,26 @@ var Gamepad2 = createLucideIcon("gamepad-2", [
 	["path", {
 		d: "M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z",
 		key: "mfqc10"
+	}]
+]);
+/**
+* @license lucide-react v0.510.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var Hammer = createLucideIcon("hammer", [
+	["path", {
+		d: "m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9",
+		key: "eefl8a"
+	}],
+	["path", {
+		d: "m18 15 4-4",
+		key: "16gjal"
+	}],
+	["path", {
+		d: "m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5",
+		key: "b7pghm"
 	}]
 ]);
 /**
@@ -409,6 +431,26 @@ var Trophy = createLucideIcon("trophy", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var Wind = createLucideIcon("wind", [
+	["path", {
+		d: "M12.8 19.6A2 2 0 1 0 14 16H2",
+		key: "148xed"
+	}],
+	["path", {
+		d: "M17.5 8a2.5 2.5 0 1 1 2 4H2",
+		key: "1u4tom"
+	}],
+	["path", {
+		d: "M9.8 4.4A2 2 0 1 1 11 8H2",
+		key: "75valh"
+	}]
+]);
+/**
+* @license lucide-react v0.510.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var X = createLucideIcon("x", [["path", {
 	d: "M18 6 6 18",
 	key: "1bl5f8"
@@ -417,4 +459,4 @@ var X = createLucideIcon("x", [["path", {
 	key: "d8bk6v"
 }]]);
 //#endregion
-export { Settings as a, Pause as c, Gamepad2 as d, Crosshair as f, ChevronLeft as h, Swords as i, MessageCircle as l, ChevronRight as m, Trophy as n, RotateCcw as o, CircleHelp as p, TriangleAlert as r, Play as s, X as t, Hand as u };
+export { Swords as a, Play as c, Hand as d, Hammer as f, Bomb as g, CircleHelp as h, TriangleAlert as i, Pause as l, Crosshair as m, Wind as n, Settings as o, Gamepad2 as p, Trophy as r, RotateCcw as s, X as t, MessageCircle as u };
