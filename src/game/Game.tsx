@@ -1564,11 +1564,10 @@ function Play() {
       ) : null}
       <Hud />
       {toast ? (
-        <div
-          key={toast}
-          className="toast-alert pointer-events-none absolute left-1/2 top-[7.5rem] z-20 w-max max-w-[min(22rem,calc(100%-2rem))] -translate-x-1/2 px-4 py-2 text-center text-sm"
-        >
-          {toast}
+        <div className="pointer-events-none absolute inset-x-4 top-[7.5rem] z-20 flex justify-center">
+          <div key={toast} className="toast-alert max-w-full px-4 py-2 text-center text-sm">
+            {toast}
+          </div>
         </div>
       ) : null}
       {banner ? (

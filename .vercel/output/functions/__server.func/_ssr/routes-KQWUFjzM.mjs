@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Swords, c as Play, d as Hand, f as Hammer, g as Bomb, h as CircleHelp, l as Pause, m as Crosshair, n as Wind, o as Settings, p as Gamepad2, r as Trophy, s as RotateCcw, t as X, u as MessageCircle } from "../_libs/lucide-react.mjs";
 import { t as create } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DeYzDVcO.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-KQWUFjzM.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var WEAPONS = {
@@ -4697,7 +4697,8 @@ function bloodSprite() {
 }
 /** Visible world units for a canvas size: the full 100 in landscape, fewer in portrait so sprites stay readable. */
 function viewWidthFor(W, H) {
-	return H > W * 1.1 ? 62 : 100;
+	if (H <= W * 1.1) return 100;
+	return W < 560 ? 50 : 62;
 }
 var X$1 = (f, x) => (x - f.cam) * f.unit;
 var VW = (f, v) => v * f.unit;
@@ -5110,7 +5111,7 @@ function drawWorld(ctx, w, W, H, opts) {
 		unit,
 		unitY,
 		viewW,
-		ground: portrait ? H * .64 : H * GROUND
+		ground: portrait ? H * .66 : H * GROUND
 	};
 	const zoneW = 100 * unit;
 	ctx.save();
@@ -5130,10 +5131,21 @@ function drawWorld(ctx, w, W, H, opts) {
 			ctx.fillRect(zx, 0, zoneW + 2, H);
 			continue;
 		}
-		const s = Math.max(zoneW / sp.w, H / sp.h);
+		const bgBottom = Math.min(H, f.ground + VH(f, 8));
+		const s = Math.max(zoneW / sp.w, bgBottom / sp.h);
 		const sw = zoneW / s;
-		const sh = H / s;
-		ctx.drawImage(sp.img, (sp.w - sw) / 2, (sp.h - sh) / 2, sw, sh, zx, 0, zoneW + 2, H);
+		const sh = bgBottom / s;
+		ctx.drawImage(sp.img, (sp.w - sw) / 2, sp.h - sh, sw, sh, zx, 0, zoneW + 2, bgBottom);
+		if (bgBottom < H) {
+			const stripH = H - bgBottom;
+			const srcBand = Math.max(4, Math.min(sp.h * .12, stripH / s));
+			ctx.drawImage(sp.img, (sp.w - sw) / 2, sp.h - srcBand, sw, srcBand, zx, bgBottom, zoneW + 2, stripH);
+			const g = ctx.createLinearGradient(0, bgBottom, 0, H);
+			g.addColorStop(0, "rgba(0,0,0,0.25)");
+			g.addColorStop(1, "rgba(0,0,0,0.7)");
+			ctx.fillStyle = g;
+			ctx.fillRect(zx, bgBottom, zoneW + 2, stripH);
+		}
 	}
 	for (const p of ch.props) {
 		if (p.x < w.camX - 20 || p.x > w.camX + viewW + 20) continue;
@@ -7546,9 +7558,12 @@ function Play$1() {
 			})] }) : null,
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Hud, {}),
 			toast ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "toast-alert pointer-events-none absolute left-1/2 top-[7.5rem] z-20 w-max max-w-[min(22rem,calc(100%-2rem))] -translate-x-1/2 px-4 py-2 text-center text-sm",
-				children: toast
-			}, toast) : null,
+				className: "pointer-events-none absolute inset-x-4 top-[7.5rem] z-20 flex justify-center",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "toast-alert max-w-full px-4 py-2 text-center text-sm",
+					children: toast
+				}, toast)
+			}) : null,
 			banner ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: `banner-in pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 px-6 py-2 text-center ${banner.kind === "boss" ? "rounded-2xl bg-red-900/85 font-display text-2xl text-white ring-2 ring-red-400/60" : "rounded-full bg-black/70 font-display text-xl text-paper"}`,
 				children: [banner.kind === "boss" ? "JEFE · " : "", banner.text]
