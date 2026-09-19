@@ -36,7 +36,7 @@ import {
   type FighterId,
   type EpisodeId,
 } from "./content";
-import { applyChoice, createWorld, type GameEvent, type World } from "./engine";
+import { applyChoice, applyShopPowerup, createWorld, type GameEvent, type World } from "./engine";
 import { defaultSave, loadSave, saveResult, writeSave, type Save } from "./persistence";
 import { Scene } from "./Scene";
 import { challengeUrl, downloadCard, resultCard, type ShareResult } from "./share";
@@ -44,6 +44,16 @@ import { Intro } from "./Intro";
 import { Leaderboard } from "./LeaderboardPanel";
 import { BrandLogo } from "./BrandLogo";
 import { ShopPanel } from "./ShopPanel";
+import type { ShopSku } from "./shop-catalog";
+import {
+  claimScoreRewards,
+  consumeReward,
+  emptyRewardWallet,
+  loadRewardWallet,
+  rewardStock,
+  writeRewardWallet,
+  type RewardWallet,
+} from "./rewards";
 import { chatWithNpc, type AgentTurn } from "../game/agent";
 import { configureAudio, installMobileAudioUnlock, unlockAudio, sfx } from "../game/audio";
 import "./battle.css";
@@ -70,6 +80,9 @@ export function BattleGame() {
   const [shareError, setShareError] = useState("");
   const [intro, setIntro] = useState(true);
   const [rankingName, setRankingName] = useState("");
+  const [rewards, setRewards] = useState<RewardWallet>(emptyRewardWallet);
+  const [ownedSkus, setOwnedSkus] = useState<ShopSku[]>([]);
+  const [usedOwnedSkus, setUsedOwnedSkus] = useState<ShopSku[]>([]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notify = (message: string) => {
     setToast(message);
@@ -79,6 +92,7 @@ export function BattleGame() {
   useEffect(() => {
     const local = loadSave();
     setSave(local);
+    setRewards(loadRewardWallet());
     const params = new URLSearchParams(location.search);
     const id = Number(params.get("battle"));
     const selected = params.get("fighter");
@@ -133,6 +147,7 @@ export function BattleGame() {
     const next = createWorld(save.hero, level, save.difficulty, seed);
     setWorld(next);
     setDialog(null);
+    setUsedOwnedSkus([]);
     setScreen("play");
     setWon(false);
     sfx("ui");
@@ -147,6 +162,46 @@ export function BattleGame() {
     if (world) world.paused = false;
     setDialog(null);
     unlockAudio();
+  };
+  const openCombatShop = () => {
+    if (!world || world.ended) return;
+    world.paused = true;
+    setDialog("shop");
+  };
+  const closeDialog = () => {
+    if (screen === "play" && world && !world.ended && (dialog === "pause" || dialog === "shop"))
+      world.paused = false;
+    setDialog(null);
+    unlockAudio();
+  };
+  const claimRewards = (score: number) => {
+    if (!world) return;
+    setRewards((current) => {
+      const result = claimScoreRewards(current, world.level, score);
+      if (!result.awarded.length) return current;
+      writeRewardWallet(result.wallet);
+      notify(`Regalo desbloqueado: ${result.awarded.map((reward) => reward.label).join(" + ")}`);
+      return result.wallet;
+    });
+  };
+  const useShopItem = (sku: ShopSku, source: "reward" | "owned") => {
+    if (!world) return;
+    const result = applyShopPowerup(world, sku);
+    if (!result.ok) {
+      notify(result.message);
+      return;
+    }
+    if (source === "reward") {
+      setRewards((current) => {
+        const next = consumeReward(current, sku);
+        if (!next) return current;
+        writeRewardWallet(next);
+        return next;
+      });
+    } else setUsedOwnedSkus((current) => (current.includes(sku) ? current : [...current, sku]));
+    notify(result.message);
+    world.paused = false;
+    setDialog(null);
   };
   const onEvent = (event: GameEvent) => {
     if (event.type === "toast") notify(event.text);
@@ -580,7 +635,15 @@ export function BattleGame() {
       )}
 
       {screen === "play" && world && (
-        <Scene world={world} settings={save} onEvent={onEvent} onPause={pause} />
+        <Scene
+          world={world}
+          settings={save}
+          rewardCount={rewardStock(rewards)}
+          onEvent={onEvent}
+          onPause={pause}
+          onOpenShop={openCombatShop}
+          onScoreMilestone={claimRewards}
+        />
       )}
 
       {screen === "result" && world && (
@@ -664,8 +727,7 @@ export function BattleGame() {
           className="modal-scrim"
           onClick={(e) => {
             if (e.target === e.currentTarget && dialog !== "talk") {
-              if (dialog === "pause") resume();
-              else setDialog(null);
+              closeDialog();
             }
           }}
         >
@@ -698,11 +760,7 @@ export function BattleGame() {
                           : "Pausa"
               }
             >
-              <button
-                className="modal-close icon-button"
-                aria-label="Cerrar"
-                onClick={() => (dialog === "pause" ? resume() : setDialog(null))}
-              >
+              <button className="modal-close icon-button" aria-label="Cerrar" onClick={closeDialog}>
                 <X size={21} />
               </button>
               {dialog === "pause" && (
@@ -897,7 +955,16 @@ export function BattleGame() {
                   }}
                 />
               )}
-              {dialog === "shop" && <ShopPanel />}
+              {dialog === "shop" && (
+                <ShopPanel
+                  inBattle={screen === "play" && Boolean(world)}
+                  rewards={rewards}
+                  ownedSkus={ownedSkus}
+                  usedOwnedSkus={usedOwnedSkus}
+                  onUse={useShopItem}
+                  onBenefitsSynced={setOwnedSkus}
+                />
+              )}
             </section>
           )}
         </div>

@@ -937,6 +937,42 @@
   width: 39px;
   height: 39px;
 }
+.battle-shop-button {
+  pointer-events: auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 39px;
+  padding: 0 11px;
+  border: 1px solid #f6e75a80;
+  border-radius: 3px;
+  background: #111018d9;
+  color: var(--yellow);
+  font: 900 9px/1 var(--font-sans);
+  letter-spacing: 0.08em;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+.battle-shop-button:active {
+  transform: scale(0.97);
+}
+.battle-shop-button b {
+  position: absolute;
+  right: -6px;
+  top: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  border: 2px solid #111018;
+  border-radius: 50%;
+  background: var(--coral);
+  color: #fff;
+  font-size: 9px;
+}
 .mission-hud {
   position: absolute;
   left: max(20px, env(safe-area-inset-left));
@@ -2277,6 +2313,16 @@
     width: 34px;
     height: 34px;
   }
+  .battle-shop-button {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .battle-shop-button span {
+    display: none;
+  }
   .mission-hud {
     top: 80px;
     left: 12px;
@@ -3326,6 +3372,53 @@
   font: 900 10px/1 var(--font-sans);
   letter-spacing: 0.16em;
 }
+.shop-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #ffffff26;
+  border-radius: 3px;
+  background: #ffffff09;
+  color: #fff3dc;
+  font: 900 9px/1 var(--font-sans);
+  letter-spacing: 0.08em;
+}
+.shop-sync svg {
+  width: 13px;
+  height: 13px;
+}
+.shop-sync:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.shop-reward-track {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 13px 15px;
+  border: 1px solid #f6e75a36;
+  background: #f6e75a0b;
+}
+.shop-reward-track > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--shop-yellow);
+  font: 900 10px/1 var(--font-sans);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+.shop-reward-track svg {
+  width: 16px;
+}
+.shop-reward-track p {
+  margin: 0;
+  color: #b8b0bf;
+  font-size: 11px;
+  line-height: 1.45;
+}
 .shop-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(280px, 1fr));
@@ -3348,6 +3441,10 @@
     transform 180ms ease,
     border-color 180ms ease,
     box-shadow 180ms ease;
+}
+.shop-item.ready {
+  border-color: #f6e75a66;
+  box-shadow: inset 0 3px 0 #f6e75a;
 }
 @media (hover: hover) {
   .shop-item:hover {
@@ -3445,6 +3542,43 @@
     background 160ms ease,
     color 160ms ease;
 }
+.shop-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.shop-use {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid var(--shop-yellow);
+  border-radius: 3px;
+  background: var(--shop-yellow);
+  color: #100f13;
+  font: 950 11px/1 var(--font-sans);
+  text-transform: uppercase;
+}
+.shop-use svg {
+  width: 16px;
+}
+.shop-use:active {
+  transform: scale(0.97);
+}
+.shop-used {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #8f8999;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.shop-used svg {
+  width: 14px;
+}
 .shop-buy:hover:not(:disabled) {
   background: #fff6a6;
 }
@@ -3525,6 +3659,13 @@
   }
   .shop-strip span {
     font-size: 8px;
+  }
+  .shop-reward-track {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+  .shop-item-actions {
+    flex-wrap: wrap;
   }
   .shop-modal .modal-close {
     position: fixed;

@@ -32,9 +32,9 @@ function Privacy() {
         <h2>Información que tratamos</h2>
         <h3>Progreso local</h3>
         <p>
-          El personaje elegido, ajustes, récords y preferencias se guardan en el almacenamiento
-          local del navegador. Esta información permanece en el dispositivo hasta que el usuario
-          borra los datos del sitio.
+          El personaje elegido, ajustes, récords, recompensas gratuitas, inventario de prueba y
+          preferencias se guardan en el almacenamiento local del navegador. Esta información
+          permanece en el dispositivo hasta que el usuario borra los datos del sitio.
         </p>
         <h3>Ranking</h3>
         <p>

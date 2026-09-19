@@ -46,7 +46,20 @@ function Purchases() {
         <p>
           Usá en Whop el mismo correo configurado en tu perfil del ranking. Después de un pago
           exitoso, un webhook firmado registra la compra y asigna el artículo a ese perfil. Si te
-          registraste con teléfono, agregá el correo de compras en el formulario del ranking.
+          registraste con teléfono, agregá el correo de compras en el formulario del ranking. Al
+          volver al juego, abrí Arsenal y tocá Sincronizar.
+        </p>
+        <h3>Uso durante la partida</h3>
+        <p>
+          Una compra activa permite usar esa ventaja una vez por batalla. El juego se pausa al abrir
+          Arsenal y continúa inmediatamente después de activarla. El checkout puede abrirse en otra
+          pestaña para conservar la partida que está en curso.
+        </p>
+        <h3>Pruebas gratuitas por puntaje</h3>
+        <p>
+          Cada episodio entrega unidades de prueba al alcanzar determinadas metas de puntaje. Estas
+          recompensas se guardan en el navegador, pueden utilizarse durante una partida y no tienen
+          valor monetario ni pueden transferirse o cambiarse por dinero.
         </p>
         <h3>Artículos digitales</h3>
         <p>

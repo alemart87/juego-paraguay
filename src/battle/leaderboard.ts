@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { FighterId } from "./content";
+import { SHOP_SKUS, type ShopSku } from "./shop-catalog";
 
 export type LeaderboardEntry = {
   rank: number;
@@ -62,6 +63,49 @@ async function contactHash(kind: "email" | "phone", value: string) {
     .digest("hex");
 }
 
+async function benefitsToken(hash: string) {
+  const { createHmac } = await import("node:crypto");
+  const secret = process.env.LEADERBOARD_SECRET?.trim() ?? "influencers-battle-local-preview";
+  return createHmac("sha256", secret).update(`benefits:${hash}`).digest("hex");
+}
+
+export const getPlayerBenefits = createServerFn({ method: "POST" })
+  .validator((input: unknown) =>
+    z
+      .object({
+        contactKind: z.enum(["email", "phone"]),
+        contact: z.string().trim().min(5).max(160),
+        benefitToken: z.string().length(64),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const hash = await contactHash(data.contactKind, data.contact);
+    if (!hash) return { ok: false as const, message: "El perfil no es válido." };
+    const expected = await benefitsToken(hash);
+    const { timingSafeEqual } = await import("node:crypto");
+    const suppliedBuffer = Buffer.from(data.benefitToken, "utf8");
+    const expectedBuffer = Buffer.from(expected, "utf8");
+    if (
+      suppliedBuffer.length !== expectedBuffer.length ||
+      !timingSafeEqual(suppliedBuffer, expectedBuffer)
+    )
+      return { ok: false as const, message: "Actualizá tu perfil para sincronizar compras." };
+    const sql = await (await import("@/lib/db")).getSql();
+    const rows = await sql.query<{ game_sku: string }>(
+      `SELECT DISTINCT e.game_sku
+         FROM player_entitlements e
+         JOIN leaderboard_players p ON p.id = e.player_id
+        WHERE p.contact_hash = $1 AND e.status = 'active'`,
+      [hash],
+    );
+    const valid = new Set<string>(SHOP_SKUS);
+    return {
+      ok: true as const,
+      skus: rows.map((row) => row.game_sku).filter((sku): sku is ShopSku => valid.has(sku)),
+    };
+  });
+
 export const registerLeaderboardPlayer = createServerFn({ method: "POST" })
   .validator((input: unknown) => profileInput.parse(input))
   .handler(async ({ data }) => {
@@ -112,10 +156,10 @@ export const registerLeaderboardPlayer = createServerFn({ method: "POST" })
     return {
       ok: true as const,
       name: data.name,
-      message:
-        purchaseHash
-          ? "Perfil listo. Usá este mismo correo al pagar en Whop."
-          : "Perfil listo. Tu mejor partida quedará ligada a este número.",
+      benefitToken: await benefitsToken(hash),
+      message: purchaseHash
+        ? "Perfil listo. Usá este mismo correo al pagar en Whop."
+        : "Perfil listo. Tu mejor partida quedará ligada a este número.",
     };
   });
 
@@ -215,6 +259,7 @@ export const submitLeaderboardScore = createServerFn({ method: "POST" })
       ok: true as const,
       rank: rankRows[0]?.rank ?? 1,
       name: data.name,
+      benefitToken: await benefitsToken(hashedContact),
       message: "Tu mejor partida ya aparece en el ranking.",
     };
   });

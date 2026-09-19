@@ -6,17 +6,48 @@ import {
   snapshot,
   activatePower,
   applyChoice,
+  applyShopPowerup,
   drainEvents,
   type Action,
   type World,
 } from "./engine";
 import { FIGHTERS, rivalFor, type EpisodeId } from "./content";
 import { defaultSave, loadSave, saveResult } from "./persistence";
+import { claimScoreRewards, consumeReward, emptyRewardWallet } from "./rewards";
 
 function tick(w: World, seconds: number, move = 0, attack = false, actions: Action[] = []) {
   for (let n = 0; n < Math.ceil(seconds * 60); n++)
     step(w, { move, attack, actions: new Set(n === 0 ? actions : []) }, 1 / 60);
 }
+test("score rewards are granted once per episode and can be consumed", () => {
+  const first = claimScoreRewards(emptyRewardWallet(), 1, 1_900);
+  assert.deepEqual(
+    first.awarded.map((reward) => reward.sku),
+    ["terere", "energia"],
+  );
+  assert.equal(first.wallet.stock.terere, 1);
+  const repeated = claimScoreRewards(first.wallet, 1, 4_000);
+  assert.deepEqual(
+    repeated.awarded.map((reward) => reward.sku),
+    ["arsenal"],
+  );
+  assert.equal(claimScoreRewards(repeated.wallet, 1, 9_000).awarded.length, 0);
+  assert.equal(claimScoreRewards(repeated.wallet, 2, 700).wallet.stock.terere, 2);
+  assert.equal(consumeReward(repeated.wallet, "arsenal")?.stock.arsenal, 0);
+});
+test("shop powerups alter the active battle immediately", () => {
+  const w = createWorld("masivo", 1, "tranqui");
+  w.player.hp = 10;
+  assert.equal(applyShopPowerup(w, "terere").ok, true);
+  assert.equal(w.player.hp, w.player.maxHp);
+  const grenades = w.grenades;
+  applyShopPowerup(w, "arsenal");
+  assert(w.grenades > grenades);
+  applyShopPowerup(w, "energia");
+  assert.equal(w.player.super, 100);
+  applyShopPowerup(w, "inmunidad");
+  assert(w.player.inv > w.t);
+});
 test("A/left decreases x, D/right increases x; released movement stops", () => {
   const w = createWorld("onichan", 1, "tranqui");
   w.enemies = [];

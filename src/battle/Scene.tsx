@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode, type PointerEvent } from "react";
-import { ArrowUp, ChevronsRight, Crosshair, Flame, Hand, Pause, Repeat2, Zap } from "lucide-react";
+import {
+  ArrowUp,
+  ChevronsRight,
+  Crosshair,
+  Flame,
+  Hand,
+  Pause,
+  Repeat2,
+  ShoppingBag,
+  Zap,
+} from "lucide-react";
 import { configureAudio, sfx, unlockAudio } from "../game/audio";
 import {
   drainEvents,
@@ -45,18 +55,24 @@ export function Scene({
   settings,
   onEvent,
   onPause,
+  onOpenShop,
+  onScoreMilestone,
+  rewardCount,
 }: {
   world: World;
   settings: Save;
   onEvent: (e: GameEvent) => void;
   onPause: () => void;
+  onOpenShop: () => void;
+  onScoreMilestone: (score: number) => void;
+  rewardCount: number;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const input = useRef<Input>({ move: 0, attack: false, actions: new Set() });
   const held = useRef(new Set<string>());
-  const callbacks = useRef({ onEvent, onPause });
-  callbacks.current = { onEvent, onPause };
+  const callbacks = useRef({ onEvent, onPause, onScoreMilestone });
+  callbacks.current = { onEvent, onPause, onScoreMilestone };
   const touch = useRef({ move: 0, attack: false });
   const joy = useRef<HTMLDivElement>(null);
   const [hud, setHud] = useState<Snapshot>(() => snapshot(world));
@@ -183,6 +199,7 @@ export function Scene({
           }
           if (now - hudAt > 100) {
             setHud(snapshot(world));
+            callbacks.current.onScoreMilestone(world.score);
             hudAt = now;
           }
           if (!canvas.current || !stage.current || disposed) return;
@@ -280,6 +297,18 @@ export function Scene({
           <b>{Math.round(hud.score).toLocaleString("es-PY")}</b>
           {hud.combo > 1 && <span>COMBO ×{hud.combo}</span>}
         </div>
+        <button
+          className="battle-shop-button"
+          aria-label={`Abrir inventario${rewardCount ? `, ${rewardCount} regalos disponibles` : ""}`}
+          onClick={() => {
+            clear();
+            onOpenShop();
+          }}
+        >
+          <ShoppingBag size={18} />
+          <span>ARSENAL</span>
+          {rewardCount > 0 && <b>{rewardCount}</b>}
+        </button>
         <button
           className="icon-button pause-button"
           aria-label="Pausar"

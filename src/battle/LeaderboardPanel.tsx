@@ -25,6 +25,7 @@ type StoredProfile = {
   kind: "email" | "phone";
   contact: string;
   purchaseEmail?: string;
+  benefitToken?: string;
 };
 const PROFILE_KEY = "influencers-battle-profile-v1";
 
@@ -108,10 +109,18 @@ export function Leaderboard({
         : await registerLeaderboardPlayer({ data });
       if (!response.ok) setError(response.message);
       else {
-        const saved: StoredProfile = { name: response.name, kind, contact, purchaseEmail };
+        const saved: StoredProfile = {
+          name: response.name,
+          kind,
+          contact,
+          purchaseEmail,
+          benefitToken: response.benefitToken,
+        };
         localStorage.setItem(PROFILE_KEY, JSON.stringify(saved));
         setRegistered(true);
-        setSuccess("rank" in response ? `#${response.rank} · ${response.message}` : response.message);
+        setSuccess(
+          "rank" in response ? `#${response.rank} · ${response.message}` : response.message,
+        );
         onRegistered(response.name);
         await refresh();
       }
@@ -165,8 +174,8 @@ export function Leaderboard({
                   <span>
                     <strong>{entry.name}</strong>
                     <small>
-                      {fighter(entry.hero).name} · EP. {entry.level} · {Math.floor(entry.time / 60)}:
-                      {String(entry.time % 60).padStart(2, "0")}
+                      {fighter(entry.hero).name} · EP. {entry.level} · {Math.floor(entry.time / 60)}
+                      :{String(entry.time % 60).padStart(2, "0")}
                     </small>
                   </span>
                   <em>{entry.score.toLocaleString("es-PY")}</em>
@@ -175,7 +184,9 @@ export function Leaderboard({
             </ol>
           ) : (
             <div className="ranking-empty">
-              <span className="ranking-empty-icon"><Trophy /></span>
+              <span className="ranking-empty-icon">
+                <Trophy />
+              </span>
               <strong>La cima está vacía.</strong>
               <span>Registrate ahora y convertí tu primera victoria en récord nacional.</span>
             </div>
@@ -185,39 +196,118 @@ export function Leaderboard({
 
       <form className="ranking-form" onSubmit={submit}>
         <div className="ranking-form-title">
-          <span><UserRound /></span>
-          <div><small>PERFIL DE JUGADOR</small><h3>{registered ? "Tu pase está listo" : "Entrá al ranking"}</h3></div>
+          <span>
+            <UserRound />
+          </span>
+          <div>
+            <small>PERFIL DE JUGADOR</small>
+            <h3>{registered ? "Tu pase está listo" : "Entrá al ranking"}</h3>
+          </div>
         </div>
-        <p>{canSubmit ? "Guardá esta partida y peleá por el primer puesto." : "Registrate sin esperar a terminar un episodio."}</p>
+        <p>
+          {canSubmit
+            ? "Guardá esta partida y peleá por el primer puesto."
+            : "Registrate sin esperar a terminar un episodio."}
+        </p>
         <label>
           Nombre público
-          <input value={name} onChange={(event) => setName(event.target.value)} maxLength={24} placeholder="Ej. TereréMaster" autoComplete="nickname" required />
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            maxLength={24}
+            placeholder="Ej. TereréMaster"
+            autoComplete="nickname"
+            required
+          />
         </label>
         <div className="contact-switch" role="group" aria-label="Tipo de contacto">
-          <button type="button" className={kind === "email" ? "active" : ""} onClick={() => { setKind("email"); setContact(""); }}><Mail /> Correo</button>
-          <button type="button" className={kind === "phone" ? "active" : ""} onClick={() => { setKind("phone"); setContact(""); }}><Phone /> Teléfono</button>
+          <button
+            type="button"
+            className={kind === "email" ? "active" : ""}
+            onClick={() => {
+              setKind("email");
+              setContact("");
+            }}
+          >
+            <Mail /> Correo
+          </button>
+          <button
+            type="button"
+            className={kind === "phone" ? "active" : ""}
+            onClick={() => {
+              setKind("phone");
+              setContact("");
+            }}
+          >
+            <Phone /> Teléfono
+          </button>
         </div>
         <label>
           {kind === "email" ? "Correo privado" : "Número privado"}
-          <input type={kind === "email" ? "email" : "tel"} value={contact} onChange={(event) => setContact(event.target.value)} placeholder={kind === "email" ? "vos@correo.com" : "+595 981 000 000"} autoComplete={kind === "email" ? "email" : "tel"} required />
+          <input
+            type={kind === "email" ? "email" : "tel"}
+            value={contact}
+            onChange={(event) => setContact(event.target.value)}
+            placeholder={kind === "email" ? "vos@correo.com" : "+595 981 000 000"}
+            autoComplete={kind === "email" ? "email" : "tel"}
+            required
+          />
         </label>
         {kind === "phone" && (
           <label>
             Correo para compras
-            <input type="email" value={purchaseEmail} onChange={(event) => setPurchaseEmail(event.target.value)} placeholder="El que usarás en Whop" autoComplete="email" />
+            <input
+              type="email"
+              value={purchaseEmail}
+              onChange={(event) => setPurchaseEmail(event.target.value)}
+              placeholder="El que usarás en Whop"
+              autoComplete="email"
+            />
           </label>
         )}
-        {kind === "email" && <p className="purchase-link-note"><ShieldCheck /> Usá este correo en Whop para recibir tus armas y poderes.</p>}
+        {kind === "email" && (
+          <p className="purchase-link-note">
+            <ShieldCheck /> Usá este correo en Whop para recibir tus armas y poderes.
+          </p>
+        )}
         <label className="ranking-consent">
-          <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} required />
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(event) => setConsent(event.target.checked)}
+            required
+          />
           <span>Acepto publicar mi apodo, personaje y puntaje. Mi contacto queda privado.</span>
         </label>
         <button className="primary" disabled={sending || !consent}>
-          {sending ? <><LoaderCircle className="spin" /> Guardando…</> : <><Trophy /> {canSubmit ? "Publicar mi puntaje" : registered ? "Actualizar perfil" : "Crear mi perfil"}</>}
+          {sending ? (
+            <>
+              <LoaderCircle className="spin" /> Guardando…
+            </>
+          ) : (
+            <>
+              <Trophy />{" "}
+              {canSubmit
+                ? "Publicar mi puntaje"
+                : registered
+                  ? "Actualizar perfil"
+                  : "Crear mi perfil"}
+            </>
+          )}
         </button>
-        <p className="ranking-privacy"><LockKeyhole /> El correo o teléfono nunca aparece públicamente.</p>
-        {error && <p className="notice" role="alert">{error}</p>}
-        {success && <p className="ranking-success" role="status"><Check /> {success}</p>}
+        <p className="ranking-privacy">
+          <LockKeyhole /> El correo o teléfono nunca aparece públicamente.
+        </p>
+        {error && (
+          <p className="notice" role="alert">
+            {error}
+          </p>
+        )}
+        {success && (
+          <p className="ranking-success" role="status">
+            <Check /> {success}
+          </p>
+        )}
       </form>
     </div>
   );

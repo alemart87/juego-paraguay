@@ -83,8 +83,10 @@ function HowToPlay() {
         </p>
         <h3>Compras y beneficios</h3>
         <p>
-          Los artículos opcionales se pagan en Whop. Usá el mismo correo guardado en tu perfil para
-          que el beneficio se asigne automáticamente. Consultá la{" "}
+          Durante la partida, tocá Arsenal para pausar y activar una ventaja sin perder el avance.
+          En cada episodio recibís pruebas gratuitas al superar 600, 1.800 y 3.500 puntos. Los
+          artículos opcionales se pagan en Whop; usá el mismo correo guardado en tu perfil y tocá
+          Sincronizar al volver para que el beneficio aparezca. Consultá la{" "}
           <Link to="/politica-de-compras">política de compras</Link> para conocer el proceso y los
           reembolsos.
         </p>

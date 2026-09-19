@@ -11,6 +11,7 @@ import {
   type Difficulty,
 } from "./content";
 import type { SfxName } from "../game/audio";
+import type { ShopSku } from "./shop-catalog";
 
 export const STAGE_WIDTH = 1500;
 export const WORLD_WIDTH = 4650;
@@ -686,6 +687,67 @@ export function applyChoice(w: World, choice: number) {
   else w.player.hp = Math.min(w.player.maxHp, w.player.hp + 65);
   w.paused = false;
   event(w, "pickup");
+}
+
+export function applyShopPowerup(w: World, sku: ShopSku) {
+  const p = w.player;
+  if (w.ended) return { ok: false as const, message: "La partida ya terminó." };
+  const messages: Record<ShopSku, string> = {
+    arsenal: "Arsenal guaraní equipado",
+    terere: "Tereré medicinal: vida completa",
+    pombero: "El Pombero bloquea tus golpes",
+    energia: "Energía y súper al máximo",
+    inmunidad: "Inmunidad política activada",
+    armadura: "Armadura de acero equipada",
+    luison: "El Luizón limpió la zona",
+    avance: "Avance relámpago activado",
+  };
+  switch (sku) {
+    case "arsenal":
+      w.weapon = "ak";
+      w.ammo.ak += 140;
+      w.ammo.smg += 120;
+      w.ammo.shotgun += 20;
+      w.grenades += 4;
+      p.buff = Math.max(p.buff, w.t + 12);
+      break;
+    case "terere":
+      p.maxHp += 25;
+      p.hp = p.maxHp;
+      break;
+    case "pombero":
+      p.shield = Math.max(p.shield, w.t + 14);
+      break;
+    case "energia":
+      p.super = 100;
+      p.buff = Math.max(p.buff, w.t + 15);
+      break;
+    case "inmunidad":
+      p.inv = Math.max(p.inv, w.t + 12);
+      break;
+    case "armadura":
+      p.maxHp += 60;
+      p.hp = Math.min(p.maxHp, p.hp + 60);
+      p.shield = Math.max(p.shield, w.t + 8);
+      break;
+    case "luison":
+      blast(w, p.x, p.y + 55, 850, 145, "#a96bff");
+      p.shield = Math.max(p.shield, w.t + 7);
+      break;
+    case "avance":
+      w.weapon = "smg";
+      w.ammo.smg += 100;
+      w.grenades += 2;
+      w.streak = Math.max(w.streak, 4);
+      w.streakAt = w.t;
+      p.dashReady = w.t;
+      p.powerReady = w.t;
+      break;
+  }
+  effect(w, p.x, p.y + 90, "text", "#f6e75a", 22, 1.2, messages[sku]);
+  w.events.push({ type: "toast", text: messages[sku] });
+  event(w, "pickup");
+  return { ok: true as const, message: messages[sku] };
 }
 function advance(w: World) {
   if (!interactLabel(w)) return;
