@@ -12,6 +12,8 @@ export type LeaderboardEntry = {
   time: number;
   combo: number;
   avatarUrl: string | null;
+  gamesPlayed: number;
+  bestScore: number;
 };
 
 export function normalizeContact(kind: "email" | "phone", value: string): string | null {
@@ -38,9 +40,10 @@ const scoreInput = z.object({
   consent: z.literal(true),
   score: z.number().int().min(0).max(10_000_000),
   level: z.number().int().min(1).max(4),
-  hero: z.enum(["masivo", "onichan", "anatomic", "comadre", "papu", "secre"]),
+  hero: z.enum(["masivo", "onichan", "anatomic", "comadre", "papu", "secre", "pablito", "marito"]),
   time: z.number().int().min(1).max(3600),
   combo: z.number().int().min(0).max(999),
+  runId: z.string().min(16).max(64),
 });
 
 const profileInput = scoreInput
@@ -181,19 +184,25 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(async ()
     time: number;
     combo: number;
     avatar_file: string | null;
+    games_played: number;
+    best_score: number;
   }>(
-    `SELECT p.display_name AS name, s.score, s.level, s.hero,
-            s.time_seconds AS time, s.combo, p.avatar_file
-       FROM leaderboard_scores s
-       JOIN leaderboard_players p ON p.id = s.player_id
-      ORDER BY s.score DESC, s.time_seconds ASC, s.updated_at ASC
+    `SELECT p.display_name AS name, p.total_score AS score,
+            COALESCE(s.level, 1) AS level, COALESCE(s.hero, 'masivo') AS hero,
+            COALESCE(s.time_seconds, 0) AS time, COALESCE(s.combo, 0) AS combo,
+            p.avatar_file, p.games_played, COALESCE(s.score, 0) AS best_score
+       FROM leaderboard_players p
+       LEFT JOIN leaderboard_scores s ON s.player_id = p.id
+      ORDER BY p.total_score DESC, p.games_played DESC, p.updated_at ASC
       LIMIT 50`,
   );
   return {
     ok: true as const,
-    entries: rows.map(({ avatar_file, ...row }, index) => ({
+    entries: rows.map(({ avatar_file, games_played, best_score, ...row }, index) => ({
       ...row,
       avatarUrl: avatar_file ? `/media/players/${avatar_file}` : null,
+      gamesPlayed: games_played,
+      bestScore: best_score,
       rank: index + 1,
     })),
   };
@@ -247,6 +256,24 @@ export const submitLeaderboardScore = createServerFn({ method: "POST" })
     );
     const playerId = players[0]?.id;
     if (!playerId) throw new Error("No se pudo registrar el perfil");
+    const inserted = await sql.query<{ score: number }>(
+      `INSERT INTO leaderboard_score_events
+         (run_id, player_id, score, level, hero, time_seconds, combo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (run_id) DO NOTHING
+       RETURNING score`,
+      [data.runId, playerId, data.score, data.level, data.hero, data.time, data.combo],
+    );
+    if (inserted.length)
+      await sql.query(
+        `UPDATE leaderboard_players
+            SET total_score = total_score + $2,
+                games_played = games_played + 1,
+                wins = wins + 1,
+                updated_at = now()
+          WHERE id = $1`,
+        [playerId, data.score],
+      );
     await sql.query(
       `INSERT INTO leaderboard_scores
          (player_id, score, level, hero, time_seconds, combo)
@@ -263,15 +290,24 @@ export const submitLeaderboardScore = createServerFn({ method: "POST" })
               AND EXCLUDED.time_seconds < leaderboard_scores.time_seconds)`,
       [playerId, data.score, data.level, data.hero, data.time, data.combo],
     );
-    const rankRows = await sql.query<{ rank: number }>(
-      `SELECT 1 + count(*)::int AS rank FROM leaderboard_scores WHERE score > $1`,
-      [data.score],
+    const rankRows = await sql.query<{ rank: number; total_score: number }>(
+      `SELECT ranked.rank, ranked.total_score
+         FROM (
+           SELECT id, total_score,
+                  row_number() OVER (ORDER BY total_score DESC, games_played DESC, updated_at ASC)::int AS rank
+             FROM leaderboard_players
+         ) ranked
+        WHERE ranked.id = $1`,
+      [playerId],
     );
     return {
       ok: true as const,
       rank: rankRows[0]?.rank ?? 1,
+      totalScore: Number(rankRows[0]?.total_score ?? data.score),
       name: data.name,
       benefitToken: await benefitsToken(hashedContact),
-      message: "Tu mejor partida ya aparece en el ranking.",
+      message: inserted.length
+        ? "La partida se sumó a tu puntaje total."
+        : "Esta partida ya estaba contabilizada.",
     };
   });

@@ -138,6 +138,7 @@ export function Leaderboard({
               hero: result.hero,
               time: Math.max(1, Math.round(result.time)),
               combo: Math.round(result.combo),
+              runId: result.runId || crypto.randomUUID(),
             },
           })
         : await registerLeaderboardPlayer({ data });
@@ -205,7 +206,7 @@ export function Leaderboard({
         <div>
           <span className="eyebrow">CLASIFICACIÓN NACIONAL · EN VIVO</span>
           <h2>El feed se gana.</h2>
-          <p>Creá tu perfil ahora. Tu mejor victoria sube automáticamente.</p>
+          <p>Creá tu perfil ahora. Cada victoria suma a tu puntaje total automáticamente.</p>
         </div>
         <BrandLogo animated className="ranking-publisher" />
       </header>
@@ -226,7 +227,7 @@ export function Leaderboard({
         <div className="ranking-board" aria-live="polite">
           <div className="ranking-labels">
             <span># / JUGADOR</span>
-            <span>PUNTOS</span>
+            <span>PUNTOS TOTALES</span>
           </div>
           {loading ? (
             <div className="ranking-loading">
@@ -241,8 +242,9 @@ export function Leaderboard({
                   <span>
                     <strong>{entry.name}</strong>
                     <small>
-                      {fighter(entry.hero).name} · EP. {entry.level} · {Math.floor(entry.time / 60)}
-                      :{String(entry.time % 60).padStart(2, "0")}
+                      {fighter(entry.hero).name} · {entry.gamesPlayed} partida
+                      {entry.gamesPlayed === 1 ? "" : "s"} · récord{" "}
+                      {entry.bestScore.toLocaleString("es-PY")}
                     </small>
                   </span>
                   <em>{entry.score.toLocaleString("es-PY")}</em>

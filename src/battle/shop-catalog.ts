@@ -1,5 +1,25 @@
 export const SHOP_ITEMS = [
   {
+    sku: "pablito",
+    name: "Pablito Pintos",
+    icon: "💖",
+    image: "/battle/shop/pablito.webp",
+    description: "Personaje premium jugable: encanto, velocidad, flash y súper de pasarela.",
+    price: 3.99,
+    badge: "PERSONAJE",
+    category: "PREMIUM",
+  },
+  {
+    sku: "marito",
+    name: "Marito Presidencial",
+    icon: "🚁",
+    image: "/battle/shop/marito.webp",
+    description: "Inmune a todo. Entra en helicóptero y dispara misiles de alto impacto.",
+    price: 19.99,
+    badge: "ULTRA PREMIUM",
+    category: "PERSONAJE",
+  },
+  {
     sku: "arsenal",
     name: "Arsenal guaraní",
     icon: "💥",
@@ -85,4 +105,3 @@ export type ShopItem = (typeof SHOP_ITEMS)[number];
 export type ShopSku = ShopItem["sku"];
 
 export const SHOP_SKUS = SHOP_ITEMS.map((item) => item.sku) as [ShopSku, ...ShopSku[]];
-

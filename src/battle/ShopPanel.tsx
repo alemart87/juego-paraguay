@@ -154,7 +154,8 @@ export function ShopPanel({
           const free = rewards.stock[item.sku] ?? 0;
           const owned = ownedSkus.includes(item.sku);
           const used = usedOwnedSkus.includes(item.sku);
-          const canUse = inBattle && (free > 0 || (owned && !used));
+          const isCharacter = item.sku === "pablito" || item.sku === "marito";
+          const canUse = !isCharacter && inBattle && (free > 0 || (owned && !used));
           return (
             <article key={item.sku} className={`shop-item ${canUse ? "ready" : ""}`}>
               <div className="shop-item-top">
@@ -184,6 +185,11 @@ export function ShopPanel({
                   {inBattle && owned && used && (
                     <span className="shop-used">
                       <Check /> Usado en esta batalla
+                    </span>
+                  )}
+                  {isCharacter && owned && (
+                    <span className="shop-used">
+                      <Check /> Elegilo en Personajes
                     </span>
                   )}
                   {!owned && (

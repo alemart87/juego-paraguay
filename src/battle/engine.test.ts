@@ -100,6 +100,24 @@ test("every fighter has a cooldown and a distinct visible power; supers consume 
     assert(w.player.super < 100, f.id);
   }
 });
+test("premium fighters have complete combat mechanics", () => {
+  const marito = createWorld("marito", 1, "picante");
+  assert.equal(marito.player.inv, Number.POSITIVE_INFINITY);
+  const targetHp = marito.enemies[0]!.hp;
+  marito.player.face = 1;
+  tick(marito, 0.1, 0, true);
+  assert(marito.shots.length > 0, "Marito fires missiles");
+  assert(marito.enemies[0]!.hp < targetHp, "Marito missile locks onto a target");
+
+  const pablito = createWorld("pablito", 1, "picante");
+  pablito.player.x = 400;
+  activatePower(pablito);
+  assert(
+    pablito.enemies.some((enemy) => enemy.slow > pablito.t),
+    "Pablito charms and slows nearby enemies",
+  );
+  assert(pablito.effects.length > 0, "Pablito power has visible effects");
+});
 test("empty gun swaps to an available weapon; melee remains usable", () => {
   const w = createWorld("masivo", 1, "tranqui");
   for (const id of ["ak", "pistol", "smg", "shotgun"] as const) w.ammo[id] = 0;

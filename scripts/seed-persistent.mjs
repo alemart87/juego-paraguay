@@ -12,6 +12,8 @@ const selected = new Set([
   "la-comadre.webp",
   "el-papu.webp",
   "la-secre.webp",
+  "pablito.webp",
+  "marito.webp",
   "boss-luison.webp",
   "boss-lata.webp",
   "boss-lulax.webp",

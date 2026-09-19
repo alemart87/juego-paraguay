@@ -154,6 +154,52 @@ export const CHARACTERS: CharacterPage[] = [
     ],
   },
   {
+    slug: "pablito-pintos",
+    name: "Pablito Pintos",
+    type: "combatiente",
+    kicker: "Premium · encanto y control",
+    description:
+      "Pablito Pintos es un personaje premium jugable de Influencers Battle con velocidad, control de masas y una prueba gratis de 10 segundos.",
+    portrait: "/battle/pablito.webp",
+    color: "#ff3190",
+    playStyle:
+      "Combina la mayor velocidad del elenco con ráfagas de encanto que frenan grupos enteros. Puede moverse, saltar, disparar, usar dash y encadenar combos como cualquier combatiente.",
+    ability:
+      "Flash irresistible congela la ofensiva rival y la súper Reina de la pasarela cubre gran parte del escenario con una onda rosa.",
+    tactics: [
+      "Probá sus movimientos durante 10 segundos antes de decidir la compra.",
+      "Usá Flash irresistible cuando una oleada rodee al personaje.",
+      "Su velocidad permite mantener combos largos sin quedar encerrado.",
+    ],
+    story: [
+      "Dentro del universo satírico del juego, Pablito convierte cada escenario en una pasarela de combate donde un flash puede detener hasta al enemigo más ruidoso.",
+      "Es un desbloqueo permanente asociado al perfil del jugador y funciona en los cuatro episodios.",
+    ],
+  },
+  {
+    slug: "marito",
+    name: "Marito",
+    type: "combatiente",
+    kicker: "Ultra premium · comando aéreo",
+    description:
+      "Marito es el personaje ultra premium de Influencers Battle: inmune, equipado con misiles y una entrada en helicóptero en cada nivel.",
+    portrait: "/battle/marito.webp",
+    color: "#f6e75a",
+    playStyle:
+      "Tiene movimiento, salto, dash y controles completos, pero reemplaza el disparo normal por misiles guiados. Durante los primeros segundos desciende desde su helicóptero.",
+    ability:
+      "Ataque presidencial lanza una salva de misiles y Operación helicóptero bombardea simultáneamente a todos los enemigos activos.",
+    tactics: [
+      "La inmunidad permanente permite concentrarse en velocidad y puntaje.",
+      "Dispará desde el helicóptero para limpiar la primera oleada.",
+      "Reservá la súper para las fases de jefe con enemigos adicionales.",
+    ],
+    story: [
+      "Marito llega a la campaña como una caricatura política ficticia con recursos absurdamente superiores: helicóptero, misiles e inmunidad total.",
+      "El personaje puede probarse durante 10 segundos y luego desbloquearse de forma permanente para el perfil del jugador.",
+    ],
+  },
+  {
     slug: "padre-apostol",
     name: "Padre Apóstol",
     type: "jefe",

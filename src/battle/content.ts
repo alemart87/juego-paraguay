@@ -1,4 +1,5 @@
-export type FighterId = "masivo" | "onichan" | "anatomic" | "comadre" | "papu" | "secre";
+export type FighterId =
+  "masivo" | "onichan" | "anatomic" | "comadre" | "papu" | "secre" | "pablito" | "marito";
 export type EpisodeId = 1 | 2 | 3 | 4;
 export type WeaponId = "fist" | "knife" | "bat" | "pistol" | "ak" | "shotgun" | "smg" | "grenade";
 export type Difficulty = "tranqui" | "picante";
@@ -54,6 +55,7 @@ export interface Fighter {
   powerHint: string;
   superName: string;
   cooldown: number;
+  premium?: { sku: "pablito" | "marito"; price: number; trialSeconds: number };
 }
 export const FIGHTERS: Fighter[] = [
   {
@@ -145,6 +147,38 @@ export const FIGHTERS: Fighter[] = [
     powerHint: "Sellá el suelo y frená a los enemigos.",
     superName: "Sistema caído",
     cooldown: 9,
+  },
+  {
+    id: "pablito",
+    name: "Pablito Pintos",
+    role: "Encanto & control",
+    quote: "Una mirada, un flash y todo el escenario queda mío.",
+    color: "#ff3190",
+    row: 6,
+    portrait: "/battle/pablito.webp",
+    hp: 155,
+    speed: 315,
+    power: "Flash irresistible",
+    powerHint: "Encantá y frená enemigos mientras una ráfaga rosa limpia el camino.",
+    superName: "Reina de la pasarela",
+    cooldown: 5,
+    premium: { sku: "pablito", price: 3.99, trialSeconds: 10 },
+  },
+  {
+    id: "marito",
+    name: "Marito",
+    role: "Comandante aéreo",
+    quote: "Yo no entro al nivel. El nivel recibe mi helicóptero.",
+    color: "#f6e75a",
+    row: 7,
+    portrait: "/battle/marito.webp",
+    hp: 999,
+    speed: 330,
+    power: "Ataque presidencial",
+    powerHint: "Misiles guiados desde el aire. Inmunidad total durante toda la partida.",
+    superName: "Operación helicóptero",
+    cooldown: 3.5,
+    premium: { sku: "marito", price: 19.99, trialSeconds: 10 },
   },
 ];
 export const fighter = (id: FighterId) => FIGHTERS.find((f) => f.id === id)!;

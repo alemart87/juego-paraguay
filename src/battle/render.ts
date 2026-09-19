@@ -9,6 +9,7 @@ export interface Art {
   minions: HTMLImageElement;
   asuncionCombatants: HTMLImageElement;
   apostolCombatants: HTMLImageElement;
+  premium: HTMLImageElement[];
 }
 const images = new Map<string, Promise<HTMLImageElement>>();
 function load(src: string): Promise<HTMLImageElement> {
@@ -92,16 +93,27 @@ function poses() {
   return posesPromise;
 }
 export async function loadArt(level: World["level"]): Promise<Art> {
-  const [background, items, actionPoses, bosses, minions, asuncionCombatants, apostolCombatants] =
-    await Promise.all([
-      load(episode(level).bg),
-      frames(),
-      poses(),
-      load("/battle/bosses.webp"),
-      load("/battle/minions.webp"),
-      load("/battle/asuncion-combatants.webp"),
-      load("/battle/apostol-combatants.webp"),
-    ]);
+  const [
+    background,
+    items,
+    actionPoses,
+    bosses,
+    minions,
+    asuncionCombatants,
+    apostolCombatants,
+    pablito,
+    marito,
+  ] = await Promise.all([
+    load(episode(level).bg),
+    frames(),
+    poses(),
+    load("/battle/bosses.webp"),
+    load("/battle/minions.webp"),
+    load("/battle/asuncion-combatants.webp"),
+    load("/battle/apostol-combatants.webp"),
+    load("/battle/pablito.webp"),
+    load("/battle/marito.webp"),
+  ]);
   return {
     background,
     frames: items,
@@ -110,6 +122,7 @@ export async function loadArt(level: World["level"]): Promise<Art> {
     minions,
     asuncionCombatants,
     apostolCombatants,
+    premium: [pablito, marito],
   };
 }
 function rect(
@@ -170,6 +183,19 @@ function drawFighter(
   const pose = hit ? 3 : airborne ? 2 : attack ? 1 : 0;
   const image =
     moving && !hit && !attack && !airborne ? art.frames[row]?.[frame] : art.poses[row]?.[pose];
+  if (row >= 6) {
+    const premium = art.premium[row - 6];
+    if (!premium) return;
+    g.save();
+    g.translate(x, y);
+    g.scale(face * scale, scale);
+    if (hit) g.globalAlpha = 0.48;
+    const bob = airborne ? -10 : moving ? Math.sin(t * 14) * 4 : Math.sin(t * 3) * 2;
+    if (attack) g.rotate(0.07);
+    g.drawImage(premium, -64, -151 + bob, 128, 154);
+    g.restore();
+    return;
+  }
   if (!image) return;
   g.save();
   g.translate(x, y);
@@ -378,6 +404,29 @@ export function render(
   const p = w.player,
     px = sx(p.x),
     py = floor - p.y;
+  if (w.hero === "marito" && w.t < 10) {
+    const lift = Math.max(0, 1 - w.t / 10) * 76;
+    g.save();
+    g.translate(px, py - lift - 96);
+    g.strokeStyle = "#161922";
+    g.lineWidth = 6;
+    g.beginPath();
+    g.moveTo(-88, -41);
+    g.lineTo(88, -41);
+    g.moveTo(0, -41);
+    g.lineTo(0, -23);
+    g.stroke();
+    rect(g, -71, -23, 134, 45, "#27313a", 20);
+    rect(g, 42, -12, 86, 12, "#27313a", 4);
+    g.fillStyle = "#86d7e8";
+    g.beginPath();
+    g.arc(-31, -7, 24, Math.PI, Math.PI * 2);
+    g.fill();
+    rect(g, -48, 18, 18, 25, "#343b42", 3);
+    rect(g, 25, 18, 18, 25, "#343b42", 3);
+    label(g, "PY-01", 10, 10, 12, "#f6e75a");
+    g.restore();
+  }
   ellipse(g, px, floor + 5, 35, 7, "#11101860");
   if (p.shield > w.t) {
     g.strokeStyle = "#83caa8";
@@ -393,7 +442,7 @@ export function render(
     art,
     fighter(w.hero).row,
     px,
-    py,
+    py - (w.hero === "marito" && w.t < 10 ? Math.max(0, 1 - w.t / 10) * 76 : 0),
     p.face,
     w.t,
     Math.abs(p.vx) > 20,

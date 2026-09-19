@@ -7,6 +7,7 @@ export interface ShareResult {
   combo: number;
   seed: number;
   playerName?: string;
+  runId?: string;
 }
 export function challengeUrl(result: ShareResult) {
   const url = new URL(window.location.href);

@@ -11,6 +11,8 @@ export const getWhopCheckout = createServerFn({ method: "POST" })
   .validator((value: unknown) => input.parse(value))
   .handler(async ({ data }) => {
     const env: Record<ShopSku, string | undefined> = {
+      pablito: process.env.WHOP_CHECKOUT_PABLITO,
+      marito: process.env.WHOP_CHECKOUT_MARITO,
       arsenal: process.env.WHOP_CHECKOUT_ARSENAL,
       terere: process.env.WHOP_CHECKOUT_TERERE,
       pombero: process.env.WHOP_CHECKOUT_POMBERO,

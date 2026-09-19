@@ -43,7 +43,7 @@ import { challengeUrl, downloadCard, resultCard, type ShareResult } from "./shar
 import { Intro } from "./Intro";
 import { Leaderboard } from "./LeaderboardPanel";
 import { loadLeaderboardProfile } from "./leaderboard-profile";
-import { submitLeaderboardScore } from "./leaderboard";
+import { getPlayerBenefits, submitLeaderboardScore } from "./leaderboard";
 import { BrandLogo } from "./BrandLogo";
 import { ShopPanel } from "./ShopPanel";
 import type { ShopSku } from "./shop-catalog";
@@ -59,6 +59,7 @@ import {
 import { chatWithNpc, type AgentTurn } from "../game/agent";
 import { configureAudio, installMobileAudioUnlock, unlockAudio, sfx } from "../game/audio";
 import "./battle.css";
+import { trackGame } from "./analytics";
 
 type Screen = "home" | "fighters" | "episodes" | "brief" | "play" | "result";
 type Dialog = "settings" | "help" | "pause" | "talk" | "share" | "ranking" | "shop" | null;
@@ -88,6 +89,10 @@ export function BattleGame() {
   const [rewards, setRewards] = useState<RewardWallet>(emptyRewardWallet);
   const [ownedSkus, setOwnedSkus] = useState<ShopSku[]>([]);
   const [usedOwnedSkus, setUsedOwnedSkus] = useState<ShopSku[]>([]);
+  const [runId, setRunId] = useState("");
+  const [trialEndsAt, setTrialEndsAt] = useState(0);
+  const [trialSeconds, setTrialSeconds] = useState(0);
+  const [trialExpired, setTrialExpired] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoRankSubmitted = useRef(false);
   const notify = (message: string) => {
@@ -100,7 +105,16 @@ export function BattleGame() {
     const leaderboardProfile = loadLeaderboardProfile();
     setSave(local);
     if (leaderboardProfile) setRankingName(leaderboardProfile.name);
+    if (leaderboardProfile?.benefitToken)
+      void getPlayerBenefits({
+        data: {
+          contactKind: leaderboardProfile.kind,
+          contact: leaderboardProfile.contact,
+          benefitToken: leaderboardProfile.benefitToken,
+        },
+      }).then((response) => response.ok && setOwnedSkus(response.skus));
     setRewards(loadRewardWallet());
+    trackGame("page_view");
     const params = new URLSearchParams(location.search);
     const id = Number(params.get("battle"));
     const selected = params.get("fighter");
@@ -144,6 +158,23 @@ export function BattleGame() {
       document.documentElement.style.overflow = previousRoot;
     };
   }, [dialog]);
+  useEffect(() => {
+    if (!trialEndsAt || screen !== "play") return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((trialEndsAt - Date.now()) / 1000));
+      setTrialSeconds(remaining);
+      if (!remaining) {
+        setTrialEndsAt(0);
+        setTrialExpired(true);
+        if (world && !world.ended) world.paused = true;
+        setDialog("shop");
+        notify(`Terminó la prueba de ${fighter(save.hero).name}. Desbloquealo para continuar.`);
+      }
+    };
+    tick();
+    const timer = window.setInterval(tick, 200);
+    return () => window.clearInterval(timer);
+  }, [trialEndsAt, screen, world, save.hero]);
   const updateSave = (next: Save) => {
     setSave(next);
     setStored(writeSave(next));
@@ -152,6 +183,28 @@ export function BattleGame() {
   const completed = Object.keys(save.records).length;
   const play = () => {
     unlockAudio();
+    const selected = fighter(save.hero);
+    if (selected.premium && !ownedSkus.includes(selected.premium.sku)) {
+      const key = `ib-premium-trial-${selected.id}`;
+      if (localStorage.getItem(key)) {
+        setDialog("shop");
+        notify(`${selected.name} es premium. Desbloquealo para volver a jugar.`);
+        return;
+      }
+      localStorage.setItem(key, "used");
+      trackGame("premium_trial", level, save.hero);
+      const ends = Date.now() + selected.premium.trialSeconds * 1000;
+      setTrialEndsAt(ends);
+      setTrialSeconds(selected.premium.trialSeconds);
+      setTrialExpired(false);
+    } else {
+      setTrialEndsAt(0);
+      setTrialSeconds(0);
+      setTrialExpired(false);
+    }
+    const nextRunId = crypto.randomUUID();
+    setRunId(nextRunId);
+    trackGame("game_start", level, save.hero);
     const next = createWorld(save.hero, level, save.difficulty, seed);
     setWorld(next);
     setDialog(null);
@@ -179,6 +232,12 @@ export function BattleGame() {
     setDialog("shop");
   };
   const closeDialog = () => {
+    if (dialog === "shop" && trialExpired) {
+      setDialog(null);
+      setWorld(null);
+      setScreen("fighters");
+      return;
+    }
     if (screen === "play" && world && !world.ended && (dialog === "pause" || dialog === "shop"))
       world.paused = false;
     setDialog(null);
@@ -220,6 +279,8 @@ export function BattleGame() {
       setDialog("talk");
     }
     if (event.type === "win" || event.type === "lose") {
+      if (world)
+        trackGame(event.type === "win" ? "game_win" : "game_loss", world.level, world.hero);
       setWon(event.type === "win");
       setScreen("result");
       setDialog(null);
@@ -249,6 +310,7 @@ export function BattleGame() {
               hero: world.hero,
               time: Math.max(1, Math.round(world.t)),
               combo: Math.round(world.bestCombo),
+              runId,
             },
           })
             .then((response) => {
@@ -274,8 +336,9 @@ export function BattleGame() {
         combo: world.bestCombo,
         seed: world.seed,
         playerName: rankingName || undefined,
+        runId,
       }
-    : { hero: save.hero, level, score: 0, time: 0, combo: 0, seed };
+    : { hero: save.hero, level, score: 0, time: 0, combo: 0, seed, runId };
   const openShare = async () => {
     setDialog("share");
     setShareBlob(null);
@@ -388,11 +451,11 @@ export function BattleGame() {
             <div className="hero-art">
               <img
                 src="/media/characters/cover-v2.webp"
-                alt="Los seis personajes de Influencers Battle en una portada de acción paraguaya"
+                alt="Los personajes de Influencers Battle en una portada de acción paraguaya"
                 fetchPriority="high"
               />
               <div className="art-sticker">
-                <span>6 EGOS.</span>
+                <span>8 EGOS.</span>
                 <span>CERO FILTRO.</span>
               </div>
             </div>
@@ -492,7 +555,7 @@ export function BattleGame() {
               </h1>
             </div>
             <p>
-              Seis estilos. Las mismas ganas
+              Ocho estilos. Las mismas ganas
               <br />
               de quedarse con el escenario.
             </p>
@@ -565,7 +628,14 @@ export function BattleGame() {
               <button className="primary" onClick={() => setScreen("episodes")}>
                 Elegir escenario <ArrowRight size={19} />
               </button>
-              <small className="muted">Todos los personajes están disponibles.</small>
+              {hero.premium ? (
+                <small className="premium-note">
+                  PREMIUM · USD {hero.premium.price.toFixed(2)} · Probalo{" "}
+                  {hero.premium.trialSeconds}s
+                </small>
+              ) : (
+                <small className="muted">Incluido con el juego.</small>
+              )}
             </aside>
           </div>
         </section>
@@ -1039,7 +1109,11 @@ export function BattleGame() {
                   ownedSkus={ownedSkus}
                   usedOwnedSkus={usedOwnedSkus}
                   onUse={useShopItem}
-                  onBenefitsSynced={setOwnedSkus}
+                  onBenefitsSynced={(skus) => {
+                    setOwnedSkus(skus);
+                    const premium = fighter(save.hero).premium;
+                    if (premium && skus.includes(premium.sku)) setTrialExpired(false);
+                  }}
                 />
               )}
             </section>
@@ -1049,6 +1123,12 @@ export function BattleGame() {
       {toast && (
         <div className="ib-toast" role="status">
           {toast}
+        </div>
+      )}
+      {trialSeconds > 0 && screen === "play" && (
+        <div className="premium-trial-clock" role="status">
+          <small>PRUEBA PREMIUM</small>
+          <strong>{trialSeconds}s</strong>
         </div>
       )}
     </main>

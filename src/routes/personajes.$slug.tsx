@@ -40,6 +40,8 @@ function CharacterPage() {
     "la-comadre": "comadre",
     "el-papu": "papu",
     "la-secre": "secre",
+    "pablito-pintos": "pablito",
+    marito: "marito",
   };
   const fighterId = fighterIdBySlug[character.slug];
   const playUrl = fighterId ? `/?battle=1&fighter=${fighterId}` : "/";

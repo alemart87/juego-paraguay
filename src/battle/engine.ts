@@ -234,7 +234,7 @@ export function createWorld(
       face: 1,
       hp: f.hp,
       maxHp: f.hp,
-      inv: 0,
+      inv: hero === "marito" ? Number.POSITIVE_INFINITY : 0,
       dash: 0,
       dashReady: 0,
       powerReady: 0,
@@ -470,6 +470,28 @@ function shoot(w: World, s: Omit<Shot, "age" | "origin" | "hitIds">) {
 function attack(w: World) {
   const p = w.player;
   if (w.t < p.attackReady) return;
+  if (w.hero === "marito") {
+    p.attackReady = w.t + 0.38;
+    p.attackPose = w.t + 0.18;
+    const target = w.enemies
+      .filter((enemy) => enemy.hp > 0)
+      .sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+    shoot(w, {
+      x: p.x + p.face * 38,
+      y: p.y + (w.t < 10 ? 145 : 72),
+      vx: p.face * 540,
+      vy: target ? clamp((target.y + 45 - (p.y + 72)) * 2.2, -180, 180) : -20,
+      life: 1.25,
+      damage: 72,
+      enemy: false,
+      kind: "grenade",
+      color: "#f6e75a",
+      radius: 12,
+    });
+    if (target) hitEnemy(w, target, 38, p.face * 12);
+    event(w, "grenade");
+    return;
+  }
   const base = BASE_WEAPONS[w.weapon];
   if (w.ammo[w.weapon] <= 0) {
     p.attackReady = w.t + 0.25;
@@ -632,6 +654,18 @@ export function activatePower(w: World) {
         }
         blast(w, p.x, 60, 600, 120, f.color);
         break;
+      case "pablito":
+        for (const e of w.enemies)
+          if (e.hp > 0) {
+            e.slow = w.t + 7;
+            e.ready = Math.max(e.ready, w.t + 4);
+          }
+        blast(w, p.x, 75, 760, 190, f.color);
+        break;
+      case "marito":
+        p.inv = Number.POSITIVE_INFINITY;
+        for (const e of w.enemies) if (e.hp > 0) blast(w, e.x, e.y + 50, 135, 240, f.color);
+        break;
     }
     return;
   }
@@ -675,6 +709,31 @@ export function activatePower(w: World) {
         }
       effect(w, p.x, 15, "ring", f.color, 430, 0.7);
       break;
+    case "pablito":
+      for (const e of w.enemies)
+        if (e.hp > 0 && Math.abs(e.x - p.x) < 520) {
+          e.slow = w.t + 4.5;
+          e.ready = Math.max(e.ready, w.t + 2.5);
+          hitEnemy(w, e, 75, (e.x > p.x ? 1 : -1) * 45);
+        }
+      blast(w, p.x, 70, 520, 55, f.color);
+      break;
+    case "marito":
+      p.inv = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < 5; i++)
+        shoot(w, {
+          x: p.x + (i - 2) * 22,
+          y: p.y + 150,
+          vx: p.face * (470 + i * 35),
+          vy: -160 + i * 70,
+          life: 1.35,
+          damage: 105,
+          enemy: false,
+          kind: "grenade",
+          color: f.color,
+          radius: 13,
+        });
+      break;
   }
 }
 export function applyChoice(w: World, choice: number) {
@@ -693,6 +752,8 @@ export function applyShopPowerup(w: World, sku: ShopSku) {
   const p = w.player;
   if (w.ended) return { ok: false as const, message: "La partida ya terminó." };
   const messages: Record<ShopSku, string> = {
+    pablito: "Pablito Pintos desbloqueado en tu perfil",
+    marito: "Marito Presidencial desbloqueado en tu perfil",
     arsenal: "Arsenal guaraní equipado",
     terere: "Tereré medicinal: vida completa",
     pombero: "El Pombero bloquea tus golpes",
@@ -703,6 +764,9 @@ export function applyShopPowerup(w: World, sku: ShopSku) {
     avance: "Avance relámpago activado",
   };
   switch (sku) {
+    case "pablito":
+    case "marito":
+      return { ok: false as const, message: "Elegí este personaje antes de iniciar la partida." };
     case "arsenal":
       w.weapon = "ak";
       w.ammo.ak += 140;
