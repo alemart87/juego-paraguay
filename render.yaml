@@ -27,6 +27,8 @@ services:
         value: https://www.influencerspy.pro
       - key: WHOP_API_KEY
         sync: false
+      - key: WHOP_WEBHOOK_SECRET
+        sync: false
 
 databases:
   - name: influencers-battle-db

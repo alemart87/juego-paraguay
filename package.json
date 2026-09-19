@@ -14,6 +14,7 @@
     "build:docker": "node scripts/with-app-env.mjs vite build && npm run db:migrate",
     "start": "node .output/server/index.mjs",
     "persistent:seed": "node scripts/seed-persistent.mjs",
+    "whop:provision": "node --env-file=.env --import tsx scripts/provision-whop.ts",
     "preview": "node scripts/with-app-env.mjs vite preview",
     "preview:restart": "node scripts/preview.mjs restart",
     "preview:stop": "node scripts/preview.mjs stop",

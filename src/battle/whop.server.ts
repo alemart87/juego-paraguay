@@ -1,9 +1,8 @@
 import { WhopClient } from "@whop/sdk";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type { SHOP_ITEMS } from "./shop";
+import type { ShopItem } from "./shop-catalog";
 
-type ShopItem = (typeof SHOP_ITEMS)[number];
 type CheckoutRecord = {
   id: string;
   url: string;

@@ -53,18 +53,29 @@ Para habilitar las conversaciones generativas, completá `VENICE_API_KEY` en `.e
 | `PUBLIC_SITE_URL`    | URL pública: `https://www.influencerspy.pro`.                                 |
 | `VITE_AUTH_ENABLED`  | Debe permanecer `false`; el ranking usa registro opcional propio.             |
 | `WHOP_API_KEY`       | Account API key privada para crear checkouts de Whop desde el servidor.       |
+| `WHOP_WEBHOOK_SECRET` | Secreto `ws_…` que verifica cada evento firmado de Whop.                     |
 | `WHOP_CHECKOUT_*`    | Overrides opcionales para enlaces existentes; ya no son obligatorios.         |
 
 Nunca subas `.env`; el repositorio solo contiene [.env.example](.env.example).
 
 ### Activar la tienda Whop
 
-1. En Whop creá una **Account API key** para el negocio y autorizá creación de checkout configurations y planes.
+1. En Whop creá una **Account API key** del negocio con el scope `checkout_configuration:create`.
 2. En Render → Web Service → **Environment**, cargá la clave como `WHOP_API_KEY` y guardá.
-3. Entrá a la tienda. Al primer clic de cada SKU, el servidor usa `@whop/sdk` para crear un plan `one_time` inline y obtiene su `purchase_url`.
+3. Ejecutá `npm run whop:provision` para crear los ocho checkouts, o entrá a la tienda: el primer clic de cada SKU crea el plan `one_time` inline y obtiene su `purchase_url`.
 4. El resultado se guarda en `/persistent/whop-checkouts.json`; los siguientes clics reutilizan el mismo checkout.
 
-La clave nunca llega al navegador. Los `WHOP_CHECKOUT_*` siguen aceptándose como overrides, pero no hace falta crear ocho productos manualmente. Para acreditar automáticamente poderes dentro de una cuenta se necesita la segunda fase documentada: webhook firmado, identidad del jugador e inventario persistente.
+La clave nunca llega al navegador. Los `WHOP_CHECKOUT_*` siguen aceptándose como overrides, pero no hace falta crear ocho productos manualmente.
+
+### Webhook de compras
+
+Creá un webhook `v1` en [Whop Dashboard → Developer](https://whop.com/dashboard/developer) con esta URL:
+
+```text
+https://www.influencerspy.pro/api/webhooks/whop
+```
+
+Suscribilo a `payment.succeeded`, `payment.failed` y `refund.updated`. Whop muestra el secreto de firma `ws_…` al crear el endpoint; guardalo como `WHOP_WEBHOOK_SECRET` tanto en `.env` como en Render. El endpoint verifica el cuerpo crudo con `@whop/sdk/helpers`, rechaza firmas inválidas, descarta reintentos por `webhook-id` y registra compras/reembolsos en PostgreSQL mediante `migrations/0003_whop_commerce.sql`.
 
 ## Docker local
 
@@ -80,7 +91,7 @@ El archivo [render.yaml](render.yaml) crea un Web Service Docker, una base Postg
 
 1. Elegí **New → Blueprint** y conectá este repositorio.
 2. Confirmá el plan del servicio y de PostgreSQL.
-3. Cargá `VENICE_API_KEY` y `WHOP_API_KEY` cuando Render lo solicite.
+3. Cargá `VENICE_API_KEY`, `WHOP_API_KEY` y `WHOP_WEBHOOK_SECRET` cuando Render lo solicite.
 4. Desplegá y comprobá `https://TU-SERVICIO.onrender.com/health`.
 
 Render monta el disco en `/persistent`; el contenedor solo persiste archivos ubicados debajo de ese punto. Este proyecto sirve los personajes desde `/media/characters/:archivo`, primero buscando `/persistent/characters` y usando el recurso empaquetado como respaldo. Un servicio con disco persistente queda limitado a una instancia y pierde el despliegue sin interrupción, según la documentación oficial de [Persistent Disks](https://render.com/docs/disks). La definición del Blueprint sigue la [Blueprint YAML Reference](https://render.com/docs/blueprint-spec), usa la URL interna de [Render Postgres](https://render.com/docs/postgresql-creating-connecting) y ejecuta el contenedor según la guía de [Docker on Render](https://render.com/docs/docker).
@@ -104,8 +115,9 @@ Las pruebas cubren física, salto, dash, armas, poderes, campaña, jefes, determ
 ```text
 src/battle/                    juego, UI, ranking y tarjeta social
 src/game/                      audio y conversación con Venice AI
-migrations/                     ranking y ampliación al episodio 4
+migrations/                     ranking, episodio 4 y compras Whop
 server/routes/health.ts        health check de Render
+server/routes/api/webhooks/    receptor firmado de eventos Whop
 server/routes/media/           imágenes desde /persistent
 public/battle/                 recursos fuente empaquetados
 public/brand/                  identidad visual de PY-STAR GAMES
