@@ -54,7 +54,16 @@ function ensure() {
     ctx = new AC();
     master = ctx.createGain();
     master.gain.value = enabled ? volume : 0;
-    master.connect(ctx.destination);
+    // Several combat effects can overlap in the same frame. A compressor keeps
+    // those peaks clean while making the quieter UI and movement sounds easier
+    // to hear on phone speakers.
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -20;
+    compressor.knee.value = 18;
+    compressor.ratio.value = 5;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.18;
+    master.connect(compressor).connect(ctx.destination);
     const len = ctx.sampleRate * 0.6;
     noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -64,15 +73,16 @@ function ensure() {
 }
 
 /** Call synchronously inside a user gesture. Safe to call many times. */
-export function unlockAudio() {
+export function unlockAudio(): Promise<void> {
   const c = ensure();
-  if (c && c.state === "suspended") void c.resume();
+  if (!c || c.state === "running") return Promise.resolve();
+  return c.resume().then(() => undefined).catch(() => undefined);
 }
 
 export function configureAudio(on: boolean, vol: number) {
   enabled = on;
-  volume = vol;
-  if (master && ctx) master.gain.setTargetAtTime(on ? vol : 0, ctx.currentTime, 0.02);
+  volume = Math.max(0, Math.min(1, vol));
+  if (master && ctx) master.gain.setTargetAtTime(on ? volume : 0, ctx.currentTime, 0.02);
 }
 
 function tone(
@@ -137,9 +147,9 @@ const MIN_GAP: Partial<Record<SfxName, number>> = {
   hurt: 120,
 };
 
-export function sfx(name: SfxName) {
+function playSfx(name: SfxName) {
   if (!enabled) return;
-  const c = ensure();
+  const c = ctx;
   if (!c || c.state !== "running") return;
   const now = performance.now();
   const gap = MIN_GAP[name] ?? 0;
@@ -267,6 +277,23 @@ export function sfx(name: SfxName) {
       );
       break;
   }
+}
+
+export function sfx(name: SfxName) {
+  if (!enabled) return;
+  const c = ensure();
+  if (!c) return;
+  if (c.state === "running") {
+    playSfx(name);
+    return;
+  }
+  // The first tap on iOS/Android often creates a suspended context. Resume it
+  // from that gesture and keep the sound that triggered the unlock instead of
+  // silently dropping the first shot or menu confirmation.
+  void c
+    .resume()
+    .then(() => playSfx(name))
+    .catch(() => undefined);
 }
 
 export function vibrate(ms: number) {

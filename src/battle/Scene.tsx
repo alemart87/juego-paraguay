@@ -92,7 +92,7 @@ export function Scene({
     const observer = new ResizeObserver(resize);
     observer.observe(stage.current!);
     resize();
-    configureAudio(settings.sound, 0.35);
+    configureAudio(settings.sound, 0.85);
     const keydown = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest("input,textarea,select")) return;
       if (
