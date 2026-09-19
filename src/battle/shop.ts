@@ -40,7 +40,7 @@ export const getWhopCheckout = createServerFn({ method: "POST" })
       console.error("[whop] checkout unavailable", error);
       return {
         ok: false as const,
-        message: "Whop todavía no está conectado. Configurá WHOP_API_KEY en Render.",
+        message: "La tienda no pudo conectarse con Whop. Probá de nuevo en unos minutos.",
       };
     }
   });
