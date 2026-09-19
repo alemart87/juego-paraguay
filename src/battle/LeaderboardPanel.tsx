@@ -20,25 +20,11 @@ import {
 } from "./leaderboard";
 import type { ShareResult } from "./share";
 import { BrandLogo } from "./BrandLogo";
-
-type StoredProfile = {
-  name: string;
-  kind: "email" | "phone";
-  contact: string;
-  purchaseEmail?: string;
-  benefitToken?: string;
-  avatarUrl?: string;
-};
-const PROFILE_KEY = "influencers-battle-profile-v1";
-
-function loadProfile(): StoredProfile | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return JSON.parse(localStorage.getItem(PROFILE_KEY) || "null") as StoredProfile | null;
-  } catch {
-    return null;
-  }
-}
+import {
+  loadLeaderboardProfile,
+  storeLeaderboardProfile,
+  type StoredProfile,
+} from "./leaderboard-profile";
 
 async function prepareAvatar(file: File) {
   if (file.size > 10 * 1024 * 1024) throw new Error("La foto debe pesar menos de 10 MB.");
@@ -114,7 +100,7 @@ export function Leaderboard({
   };
 
   useEffect(() => {
-    const saved = loadProfile();
+    const saved = loadLeaderboardProfile();
     if (saved) {
       setName(saved.name);
       setKind(saved.kind);
@@ -194,7 +180,7 @@ export function Leaderboard({
           benefitToken: response.benefitToken,
           avatarUrl: uploadedAvatar || undefined,
         };
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(saved));
+        storeLeaderboardProfile(saved);
         setRegistered(true);
         setSuccess(
           photoError

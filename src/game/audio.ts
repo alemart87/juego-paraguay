@@ -45,6 +45,29 @@ let volume = 0.8;
 let warmed = false;
 const lastPlay: Partial<Record<SfxName, number>> = {};
 
+type AudioSessionNavigator = Navigator & {
+  audioSession?: { type: "auto" | "playback" | "transient" | "transient-solo" };
+};
+
+function configurePlaybackAudioSession() {
+  if (typeof navigator === "undefined") return;
+  try {
+    const audioSession = (navigator as AudioSessionNavigator).audioSession;
+    if (audioSession) audioSession.type = "playback";
+  } catch {
+    /* Older browsers do not expose AudioSession. */
+  }
+}
+
+function discardAudioContext() {
+  const previous = ctx;
+  ctx = null;
+  master = null;
+  noiseBuf = null;
+  warmed = false;
+  if (previous && previous.state !== "closed") void previous.close().catch(() => undefined);
+}
+
 function resetClosedContext() {
   if (ctx?.state !== "closed") return;
   ctx = null;
@@ -55,6 +78,7 @@ function resetClosedContext() {
 
 function ensure() {
   if (typeof window === "undefined") return null;
+  configurePlaybackAudioSession();
   resetClosedContext();
   if (!ctx) {
     const AC =
@@ -84,6 +108,7 @@ function ensure() {
 
 /** Call synchronously inside a user gesture. Safe to call many times. */
 export function unlockAudio(): Promise<void> {
+  configurePlaybackAudioSession();
   const c = ensure();
   if (!c) return Promise.resolve();
   // iOS Safari needs a real source node to start during the trusted gesture.
@@ -121,15 +146,20 @@ export function installMobileAudioUnlock(): () => void {
   const wake = () => {
     if (enabled) void unlockAudio();
   };
-  const visible = () => {
-    if (document.visibilityState === "visible") wake();
+  const visibilityChanged = () => {
+    // Safari can report a running context while its output is permanently
+    // silent after backgrounding. Effects are short-lived, so replacing the
+    // context is safe and the next real touch starts a clean audio route.
+    if (document.visibilityState === "hidden") discardAudioContext();
   };
+  const pageHidden = () => discardAudioContext();
   document.addEventListener("touchstart", wake, { capture: true, passive: true });
   document.addEventListener("pointerdown", wake, { capture: true, passive: true });
   document.addEventListener("touchend", wake, { capture: true, passive: true });
   document.addEventListener("click", wake, { capture: true, passive: true });
   document.addEventListener("keydown", wake, { capture: true });
-  document.addEventListener("visibilitychange", visible);
+  document.addEventListener("visibilitychange", visibilityChanged);
+  window.addEventListener("pagehide", pageHidden);
   window.addEventListener("pageshow", wake);
   return () => {
     document.removeEventListener("touchstart", wake, true);
@@ -137,7 +167,8 @@ export function installMobileAudioUnlock(): () => void {
     document.removeEventListener("touchend", wake, true);
     document.removeEventListener("click", wake, true);
     document.removeEventListener("keydown", wake, true);
-    document.removeEventListener("visibilitychange", visible);
+    document.removeEventListener("visibilitychange", visibilityChanged);
+    window.removeEventListener("pagehide", pageHidden);
     window.removeEventListener("pageshow", wake);
   };
 }

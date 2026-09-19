@@ -42,6 +42,8 @@ import { Scene } from "./Scene";
 import { challengeUrl, downloadCard, resultCard, type ShareResult } from "./share";
 import { Intro } from "./Intro";
 import { Leaderboard } from "./LeaderboardPanel";
+import { loadLeaderboardProfile } from "./leaderboard-profile";
+import { submitLeaderboardScore } from "./leaderboard";
 import { BrandLogo } from "./BrandLogo";
 import { ShopPanel } from "./ShopPanel";
 import type { ShopSku } from "./shop-catalog";
@@ -80,10 +82,14 @@ export function BattleGame() {
   const [shareError, setShareError] = useState("");
   const [intro, setIntro] = useState(true);
   const [rankingName, setRankingName] = useState("");
+  const [rankingSync, setRankingSync] = useState<"idle" | "uploading" | "success" | "error">(
+    "idle",
+  );
   const [rewards, setRewards] = useState<RewardWallet>(emptyRewardWallet);
   const [ownedSkus, setOwnedSkus] = useState<ShopSku[]>([]);
   const [usedOwnedSkus, setUsedOwnedSkus] = useState<ShopSku[]>([]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoRankSubmitted = useRef(false);
   const notify = (message: string) => {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -91,7 +97,9 @@ export function BattleGame() {
   };
   useEffect(() => {
     const local = loadSave();
+    const leaderboardProfile = loadLeaderboardProfile();
     setSave(local);
+    if (leaderboardProfile) setRankingName(leaderboardProfile.name);
     setRewards(loadRewardWallet());
     const params = new URLSearchParams(location.search);
     const id = Number(params.get("battle"));
@@ -150,6 +158,8 @@ export function BattleGame() {
     setUsedOwnedSkus([]);
     setScreen("play");
     setWon(false);
+    setRankingSync("idle");
+    autoRankSubmitted.current = false;
     sfx("ui");
   };
   const pause = () => {
@@ -224,6 +234,34 @@ export function BattleGame() {
             medals,
           }),
         );
+        const profile = loadLeaderboardProfile();
+        if (profile && !autoRankSubmitted.current) {
+          autoRankSubmitted.current = true;
+          setRankingSync("uploading");
+          void submitLeaderboardScore({
+            data: {
+              name: profile.name,
+              contactKind: profile.kind,
+              contact: profile.contact,
+              consent: true,
+              score: Math.round(world.score),
+              level: world.level,
+              hero: world.hero,
+              time: Math.max(1, Math.round(world.t)),
+              combo: Math.round(world.bestCombo),
+            },
+          })
+            .then((response) => {
+              if (!response.ok) {
+                setRankingSync("error");
+                return;
+              }
+              setRankingSync("success");
+              setRankingName(response.name);
+              notify(`Puntaje publicado automáticamente · puesto #${response.rank}.`);
+            })
+            .catch(() => setRankingSync("error"));
+        }
       }
     }
   };
@@ -697,6 +735,17 @@ export function BattleGame() {
                 <strong>×{world.bestCombo}</strong>
               </div>
             </div>
+            {won && rankingSync !== "idle" && (
+              <p
+                className={`ranking-auto-status ${rankingSync}`}
+                role={rankingSync === "error" ? "alert" : "status"}
+              >
+                {rankingSync === "uploading" && "Publicando tu puntaje en el ranking…"}
+                {rankingSync === "success" && "Puntaje publicado automáticamente en el ranking."}
+                {rankingSync === "error" &&
+                  "La victoria quedó guardada. Abrí Ranking para reintentar la publicación."}
+              </p>
+            )}
             {won && (
               <div className="medal-row">
                 <span>
