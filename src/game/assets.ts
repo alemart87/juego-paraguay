@@ -40,12 +40,31 @@ function maxHeightFor(src: string) {
   return 360;
 }
 
-function shrink(img: HTMLImageElement, maxH: number): Sprite {
-  if (img.naturalHeight <= maxH || typeof document === "undefined")
+/** Sprites exported with an opaque magenta "key" background instead of alpha. */
+const KEYED = new Set(["/sprites/slash.png"]);
+
+function keyOutMagenta(g: CanvasRenderingContext2D, w: number, h: number) {
+  const im = g.getImageData(0, 0, w, h);
+  const d = im.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i];
+    const gr = d[i + 1];
+    const b = d[i + 2];
+    // How "magenta" the pixel is: high red and blue, low green.
+    const k = Math.min(r, b) - gr;
+    if (k > 150) d[i + 3] = 0;
+    else if (k > 60) d[i + 3] = Math.round(d[i + 3] * (1 - (k - 60) / 90));
+  }
+  g.putImageData(im, 0, 0);
+}
+
+function shrink(img: HTMLImageElement, maxH: number, src: string): Sprite {
+  const keyed = KEYED.has(src);
+  if ((img.naturalHeight <= maxH && !keyed) || typeof document === "undefined")
     return { img, w: img.naturalWidth, h: img.naturalHeight };
-  const s = maxH / img.naturalHeight;
+  const s = Math.min(1, maxH / img.naturalHeight);
   const w = Math.max(1, Math.round(img.naturalWidth * s));
-  const h = maxH;
+  const h = Math.max(1, Math.round(img.naturalHeight * s));
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -54,6 +73,7 @@ function shrink(img: HTMLImageElement, maxH: number): Sprite {
   g.imageSmoothingEnabled = true;
   g.imageSmoothingQuality = "high";
   g.drawImage(img, 0, 0, w, h);
+  if (keyed) keyOutMagenta(g, w, h);
   return { img: c, w, h };
 }
 
@@ -67,7 +87,7 @@ export function loadSprite(src: string): Promise<Sprite | null> {
     const img = new Image();
     img.decoding = "async";
     img.onload = () => {
-      const sp = shrink(img, maxHeightFor(src));
+      const sp = shrink(img, maxHeightFor(src), src);
       cache.set(src, sp);
       pending.delete(src);
       resolve(sp);

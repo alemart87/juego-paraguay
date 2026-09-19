@@ -178,6 +178,8 @@ export type World = {
   difficulty: Difficulty;
   tune: Tuning;
   width: number;
+  /** Visible world units across the screen (100 landscape, less in portrait). */
+  viewW: number;
   t: number;
   timer: number;
   player: Player;
@@ -287,6 +289,7 @@ export function createWorld(chapter: 1 | 2 | 3, hero: HeroId, difficulty: Diffic
     difficulty,
     tune,
     width: worldWidth(chapter),
+    viewW: 100,
     t: 0,
     timer: 0,
     player: {
@@ -1185,7 +1188,7 @@ function stepZones(w: World, ev: WorldEvent[]) {
   list.forEach((id, i) => {
     const e = w.enemies[id];
     if (!isAlive(e) || e.chasing || e.isBoss || e.calm || e.cry || e.fly || e.down) return;
-    e.x = clamp(w.camX + 106 + i * 10, 8, w.width - 8);
+    e.x = clamp(w.camX + w.viewW + 6 + i * 10, 8, w.width - 8);
     e.chasing = true;
     e.caught = false;
     e.noLeashUntil = w.t + 8;
@@ -1514,7 +1517,7 @@ export function stepWorld(world: World, input: Input, dtRaw: number, ev: WorldEv
   if (t > p.comboUntil + 0.2) p.finisher = false;
 
   /* --- camera --- */
-  const camTarget = clamp(p.x - 38 + p.facing * 4 + p.vx * 0.08, 0, w.width - 100);
+  const camTarget = clamp(p.x - w.viewW * 0.4 + p.facing * 4 + p.vx * 0.08, 0, w.width - w.viewW);
   w.camX += (camTarget - w.camX) * Math.min(1, 7 * dt);
 }
 
@@ -1590,7 +1593,7 @@ export function respawn(w: World, ev: WorldEvent[]) {
       e.x = ch.hazardHome[def.id];
     }
   }
-  w.camX = clamp(p.x - 38, 0, w.width - 100);
+  w.camX = clamp(p.x - w.viewW * 0.4, 0, w.width - w.viewW);
   w.ended = false;
   ev.push({ t: "toast", msg: "Volvés al inicio de la zona. −5 Gs." }, { t: "hud" });
 }

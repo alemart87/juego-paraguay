@@ -47,7 +47,7 @@ import {
   stick,
 } from "./input";
 import { vibrate } from "./audio";
-import { drawWorld } from "./render";
+import { drawWorld, viewWidthFor } from "./render";
 import { TUNING, formatTime, type Difficulty, type Quality } from "./settings";
 import { getWorld, useGame } from "./store";
 import { unlockAudio } from "./audio";
@@ -1149,8 +1149,8 @@ function Hud() {
   const hpColor = hpFrac > 0.5 ? "bg-emerald-400" : hpFrac > 0.25 ? "bg-amber-400" : "bg-red-500";
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-2 pt-[max(0.4rem,env(safe-area-inset-top))]">
-      <div className="flex items-start justify-between gap-2">
-        <div className="max-w-[46%] rounded-xl bg-black/70 px-2.5 py-1.5">
+      <div className="flex items-start justify-between gap-1.5">
+        <div className="min-w-0 max-w-[50%] rounded-xl bg-black/70 px-2.5 py-1.5 sm:max-w-[46%]">
           <p className="truncate text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">
             {ch.title} · {zone}
           </p>
@@ -1168,21 +1168,26 @@ function Hud() {
             ))}
           </ul>
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex min-w-0 flex-col items-end gap-1">
           <div className="flex items-center gap-1">
-            {TEAM.map((id) => (
-              <img
-                key={id}
-                src={HERO_BY_ID[id].portrait}
-                alt=""
-                draggable={false}
-                className={
-                  id === hero || recruited.includes(id)
-                    ? "size-7 rounded-full object-cover ring-2 ring-accent"
-                    : "size-7 rounded-full object-cover opacity-30 grayscale"
-                }
-              />
-            ))}
+            <div className="hidden items-center gap-1 sm:flex">
+              {TEAM.map((id) => (
+                <img
+                  key={id}
+                  src={HERO_BY_ID[id].portrait}
+                  alt=""
+                  draggable={false}
+                  className={
+                    id === hero || recruited.includes(id)
+                      ? "size-7 rounded-full object-cover ring-2 ring-accent"
+                      : "size-7 rounded-full object-cover opacity-30 grayscale"
+                  }
+                />
+              ))}
+            </div>
+            <span className="rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-accent sm:hidden">
+              {recruited.length}/{TEAM.length}
+            </span>
             <button
               type="button"
               aria-label="Pausa"
@@ -1192,14 +1197,15 @@ function Hud() {
               <Pause size={16} />
             </button>
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-semibold">
+          <div className="flex flex-wrap items-center justify-end gap-1 text-[11px] font-semibold">
             <span className="rounded-md bg-black/70 px-2 py-1 text-accent">{coins} Gs</span>
             <span className="rounded-md bg-black/70 px-2 py-1 text-paper">{formatTime(timer)}</span>
             <span className="rounded-md bg-black/70 px-2 py-1 text-paper">
-              {score} pts{combo > 1 ? ` x${combo}` : ""}
+              {score}
+              {combo > 1 ? ` x${combo}` : ""}
             </span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-1">
             <span className="flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-paper">
               <WeaponIcon weapon={weapon} size={13} />
               {WEAPONS[weapon].kind === "melee"
@@ -1217,7 +1223,7 @@ function Hud() {
             >
               <Wind size={13} />
             </span>
-            <div className="relative h-5 w-28 overflow-hidden rounded-md bg-black/70 ring-1 ring-line">
+            <div className="relative h-5 w-20 overflow-hidden rounded-md bg-black/70 ring-1 ring-line sm:w-28">
               <div
                 className={`h-full ${hpColor} transition-[width] duration-200`}
                 style={{ width: `${hpFrac * 100}%` }}
@@ -1421,6 +1427,7 @@ function Play() {
         st.syncHud();
       }
       const { W, H } = sizeRef.current;
+      w.viewW = viewWidthFor(W, H);
       const dpr = dprRef.current;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const s = useGame.getState();
