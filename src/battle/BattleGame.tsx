@@ -45,7 +45,7 @@ import { Leaderboard } from "./LeaderboardPanel";
 import { BrandLogo } from "./BrandLogo";
 import { ShopPanel } from "./ShopPanel";
 import { chatWithNpc, type AgentTurn } from "../game/agent";
-import { unlockAudio, sfx } from "../game/audio";
+import { configureAudio, installMobileAudioUnlock, unlockAudio, sfx } from "../game/audio";
 import "./battle.css";
 
 type Screen = "home" | "fighters" | "episodes" | "brief" | "play" | "result";
@@ -99,6 +99,10 @@ export function BattleGame() {
     };
   }, []);
   useEffect(() => {
+    configureAudio(save.sound, 0.95);
+    return installMobileAudioUnlock();
+  }, [save.sound]);
+  useEffect(() => {
     if (!shareBlob) {
       setShareImage("");
       return;
@@ -107,6 +111,17 @@ export function BattleGame() {
     setShareImage(url);
     return () => URL.revokeObjectURL(url);
   }, [shareBlob]);
+  useEffect(() => {
+    if (!dialog) return;
+    const previousBody = document.body.style.overflow;
+    const previousRoot = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBody;
+      document.documentElement.style.overflow = previousRoot;
+    };
+  }, [dialog]);
   const updateSave = (next: Save) => {
     setSave(next);
     setStored(writeSave(next));
@@ -714,9 +729,25 @@ export function BattleGame() {
                   <Toggle
                     label="Sonido"
                     value={save.sound}
-                    onChange={(v) => updateSave({ ...save, sound: v })}
+                    onChange={(v) => {
+                      configureAudio(v, 0.95);
+                      if (v) {
+                        void unlockAudio().then(() => sfx("win"));
+                      }
+                      updateSave({ ...save, sound: v });
+                    }}
                     icon={save.sound ? <Volume2 /> : <VolumeX />}
                   />
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      configureAudio(true, 0.95);
+                      void unlockAudio().then(() => sfx("pickup"));
+                      if (!save.sound) updateSave({ ...save, sound: true });
+                    }}
+                  >
+                    <Volume2 size={18} /> Probar sonido
+                  </button>
                   <Toggle
                     label="Sacudida de cámara"
                     value={save.shake}

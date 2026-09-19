@@ -10,7 +10,21 @@ export function ShopPanel() {
     setMessage("");
     try {
       const result = await getWhopCheckout({ data: { sku } });
-      if (result.ok) window.location.assign(result.url);
+      if (result.ok) {
+        const url = new URL(result.url);
+        try {
+          const profile = JSON.parse(
+            localStorage.getItem("influencers-battle-profile-v1") || "null",
+          ) as { kind?: string; contact?: string; purchaseEmail?: string } | null;
+          const email = profile?.kind === "email" ? profile.contact : profile?.purchaseEmail;
+          if (email) {
+            url.searchParams.set("email", email.trim().toLowerCase());
+          }
+        } catch {
+          // Checkout remains usable if local storage is unavailable.
+        }
+        window.location.assign(url.toString());
+      }
       else setMessage(result.message);
     } catch {
       setMessage("No pudimos abrir Whop. Probá de nuevo más tarde.");
@@ -69,7 +83,8 @@ export function ShopPanel() {
         </p>
       )}
       <p className="shop-trust">
-        <LockKeyhole size={14} /> El pago se completa en Whop. Volvés al juego al terminar.
+        <LockKeyhole size={14} /> El pago se completa en Whop. Usá el correo de tu perfil para
+        recibir el beneficio automáticamente.
       </p>
     </div>
   );

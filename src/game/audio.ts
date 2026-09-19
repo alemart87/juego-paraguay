@@ -42,6 +42,7 @@ let master: GainNode | null = null;
 let noiseBuf: AudioBuffer | null = null;
 let enabled = true;
 let volume = 0.8;
+let warmed = false;
 const lastPlay: Partial<Record<SfxName, number>> = {};
 
 function ensure() {
@@ -75,8 +76,44 @@ function ensure() {
 /** Call synchronously inside a user gesture. Safe to call many times. */
 export function unlockAudio(): Promise<void> {
   const c = ensure();
-  if (!c || c.state === "running") return Promise.resolve();
+  if (!c) return Promise.resolve();
+  // iOS Safari needs a source node to start during the trusted gesture. Calling
+  // resume() alone can resolve while the output route remains muted.
+  if (!warmed) {
+    const silent = c.createBuffer(1, 1, c.sampleRate);
+    const source = c.createBufferSource();
+    source.buffer = silent;
+    source.connect(c.destination);
+    source.start(0);
+    warmed = true;
+  }
+  if (c.state === "running") return Promise.resolve();
   return c.resume().then(() => undefined).catch(() => undefined);
+}
+
+/**
+ * Keep mobile audio alive across tab switches, checkout returns and screen
+ * locks. The capture listeners run before React handlers and therefore remain
+ * inside Safari's trusted touch event.
+ */
+export function installMobileAudioUnlock(): () => void {
+  if (typeof document === "undefined") return () => undefined;
+  const wake = () => {
+    if (enabled) void unlockAudio();
+  };
+  const visible = () => {
+    if (document.visibilityState === "visible") wake();
+  };
+  document.addEventListener("pointerdown", wake, { capture: true, passive: true });
+  document.addEventListener("touchend", wake, { capture: true, passive: true });
+  document.addEventListener("visibilitychange", visible);
+  window.addEventListener("pageshow", wake);
+  return () => {
+    document.removeEventListener("pointerdown", wake, true);
+    document.removeEventListener("touchend", wake, true);
+    document.removeEventListener("visibilitychange", visible);
+    window.removeEventListener("pageshow", wake);
+  };
 }
 
 export function configureAudio(on: boolean, vol: number) {

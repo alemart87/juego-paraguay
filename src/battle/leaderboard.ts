@@ -41,6 +41,84 @@ const scoreInput = z.object({
   combo: z.number().int().min(0).max(999),
 });
 
+const profileInput = scoreInput
+  .pick({
+    name: true,
+    contactKind: true,
+    contact: true,
+    consent: true,
+  })
+  .extend({ purchaseEmail: z.string().trim().max(160).optional() });
+
+async function contactHash(kind: "email" | "phone", value: string) {
+  const normalized = normalizeContact(kind, value);
+  if (!normalized) return null;
+  const { createHmac } = await import("node:crypto");
+  const configuredSecret = process.env.LEADERBOARD_SECRET?.trim();
+  if (process.env.DATABASE_URL?.trim() && !configuredSecret)
+    throw new Error("LEADERBOARD_SECRET is required when DATABASE_URL is configured");
+  return createHmac("sha256", configuredSecret ?? "influencers-battle-local-preview")
+    .update(`${kind}:${normalized}`)
+    .digest("hex");
+}
+
+export const registerLeaderboardPlayer = createServerFn({ method: "POST" })
+  .validator((input: unknown) => profileInput.parse(input))
+  .handler(async ({ data }) => {
+    const normalized = normalizeContact(data.contactKind, data.contact);
+    if (!normalized)
+      return {
+        ok: false as const,
+        message:
+          data.contactKind === "email"
+            ? "Ingresá un correo válido."
+            : "Ingresá un número válido con código de país.",
+      };
+    const hash = await contactHash(data.contactKind, data.contact);
+    if (!hash) return { ok: false as const, message: "El contacto no es válido." };
+    const purchaseEmail = data.contactKind === "email" ? normalized : data.purchaseEmail;
+    const purchaseHash = purchaseEmail ? await contactHash("email", purchaseEmail) : null;
+    if (data.purchaseEmail && !purchaseHash)
+      return { ok: false as const, message: "Ingresá un correo de compra válido." };
+    const sql = await (await import("@/lib/db")).getSql();
+    const players = await sql.query<{ id: number }>(
+      `INSERT INTO leaderboard_players
+         (contact_hash, contact_kind, display_name, purchase_email_hash)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (contact_hash) DO UPDATE SET
+         display_name = EXCLUDED.display_name,
+         purchase_email_hash = COALESCE(EXCLUDED.purchase_email_hash, leaderboard_players.purchase_email_hash),
+         updated_at = now()
+       RETURNING id`,
+      [hash, data.contactKind, data.name, purchaseHash],
+    );
+    const playerId = players[0]?.id;
+    if (!playerId) throw new Error("No se pudo registrar el perfil");
+    if (purchaseHash) {
+      await sql.query(
+        `UPDATE whop_purchases SET player_id = $1, updated_at = now()
+          WHERE purchaser_email_hash = $2 AND player_id IS NULL`,
+        [playerId, purchaseHash],
+      );
+      await sql.query(
+        `INSERT INTO player_entitlements (player_id, game_sku, source_payment_id)
+         SELECT $1, game_sku, payment_id FROM whop_purchases
+          WHERE player_id = $1 AND status = 'paid'
+         ON CONFLICT (source_payment_id, game_sku) DO UPDATE SET
+           player_id = EXCLUDED.player_id, status = 'active', updated_at = now()`,
+        [playerId],
+      );
+    }
+    return {
+      ok: true as const,
+      name: data.name,
+      message:
+        purchaseHash
+          ? "Perfil listo. Usá este mismo correo al pagar en Whop."
+          : "Perfil listo. Tu mejor partida quedará ligada a este número.",
+    };
+  });
+
 export const getLeaderboard = createServerFn({ method: "GET" }).handler(async () => {
   const { getSql } = await import("@/lib/db");
   const sql = await getSql();
@@ -78,8 +156,7 @@ export const submitLeaderboardScore = createServerFn({ method: "POST" })
             : "Ingresá un número válido con código de país.",
       };
 
-    const [{ createHmac }, { getRequest }, { getSql }] = await Promise.all([
-      import("node:crypto"),
+    const [{ getRequest }, { getSql }] = await Promise.all([
       import("@tanstack/react-start/server"),
       import("@/lib/db"),
     ]);
@@ -101,12 +178,8 @@ export const submitLeaderboardScore = createServerFn({ method: "POST" })
     recent.push(now);
     globalRate.__leaderboardRate.set(address, recent);
 
-    const configuredSecret = process.env.LEADERBOARD_SECRET?.trim();
-    if (process.env.DATABASE_URL?.trim() && !configuredSecret)
-      throw new Error("LEADERBOARD_SECRET is required when DATABASE_URL is configured");
-    const contactHash = createHmac("sha256", configuredSecret ?? "influencers-battle-local-preview")
-      .update(`${data.contactKind}:${normalized}`)
-      .digest("hex");
+    const hashedContact = await contactHash(data.contactKind, data.contact);
+    if (!hashedContact) return { ok: false as const, message: "El contacto no es válido." };
     const sql = await getSql();
     const players = await sql.query<{ id: number }>(
       `INSERT INTO leaderboard_players (contact_hash, contact_kind, display_name)
@@ -114,7 +187,7 @@ export const submitLeaderboardScore = createServerFn({ method: "POST" })
        ON CONFLICT (contact_hash) DO UPDATE
          SET display_name = EXCLUDED.display_name, updated_at = now()
        RETURNING id`,
-      [contactHash, data.contactKind, data.name],
+      [hashedContact, data.contactKind, data.name],
     );
     const playerId = players[0]?.id;
     if (!playerId) throw new Error("No se pudo registrar el perfil");
