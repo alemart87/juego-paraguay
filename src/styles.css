@@ -44,6 +44,19 @@ body {
   margin: 0;
 }
 
+/* iOS Safari zooms the whole page when a focused field is under 16px and never zooms
+   back out. Unlayered, so it wins over Tailwind's text-* utilities on any form field. */
+input:not([type="range"]):not([type="checkbox"]),
+textarea,
+select {
+  font-size: max(16px, 1em);
+}
+
+/* Long unbroken words (chat messages, names) wrap instead of widening the page. */
+.game-root {
+  overflow-wrap: anywhere;
+}
+
 h1,
 h2,
 h3 {
