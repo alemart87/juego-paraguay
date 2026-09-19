@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Team UPAP y Juan";
+const APP_NAME = "Influencers Battle · Paraguay";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -18,7 +18,8 @@ export const Route = createRootRoute({
       { name: "theme-color", content: "#0b0f14" },
       {
         name: "description",
-        content: "Aventura en mundo abierto. Reuní al equipo y hacé el asado.",
+        content:
+          "Seis personajes, tres escenarios paraguayos y una batalla por el feed. Acción arcade móvil y conversaciones con IA. Ficción satírica.",
       },
       { name: "apple-mobile-web-app-title", content: APP_NAME },
       { name: "apple-mobile-web-app-status-bar-style", content: "black" },
@@ -32,7 +33,7 @@ export const Route = createRootRoute({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800;900&display=swap",
       },
     ],
   }),

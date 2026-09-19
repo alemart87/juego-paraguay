@@ -335,9 +335,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.error(`[preview] ${args.error}`);
     process.exit(1);
   }
-  if (!existsSync("/proc/self")) {
+  if (process.platform === "win32") {
+    const { windowsPreview } = await import("./preview-windows.mjs");
+    process.exitCode = await windowsPreview(ROOT, args.action);
+  } else if (!existsSync("/proc/self")) {
     console.error("[preview] no /proc — this script only runs inside the sandbox");
     process.exit(1);
+  } else {
+    process.exitCode = args.action === "stop" ? ((await stop()) ? 0 : 1) : await restart();
   }
-  process.exitCode = args.action === "stop" ? ((await stop()) ? 0 : 1) : await restart();
 }

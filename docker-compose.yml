@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: juego_paraguay
+      POSTGRES_USER: juego_paraguay
+      POSTGRES_PASSWORD: juego_paraguay
+    ports:
+      - "5432:5432"
+    volumes:
+      - juego_paraguay_pgdata:/var/lib/postgresql/data
+
+  game:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "8080:10000"
+    environment:
+      DATABASE_URL: postgresql://juego_paraguay:juego_paraguay@db:5432/juego_paraguay
+      LEADERBOARD_SECRET: local-docker-change-before-production
+      VENICE_API_KEY: ${VENICE_API_KEY:-}
+      VENICE_MODEL: ${VENICE_MODEL:-zai-org-glm-5-2}
+      PERSISTENT_DIR: /persistent
+    volumes:
+      - juego_paraguay_media:/persistent
+
+volumes:
+  juego_paraguay_pgdata:
+  juego_paraguay_media:

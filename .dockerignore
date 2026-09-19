@@ -1,0 +1,13 @@
+.git
+.github
+.grok
+.vercel
+node_modules
+screenshots
+work
+outputs
+persistent
+.env
+.env.*
+!.env.example
+npm-debug.log*

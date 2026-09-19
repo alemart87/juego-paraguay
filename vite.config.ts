@@ -157,6 +157,9 @@ export default defineConfig(({ command, isPreview }) => ({
     strictPort: true,
   },
   resolve: { tsconfigPaths: true },
+  // PGLite loads a binary data file next to its package. Keep it external so
+  // Nitro traces that asset instead of producing a JS-only bundle.
+  ssr: { external: ["@electric-sql/pglite"] },
   plugins: [
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.
@@ -170,7 +173,8 @@ export default defineConfig(({ command, isPreview }) => ({
     ...(command === "build" || isPreview
       ? [
           nitro({
-            preset: "vercel",
+            preset: process.env.NITRO_PRESET ?? "vercel",
+            traceDeps: ["@electric-sql/pglite*"],
             // Auto-registers server/middleware/* (the PWA install page +
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.

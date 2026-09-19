@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: influencers-battle-paraguay
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    disk:
+      name: influencers-battle-media
+      mountPath: /persistent
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: influencers-battle-db
+          property: connectionString
+      - key: LEADERBOARD_SECRET
+        generateValue: true
+      - key: VENICE_API_KEY
+        sync: false
+      - key: VENICE_MODEL
+        value: zai-org-glm-5-2
+      - key: PERSISTENT_DIR
+        value: /persistent
+      - key: VITE_AUTH_ENABLED
+        value: "false"
+
+databases:
+  - name: influencers-battle-db
+    plan: basic-256mb
+    postgresMajorVersion: "16"

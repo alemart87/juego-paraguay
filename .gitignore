@@ -3,3 +3,15 @@ node_modules/
 .github_repo
 .env
 .env.*
+!.env.example
+work/
+.grok/brand-tools/
+.grok/brand-export.mjs
+.grok/favicon-check.png
+.grok/*.log
+.grok/*.pid
+.vercel/output/
+dist/
+persistent/
+.output/
+screenshots/
