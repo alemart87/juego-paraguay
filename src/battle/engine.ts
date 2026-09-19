@@ -42,6 +42,7 @@ export interface Player {
   jumpBuffer: number;
   coyote: number;
   attackPose: number;
+  powerPose: number;
   buff: number;
 }
 export interface Enemy {
@@ -76,6 +77,7 @@ export interface Shot {
   kind:
     | "bullet"
     | "grenade"
+    | "missile"
     | "usb"
     | "wave"
     | "paper"
@@ -98,7 +100,7 @@ export interface Effect {
   y: number;
   life: number;
   max: number;
-  kind: "ring" | "spark" | "text" | "trail";
+  kind: "ring" | "spark" | "text" | "trail" | "nuke";
   color: string;
   size: number;
   text?: string;
@@ -246,6 +248,7 @@ export function createWorld(
       jumpBuffer: 0,
       coyote: 0.1,
       attackPose: 0,
+      powerPose: 0,
       buff: 0,
     },
     enemies: [],
@@ -471,8 +474,8 @@ function attack(w: World) {
   const p = w.player;
   if (w.t < p.attackReady) return;
   if (w.hero === "marito") {
-    p.attackReady = w.t + 0.38;
-    p.attackPose = w.t + 0.18;
+    p.attackReady = w.t + 0.42;
+    p.attackPose = w.t + 0.28;
     const target = w.enemies
       .filter((enemy) => enemy.hp > 0)
       .sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
@@ -481,15 +484,33 @@ function attack(w: World) {
       y: p.y + (w.t < 10 ? 145 : 72),
       vx: p.face * 540,
       vy: target ? clamp((target.y + 45 - (p.y + 72)) * 2.2, -180, 180) : -20,
-      life: 1.25,
-      damage: 72,
+      life: 1.55,
+      damage: 118,
       enemy: false,
-      kind: "grenade",
-      color: "#f6e75a",
-      radius: 12,
+      kind: "missile",
+      color: "#ff9c35",
+      radius: 18,
     });
-    if (target) hitEnemy(w, target, 38, p.face * 12);
     event(w, "grenade");
+    return;
+  }
+  if (w.hero === "pablito") {
+    p.attackReady = w.t + 0.2;
+    p.attackPose = w.t + 0.24;
+    shoot(w, {
+      x: p.x + p.face * 42,
+      y: p.y + 69,
+      vx: p.face * 1040,
+      vy: Math.sin(w.t * 11) * 22,
+      life: 0.72,
+      damage: 28,
+      enemy: false,
+      kind: "wave",
+      color: "#ff3190",
+      radius: 9,
+    });
+    effect(w, p.x + p.face * 50, p.y + 69, "spark", "#ffd6ef", 8, 0.12);
+    event(w, "shot");
     return;
   }
   const base = BASE_WEAPONS[w.weapon];
@@ -598,6 +619,7 @@ export function activatePower(w: World) {
   if (ultimate) p.super = 0;
   else p.powerReady = w.t + f.cooldown;
   p.attackPose = w.t + 0.35;
+  p.powerPose = w.t + (ultimate ? 1.35 : 0.72);
   p.inv = Math.max(p.inv, w.t + 0.3);
   event(w, "stomp");
   effect(w, p.x, p.y + 155, "text", f.color, 22, 1, ultimate ? f.superName : f.power);
@@ -664,7 +686,12 @@ export function activatePower(w: World) {
         break;
       case "marito":
         p.inv = Number.POSITIVE_INFINITY;
-        for (const e of w.enemies) if (e.hp > 0) blast(w, e.x, e.y + 50, 135, 240, f.color);
+        w.shots = w.shots.filter((shot) => !shot.enemy);
+        effect(w, p.x + p.face * 390, 85, "nuke", "#fff26a", 980, 2.2, "PROTOCOLO NUCLEAR");
+        blast(w, p.x + p.face * 390, 80, 1250, 720, "#fff26a");
+        w.shake = 1.35;
+        w.events.push({ type: "toast", text: "PROTOCOLO NUCLEAR · IMPACTO TOTAL" });
+        event(w, "explode");
         break;
     }
     return;
@@ -726,13 +753,14 @@ export function activatePower(w: World) {
           y: p.y + 150,
           vx: p.face * (470 + i * 35),
           vy: -160 + i * 70,
-          life: 1.35,
-          damage: 105,
+          life: 1.65,
+          damage: 145,
           enemy: false,
-          kind: "grenade",
-          color: f.color,
-          radius: 13,
+          kind: "missile",
+          color: "#ff9c35",
+          radius: 18,
         });
+      event(w, "grenade");
       break;
   }
 }
@@ -1124,6 +1152,17 @@ export function step(w: World, input: Input, dt: number) {
         s.vx *= 0.75;
       }
     }
+    if (s.kind === "missile" && !s.enemy) {
+      const target = w.enemies
+        .filter((enemy) => enemy.hp > 0 && Math.sign(enemy.x - s.x) === Math.sign(s.vx))
+        .sort((a, b) => Math.abs(a.x - s.x) - Math.abs(b.x - s.x))[0];
+      if (target) {
+        const desired = clamp((target.y + 55 - s.y) * 3.2, -300, 300);
+        s.vy += clamp(desired - s.vy, -540 * dt, 540 * dt);
+      }
+      if (Math.floor(s.age * 30) % 2 === 0)
+        effect(w, s.x - Math.sign(s.vx) * 18, s.y, "spark", "#ff6b2c", 6, 0.24);
+    }
     if (s.kind === "usb" && s.age > 0.7 && Math.sign(s.vx) === Math.sign(s.x - s.origin)) {
       s.vx *= -1;
       s.hitIds.clear();
@@ -1132,6 +1171,10 @@ export function step(w: World, input: Input, dt: number) {
     s.y += s.vy * dt;
     if (s.kind === "grenade" && s.life <= 0) {
       blast(w, s.x, Math.max(25, s.y), 190, s.damage, s.color);
+      event(w, "explode");
+    }
+    if (s.kind === "missile" && s.life <= 0) {
+      blast(w, s.x, Math.max(25, s.y), 235, s.damage, s.color);
       event(w, "explode");
     }
     if (s.life <= 0) continue;
@@ -1150,11 +1193,18 @@ export function step(w: World, input: Input, dt: number) {
           e.x < high &&
           Math.abs(s.y - (e.y + 50)) < s.radius + (e.kind === "boss" ? 100 : 47)
         ) {
-          hitEnemy(w, e, s.damage, Math.sign(s.vx) * 3);
-          s.hitIds.add(e.id);
-          if (s.kind === "bullet") {
+          if (s.kind === "missile") {
+            blast(w, s.x, s.y, 235, s.damage, s.color);
+            event(w, "explode");
             s.life = 0;
             break;
+          } else {
+            hitEnemy(w, e, s.damage, Math.sign(s.vx) * 3);
+            s.hitIds.add(e.id);
+            if (s.kind === "bullet") {
+              s.life = 0;
+              break;
+            }
           }
         }
       }

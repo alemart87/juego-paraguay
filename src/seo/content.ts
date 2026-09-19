@@ -182,13 +182,13 @@ export const CHARACTERS: CharacterPage[] = [
     type: "combatiente",
     kicker: "Ultra premium · comando aéreo",
     description:
-      "Marito es el personaje ultra premium de Influencers Battle: inmune, equipado con misiles y una entrada en helicóptero en cada nivel.",
+      "Marito es el personaje ultra premium de Influencers Battle: inmune, equipado con misiles explosivos, súper nuclear y entrada en helicóptero.",
     portrait: "/battle/marito.webp",
     color: "#f6e75a",
     playStyle:
       "Tiene movimiento, salto, dash y controles completos, pero reemplaza el disparo normal por misiles guiados. Durante los primeros segundos desciende desde su helicóptero.",
     ability:
-      "Ataque presidencial lanza una salva de misiles y Operación helicóptero bombardea simultáneamente a todos los enemigos activos.",
+      "Ataque presidencial lanza una salva de misiles guiados y Protocolo nuclear provoca una explosión de área total contra todos los enemigos activos.",
     tactics: [
       "La inmunidad permanente permite concentrarse en velocidad y puntaje.",
       "Dispará desde el helicóptero para limpiar la primera oleada.",

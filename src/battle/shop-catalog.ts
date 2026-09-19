@@ -14,7 +14,7 @@ export const SHOP_ITEMS = [
     name: "Marito Presidencial",
     icon: "🚁",
     image: "/battle/shop/marito.webp",
-    description: "Inmune a todo. Entra en helicóptero y dispara misiles de alto impacto.",
+    description: "Inmune a todo. Helicóptero, misiles explosivos y súper nuclear de área total.",
     price: 19.99,
     badge: "ULTRA PREMIUM",
     category: "PERSONAJE",

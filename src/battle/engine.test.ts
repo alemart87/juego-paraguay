@@ -105,9 +105,18 @@ test("premium fighters have complete combat mechanics", () => {
   assert.equal(marito.player.inv, Number.POSITIVE_INFINITY);
   const targetHp = marito.enemies[0]!.hp;
   marito.player.face = 1;
-  tick(marito, 0.1, 0, true);
-  assert(marito.shots.length > 0, "Marito fires missiles");
+  tick(marito, 0.05, 0, true);
+  assert(marito.shots.some((shot) => shot.kind === "missile"), "Marito fires missiles");
+  tick(marito, 0.8);
   assert(marito.enemies[0]!.hp < targetHp, "Marito missile locks onto a target");
+  marito.player.super = 100;
+  const hpBeforeNuke = marito.enemies.reduce((total, enemy) => total + enemy.hp, 0);
+  activatePower(marito);
+  assert(marito.effects.some((effect) => effect.kind === "nuke"), "Marito has a nuclear ultimate");
+  assert(
+    marito.enemies.reduce((total, enemy) => total + enemy.hp, 0) < hpBeforeNuke,
+    "The nuclear ultimate deals area damage",
+  );
 
   const pablito = createWorld("pablito", 1, "picante");
   pablito.player.x = 400;

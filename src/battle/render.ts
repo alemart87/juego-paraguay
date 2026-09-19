@@ -111,8 +111,8 @@ export async function loadArt(level: World["level"]): Promise<Art> {
     load("/battle/minions.webp"),
     load("/battle/asuncion-combatants.webp"),
     load("/battle/apostol-combatants.webp"),
-    load("/battle/pablito.webp"),
-    load("/battle/marito.webp"),
+    load("/battle/premium/pablito-atlas.webp"),
+    load("/battle/premium/marito-atlas.webp"),
   ]);
   return {
     background,
@@ -178,6 +178,8 @@ function drawFighter(
   hit = false,
   attack = false,
   airborne = false,
+  power = false,
+  dashing = false,
 ) {
   const frame = moving ? Math.floor(t * 11) % 4 : 1;
   const pose = hit ? 3 : airborne ? 2 : attack ? 1 : 0;
@@ -186,13 +188,35 @@ function drawFighter(
   if (row >= 6) {
     const premium = art.premium[row - 6];
     if (!premium) return;
+    const premiumFrame = hit
+      ? 7
+      : power
+        ? 6
+        : attack
+          ? 4
+          : dashing
+            ? 5
+            : airborne
+              ? 3
+              : moving
+                ? 1 + (Math.floor(t * 10) % 2)
+                : 0;
     g.save();
     g.translate(x, y);
     g.scale(face * scale, scale);
     if (hit) g.globalAlpha = 0.48;
-    const bob = airborne ? -10 : moving ? Math.sin(t * 14) * 4 : Math.sin(t * 3) * 2;
-    if (attack) g.rotate(0.07);
-    g.drawImage(premium, -64, -151 + bob, 128, 154);
+    const bob = airborne ? -8 : moving ? Math.sin(t * 14) * 2 : Math.sin(t * 3) * 1.5;
+    g.drawImage(
+      premium,
+      (premiumFrame % 4) * 256,
+      Math.floor(premiumFrame / 4) * 256,
+      256,
+      256,
+      -80,
+      -162 + bob,
+      160,
+      160,
+    );
     g.restore();
     return;
   }
@@ -404,27 +428,45 @@ export function render(
   const p = w.player,
     px = sx(p.x),
     py = floor - p.y;
-  if (w.hero === "marito" && w.t < 10) {
-    const lift = Math.max(0, 1 - w.t / 10) * 76;
+  if (w.hero === "marito" && w.t < 6.5) {
+    const arrival = Math.min(1, w.t / 1.2);
+    const departure = Math.max(0, (w.t - 3.6) / 2.9);
+    const heliX = px + (1 - arrival) * 320 + departure * 430;
+    const heliY = py - 226 - Math.sin(w.t * 8) * 5 - departure * 90;
     g.save();
-    g.translate(px, py - lift - 96);
-    g.strokeStyle = "#161922";
-    g.lineWidth = 6;
+    g.translate(heliX, heliY);
+    g.shadowColor = "#111018";
+    g.shadowBlur = 15;
+    g.strokeStyle = "#d9e2e5";
+    g.lineWidth = 4;
     g.beginPath();
-    g.moveTo(-88, -41);
-    g.lineTo(88, -41);
+    g.moveTo(-112 - Math.sin(w.t * 34) * 20, -47);
+    g.lineTo(112 + Math.sin(w.t * 34) * 20, -47);
     g.moveTo(0, -41);
-    g.lineTo(0, -23);
+    g.lineTo(0, -29);
     g.stroke();
-    rect(g, -71, -23, 134, 45, "#27313a", 20);
-    rect(g, 42, -12, 86, 12, "#27313a", 4);
-    g.fillStyle = "#86d7e8";
+    rect(g, -76, -28, 144, 52, "#202a31", 23);
+    rect(g, 47, -14, 94, 15, "#202a31", 5);
+    g.fillStyle = "#81d3e7";
     g.beginPath();
-    g.arc(-31, -7, 24, Math.PI, Math.PI * 2);
+    g.arc(-34, -8, 26, Math.PI, Math.PI * 2);
     g.fill();
-    rect(g, -48, 18, 18, 25, "#343b42", 3);
-    rect(g, 25, 18, 18, 25, "#343b42", 3);
-    label(g, "PY-01", 10, 10, 12, "#f6e75a");
+    rect(g, -50, 19, 21, 25, "#343b42", 3);
+    rect(g, 27, 19, 21, 25, "#343b42", 3);
+    rect(g, -65, 25, 37, 8, "#a62222", 3);
+    rect(g, 20, 25, 37, 8, "#a62222", 3);
+    label(g, "PY-01", 9, 12, 13, "#f6e75a");
+    if (w.t < 1.8) {
+      g.globalAlpha = 0.55;
+      g.strokeStyle = "#fff3dc";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(-28, 36);
+      g.lineTo(-15, 143);
+      g.moveTo(28, 36);
+      g.lineTo(15, 143);
+      g.stroke();
+    }
     g.restore();
   }
   ellipse(g, px, floor + 5, 35, 7, "#11101860");
@@ -442,16 +484,18 @@ export function render(
     art,
     fighter(w.hero).row,
     px,
-    py - (w.hero === "marito" && w.t < 10 ? Math.max(0, 1 - w.t / 10) * 76 : 0),
+    py,
     p.face,
     w.t,
     Math.abs(p.vx) > 20,
     1,
-    p.inv > w.t && Math.floor(w.t * 14) % 2 === 0,
+    Number.isFinite(p.inv) && p.inv > w.t && Math.floor(w.t * 14) % 2 === 0,
     p.attackPose > w.t,
     p.y > 4,
+    p.powerPose > w.t,
+    p.dash > w.t,
   );
-  if (!["fist", "knife", "bat"].includes(w.weapon)) {
+  if (!["pablito", "marito"].includes(w.hero) && !["fist", "knife", "bat"].includes(w.weapon)) {
     g.save();
     g.translate(px + p.face * 22, py - 60);
     g.scale(p.face, 1);
@@ -459,7 +503,7 @@ export function render(
     rect(g, 7, 3, 7, 10, "#232633", 1);
     rect(g, 3, -5, 8, 2, "#8996a0");
     g.restore();
-  } else if (w.weapon === "bat" || w.weapon === "knife") {
+  } else if (!["pablito", "marito"].includes(w.hero) && (w.weapon === "bat" || w.weapon === "knife")) {
     g.save();
     g.translate(px + p.face * 30, py - 70);
     g.rotate(p.face * (p.attackPose > w.t ? 1.3 : 0.3));
@@ -485,6 +529,31 @@ export function render(
       g.moveTo(x, y);
       g.lineTo(x - Math.sign(s.vx) * 18, y + s.vy * 0.01);
       g.stroke();
+    } else if (s.kind === "missile") {
+      g.save();
+      g.translate(x, y);
+      g.rotate(Math.atan2(-s.vy, s.vx));
+      g.scale(Math.sign(s.vx), 1);
+      g.shadowColor = "#ff6b2c";
+      g.shadowBlur = 13;
+      g.fillStyle = "#ff6b2c";
+      g.beginPath();
+      g.moveTo(-21, 0);
+      g.lineTo(-37 - Math.sin(s.age * 45) * 8, -8);
+      g.lineTo(-31, 0);
+      g.lineTo(-37 - Math.cos(s.age * 39) * 7, 8);
+      g.closePath();
+      g.fill();
+      rect(g, -21, -7, 36, 14, "#31363b", 6);
+      g.fillStyle = "#f6e75a";
+      g.beginPath();
+      g.moveTo(15, -7);
+      g.lineTo(29, 0);
+      g.lineTo(15, 7);
+      g.closePath();
+      g.fill();
+      rect(g, -6, -8, 7, 16, "#b72c2c", 2);
+      g.restore();
     } else if (s.kind === "can") {
       g.save();
       g.translate(x, y);
@@ -593,7 +662,41 @@ export function render(
     const x = sx(fx.x),
       y = floor - fx.y;
     g.globalAlpha = Math.max(0, fx.life / fx.max);
-    if (fx.kind === "ring") {
+    if (fx.kind === "nuke") {
+      const phase = 1 - fx.life / fx.max;
+      const flash = Math.max(0, 1 - phase * 3.6);
+      g.save();
+      g.globalAlpha = Math.max(0.08, fx.life / fx.max);
+      const glow = g.createRadialGradient(x, y, 10, x, y, Math.min(view, fx.size) * 0.72);
+      glow.addColorStop(0, `rgba(255,255,240,${0.94 * (1 - phase * 0.6)})`);
+      glow.addColorStop(0.18, "rgba(255,232,80,.82)");
+      glow.addColorStop(0.52, "rgba(255,91,30,.42)");
+      glow.addColorStop(1, "rgba(255,40,10,0)");
+      g.fillStyle = glow;
+      g.beginPath();
+      g.arc(x, y, 70 + phase * fx.size * 0.7, 0, Math.PI * 2);
+      g.fill();
+      g.globalAlpha = Math.max(0, 0.95 - phase * 0.75);
+      for (let cloud = 0; cloud < 9; cloud++) {
+        const angle = (cloud / 9) * Math.PI * 2;
+        const spread = 28 + phase * 120;
+        ellipse(
+          g,
+          x + Math.cos(angle) * spread,
+          y - 70 - phase * 145 + Math.sin(angle) * spread * 0.35,
+          54 + phase * 55,
+          42 + phase * 38,
+          cloud % 2 ? "#ff792f" : "#ffe96e",
+        );
+      }
+      rect(g, x - 28 - phase * 22, y - 65 - phase * 90, 56 + phase * 44, 190 + phase * 130, "#ff9c35aa", 30);
+      g.globalAlpha = Math.max(0, 1 - phase * 1.25);
+      g.fillStyle = `rgba(255,255,255,${flash})`;
+      g.fillRect(0, 0, view, logicalHeight);
+      g.globalAlpha = Math.max(0, 1 - phase);
+      label(g, fx.text ?? "PROTOCOLO NUCLEAR", x, Math.max(64, y - 235), 34, "#fff3dc");
+      g.restore();
+    } else if (fx.kind === "ring") {
       g.strokeStyle = fx.color;
       g.lineWidth = 5;
       g.beginPath();
