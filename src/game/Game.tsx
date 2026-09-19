@@ -429,7 +429,7 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
           <ul className="grid gap-1.5 text-muted">
             <li>· Tres golpes seguidos: el tercero remata con el doble de daño.</li>
             <li>· Bate y escopeta mandan a volar. La metralleta vacía el cargador en segundos.</li>
-            <li>· Las cajas de madera frenan balas, libros y slime: usalas de cobertura.</li>
+            <li>· Arrancás con un AK-47 y 1000 balas: mantené apretado y barré la zona.</li>
             <li>· Esquivá la embestida del jefe y pegale cuando frena.</li>
             <li>
               · Los compañeros que reclutás pelean a tu lado. Los enemigos sueltan balas y Gs.
@@ -568,7 +568,7 @@ function Select() {
             velocidad
           </div>
           <div className="rounded-xl bg-elevated py-2">
-            <p className="text-lg font-bold text-paper">{hero.perk.ammo}</p>balas base
+            <p className="text-lg font-bold text-paper">1000</p>balas AK-47
           </div>
         </div>
       </div>
@@ -1285,7 +1285,7 @@ function PauseMenu() {
         <p className="text-sm text-muted">
           Volvés al inicio de la zona con toda la vida. Perdés 5 Gs y 100 puntos.
           {falls >= 2
-            ? " Consejo: esquivá con Shift, agachate (S) ante los libros y saltá el slime. Las cajas frenan proyectiles."
+            ? " Consejo: esquivá con Shift, agachate (S) ante los libros y saltá el slime. El AK-47 los frena de lejos."
             : ""}
         </p>
         <div className="mt-4 grid gap-2">
