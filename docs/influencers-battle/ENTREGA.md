@@ -17,6 +17,8 @@ La primera campaña está implementada como juego web móvil y de escritorio. Pa
 - Tarjeta vertical para compartir y enlace reproducible con personaje y semilla.
 - Controles de teclado, táctiles simultáneos, modo zurdo, calidad liviana y pausa automática.
 - Portada, retratos, sprites, escenarios, enemigos, favicon y piezas sociales propias.
+- Open Graph 1200 × 630, metadata social completa y URL canónica del despliegue en Render.
+- Marketplace de ocho artículos con precios desde USD 3,99 y enlaces Whop configurables por entorno.
 
 Toda la historia se presenta como ficción satírica. Los rumores personales que no pudieron verificarse no se publican como hechos.
 

@@ -4,6 +4,10 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Influencers Battle · Paraguay";
+const SITE_URL = "https://juego-paraguay.onrender.com";
+const OG_IMAGE = `${SITE_URL}/og.jpg`;
+const DESCRIPTION =
+  "Elegí tu influencer, dominá cuatro escenarios paraguayos y enfrentá jefes imposibles en una batalla arcade creada para móvil.";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -16,16 +20,29 @@ export const Route = createRootRoute({
       },
       { title: APP_NAME },
       { name: "theme-color", content: "#0b0f14" },
-      {
-        name: "description",
-        content:
-          "Seis personajes, tres escenarios paraguayos y una batalla por el feed. Acción arcade móvil y conversaciones con IA. Ficción satírica.",
-      },
+      { name: "description", content: DESCRIPTION },
+      { property: "og:type", content: "website" },
+      { property: "og:locale", content: "es_PY" },
+      { property: "og:site_name", content: "PY-STAR GAMES" },
+      { property: "og:title", content: "Influencers Battle · La batalla por el feed" },
+      { property: "og:description", content: DESCRIPTION },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:image", content: OG_IMAGE },
+      { property: "og:image:secure_url", content: OG_IMAGE },
+      { property: "og:image:type", content: "image/jpeg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Influencers Battle Paraguay — héroes y jefes" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Influencers Battle · Paraguay" },
+      { name: "twitter:description", content: DESCRIPTION },
+      { name: "twitter:image", content: OG_IMAGE },
       { name: "apple-mobile-web-app-title", content: APP_NAME },
       { name: "apple-mobile-web-app-status-bar-style", content: "black" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "canonical", href: SITE_URL },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },

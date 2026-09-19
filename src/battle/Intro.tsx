@@ -38,6 +38,7 @@ export function Intro({ onDone }: { onDone: () => void }) {
             <img src={item.portrait} alt="" />
             <span>JEFE 0{id}</span>
             <b>{item.name}</b>
+            <small>{item.title}</small>
           </figure>
         ))}
       </div>

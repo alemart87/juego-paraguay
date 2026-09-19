@@ -24,23 +24,35 @@ export function ShopPanel() {
         <span className="eyebrow">
           <ShoppingBag size={15} /> TIENDA PY-STAR
         </span>
-        <h2>Potenciá la próxima batalla.</h2>
-        <p>Artículos opcionales. El precio y la confirmación final siempre aparecen en Whop.</p>
+        <h2>Equipate. Rompé el feed.</h2>
+        <p>Power-ups de pago único desde USD 3,99. Whop procesa el pago de forma segura.</p>
+        <div className="shop-strip">
+          <span>8 POWER-UPS</span>
+          <span>PAGO ÚNICO</span>
+          <span>ENTREGA SEGURA</span>
+        </div>
       </div>
       <div className="shop-grid">
         {SHOP_ITEMS.map((item) => (
           <article key={item.sku} className="shop-item">
-            <b aria-hidden="true">{item.icon}</b>
-            <div>
+            <div className="shop-item-top">
+              <b aria-hidden="true">{item.icon}</b>
+              <span>{item.badge}</span>
+            </div>
+            <div className="shop-item-copy">
+              <small>{item.category}</small>
               <h3>{item.name}</h3>
               <p>{item.description}</p>
             </div>
+            <strong className="shop-price">
+              <small>USD</small> {item.price.toFixed(2).replace(".", ",")}
+            </strong>
             <button
               className="secondary"
               disabled={busy !== null}
               onClick={() => void checkout(item.sku)}
             >
-              {busy === item.sku ? <LoaderCircle className="spin" /> : <ExternalLink />} Ver en Whop
+              {busy === item.sku ? <LoaderCircle className="spin" /> : <ExternalLink />} Comprar
             </button>
           </article>
         ))}
@@ -51,7 +63,7 @@ export function ShopPanel() {
         </p>
       )}
       <small>
-        Las compras quedan desactivadas hasta cargar los cinco enlaces de checkout en Render.
+        El cobro se confirma en Whop. Los botones se habilitan al cargar los ocho enlaces en Render.
       </small>
     </div>
   );

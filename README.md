@@ -12,7 +12,7 @@ Juego de acción satírica para móvil ambientado en Paraguay. Seis personajes j
 - Niveles ampliados cerca de 30%, con más recorrido, oleadas y acción.
 - Seis combatientes con estadísticas, arma y poder especial propios.
 - Cuatro jefes, secuaces y lenguajes de ataque; El Dictador tiene dos vidas y hondita paraguaya.
-- Tienda móvil preparada para checkouts Whop de pago único, sin precios ni cobros hasta configurarlos.
+- Marketplace móvil con ocho power-ups de pago único, precios visibles y checkouts seguros de Whop.
 - Controles multitáctiles, teclado, pausa y modo para zurdos.
 - Intro cinematográfica de tres segundos con flashes de personajes y jefes.
 - Identidad de estudio **PY-STAR GAMES** animada en intro, finales, ranking y tarjetas sociales.
@@ -51,18 +51,19 @@ Para habilitar las conversaciones generativas, completá `VENICE_API_KEY` en `.e
 | `PERSISTENT_DIR`     | Directorio persistente de personajes; en Render es `/persistent`.             |
 | `PUBLIC_SITE_URL`    | URL pública del juego.                                                        |
 | `VITE_AUTH_ENABLED`  | Debe permanecer `false`; el ranking usa registro opcional propio.             |
-| `WHOP_CHECKOUT_*`    | Cinco enlaces HTTPS de checkout para los artículos de la tienda.              |
+| `WHOP_CHECKOUT_*`    | Ocho enlaces HTTPS `purchase_url` para los artículos de la tienda.            |
 
 Nunca subas `.env`; el repositorio solo contiene [.env.example](.env.example).
 
 ### Activar la tienda Whop
 
-1. En Whop creá cinco productos o planes de pago único: Armamento especial, Tereré medicinal, Ayuda del Pombero, Energía mística y Poder político.
-2. Definí vos los precios y condiciones en Whop; el proyecto no inventa importes.
-3. Copiá cada `purchase_url` en la variable `WHOP_CHECKOUT_*` correspondiente en Render.
-4. Volvé a desplegar. La tienda valida HTTPS y abre el checkout oficial en una pestaña segura.
+1. En Whop creá ocho productos con planes **One-time**, moneda **USD**, opción **Buy now** y stock ilimitado.
+2. Usá exactamente los nombres, precios y SKU de [CONFIGURACION-WHOP.md](docs/influencers-battle/CONFIGURACION-WHOP.md).
+3. En **Dashboard → Checkout links**, creá un enlace por producto y copiá su `purchase_url`.
+4. En Render, abrí el Web Service → **Environment**, cargá cada URL en su variable `WHOP_CHECKOUT_*` y guardá los cambios.
+5. Esperá el redeploy y probá cada botón de compra desde la tienda del juego.
 
-La UI permanece visible en modo preparación, pero no inicia compras mientras las variables estén vacías. Antes de habilitar ventajas persistentes, conectá la confirmación de pago por webhook y asociá la compra con la cuenta del jugador; la versión actual abre el checkout y no concede artículos sin verificación.
+La tienda bloquea únicamente el artículo cuyo enlace falte. El checkout ya funciona al cargar las URLs. Para acreditar automáticamente poderes dentro de una cuenta se necesita la segunda fase documentada: webhook firmado, identidad del jugador e inventario persistente.
 
 ## Docker local
 
