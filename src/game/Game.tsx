@@ -832,9 +832,17 @@ function Talk() {
   const script = useGame((s) => s.script);
   const idx = useGame((s) => s.line);
   const advance = useGame((s) => s.advance);
+  const dismiss = useGame((s) => s.dismissTalk);
+  const sendAgent = useGame((s) => s.sendAgent);
+  const agentChat = useGame((s) => s.agentChat);
+  const agentBusy = useGame((s) => s.agentBusy);
+  const hero = useGame((s) => s.hero);
   const [shown, setShown] = useState(0);
+  const [draft, setDraft] = useState("");
+  const logRef = useRef<HTMLDivElement>(null);
   const line = talkKey ? (script[idx] ?? null) : null;
   const text = line?.text ?? "";
+  const canChat = Boolean(line && line.who !== "narrator");
   useEffect(() => {
     setShown(0);
     if (!text) return;
@@ -847,8 +855,12 @@ function Talk() {
     return () => window.clearInterval(id);
   }, [text, idx, talkKey]);
   useEffect(() => {
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
+  }, [agentChat, agentBusy]);
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!line) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.code === "Enter" || e.code === "Space" || e.code === "KeyE") {
         e.preventDefault();
         if (shown < text.length) setShown(text.length);
@@ -868,9 +880,15 @@ function Talk() {
       ? null
       : (HERO_BY_ID[line.who as HeroId] ?? HAZARD_BY_ID[line.who as HazardId] ?? null);
   const complete = shown >= text.length;
+  function submitChat() {
+    const t = draft.trim();
+    if (!t || agentBusy) return;
+    setDraft("");
+    void sendAgent(t);
+  }
   return (
-    <div className="absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black via-black/90 to-transparent px-4 pb-[max(1.2rem,env(safe-area-inset-bottom))] pt-16">
-      <div className="modal-in mx-auto max-w-lg rounded-2xl bg-surface/95 p-3 ring-1 ring-line">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black via-black/90 to-transparent px-4 pb-[max(1.2rem,env(safe-area-inset-bottom))] pt-16">
+      <div className="pointer-events-auto modal-in mx-auto max-w-lg rounded-2xl bg-surface/95 p-3 ring-1 ring-line">
         <div className="flex gap-3">
           {face ? (
             <img src={face.portrait} alt="" className="size-14 rounded-xl object-cover" />
@@ -878,6 +896,7 @@ function Talk() {
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
               {face ? face.name : "Misión"}
+              {canChat ? " · agente" : ""}
             </p>
             <p
               className="mt-1 min-h-[2.6em] text-sm leading-snug text-paper"
@@ -888,6 +907,24 @@ function Talk() {
             </p>
           </div>
         </div>
+        {agentChat.length ? (
+          <div ref={logRef} className="mt-2 max-h-28 space-y-1.5 overflow-y-auto pr-1">
+            {agentChat.map((m, i) => (
+              <p
+                key={`${m.role}-${i}`}
+                className={
+                  m.role === "user"
+                    ? "rounded-lg bg-black/35 px-2 py-1 text-right text-xs text-muted"
+                    : "rounded-lg bg-accent/15 px-2 py-1 text-xs leading-snug text-paper"
+                }
+              >
+                {m.role === "user" ? `${HERO_BY_ID[hero ?? "rafa"].name}: ` : ""}
+                {m.text}
+              </p>
+            ))}
+            {agentBusy ? <p className="text-[11px] text-accent">escribiendo…</p> : null}
+          </div>
+        ) : null}
         {line.choices ? (
           <div className="mt-3 grid gap-2">
             {line.choices.map((c, i) => (
@@ -907,12 +944,44 @@ function Talk() {
         ) : (
           <button
             type="button"
-            className="press mt-3 h-12 w-full rounded-xl bg-accent text-sm font-medium text-accent-fg"
+            className="press mt-3 h-11 w-full rounded-xl bg-accent text-sm font-medium text-accent-fg"
             onClick={() => (complete ? advance() : setShown(text.length))}
           >
             {complete ? "Seguir" : "…"}
           </button>
         )}
+        {canChat ? (
+          <form
+            className="mt-2 flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitChat();
+            }}
+          >
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={`Escribile a ${face?.name ?? "él"}…`}
+              maxLength={400}
+              disabled={agentBusy}
+              className="h-11 min-w-0 flex-1 rounded-xl bg-black/40 px-3 text-sm text-paper outline-none ring-1 ring-line placeholder:text-muted"
+            />
+            <button
+              type="submit"
+              disabled={agentBusy || !draft.trim()}
+              className="press h-11 rounded-xl bg-accent px-3 text-sm font-bold text-accent-fg disabled:opacity-40"
+            >
+              Decir
+            </button>
+          </form>
+        ) : null}
+        <button
+          type="button"
+          className="mt-2 w-full text-center text-[11px] text-muted"
+          onClick={dismiss}
+        >
+          Cerrar
+        </button>
       </div>
     </div>
   );

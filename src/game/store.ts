@@ -13,6 +13,7 @@ import {
   type TalkKey,
   type WeaponId,
 } from "./content";
+import { chatWithNpc, type AgentTurn } from "./agent";
 import { configureAudio, sfx, unlockAudio, vibrate } from "./audio";
 import { isChapterLoaded, preloadChapter } from "./assets";
 import {
@@ -98,6 +99,8 @@ type State = {
   talkKey: TalkKey | null;
   script: Line[];
   line: number;
+  agentChat: AgentTurn[];
+  agentBusy: boolean;
   toast: string;
   banner: { text: string; key: number; kind: "zone" | "boss" } | null;
   hud: Hud;
@@ -127,6 +130,7 @@ type State = {
   startTalk: (key: TalkKey) => void;
   advance: (choice?: number) => void;
   dismissTalk: () => void;
+  sendAgent: (text: string) => Promise<void>;
   handleEvents: (ev: WorldEvent[]) => void;
   syncHud: () => void;
   setFps: (n: number) => void;
@@ -338,6 +342,8 @@ function finishMission() {
     },
     overlay: null,
     talkKey: null,
+    agentChat: [],
+    agentBusy: false,
     phase: "cinema",
     clip: { src: ch.outro.src, title: ch.outro.title, line: ch.outro.line, next: "win" },
   });
@@ -353,6 +359,8 @@ export const useGame = create<State>((set, get) => ({
   talkKey: null,
   script: [],
   line: 0,
+  agentChat: [],
+  agentBusy: false,
   toast: "",
   banner: null,
   hud: emptyHud,
@@ -518,7 +526,7 @@ export const useGame = create<State>((set, get) => ({
     markMet(w, key);
     flushInput();
     sfx("blip");
-    set({ overlay: "talk", talkKey: key, script, line: 0 });
+    set({ overlay: "talk", talkKey: key, script, line: 0, agentChat: [], agentBusy: false });
   },
   advance: (choice) => {
     const s = get();
@@ -530,7 +538,7 @@ export const useGame = create<State>((set, get) => ({
     sfx("blip");
     const close = () => {
       closeTalk(w);
-      set({ overlay: null, talkKey: null, script: [], line: 0 });
+      set({ overlay: null, talkKey: null, script: [], line: 0, agentChat: [], agentBusy: false });
       get().syncHud();
     };
     if (line.choices && choice !== undefined && line.choices[choice]) {
@@ -554,10 +562,33 @@ export const useGame = create<State>((set, get) => ({
     if (!w || get().overlay !== "talk") return;
     closeTalk(w);
     flushInput();
-    set({ overlay: null, talkKey: null, script: [], line: 0 });
+    set({ overlay: null, talkKey: null, script: [], line: 0, agentChat: [], agentBusy: false });
     get().syncHud();
   },
-
+  sendAgent: async (text) => {
+    const s = get();
+    const who = s.script[s.line]?.who;
+    const msg = text.trim().slice(0, 400);
+    if (!msg || s.agentBusy || !who || who === "narrator") return;
+    const history = s.agentChat;
+    set({ agentBusy: true, agentChat: [...history, { role: "user", text: msg }] });
+    try {
+      const res = await chatWithNpc({
+        data: { who, player: s.hero ?? "rafa", history, message: msg },
+      });
+      const reply = res.text || "…";
+      set({
+        agentBusy: false,
+        agentChat: [...get().agentChat, { role: "assistant", text: reply }],
+      });
+      sfx("blip");
+    } catch {
+      set({
+        agentBusy: false,
+        agentChat: [...get().agentChat, { role: "assistant", text: "El agente no contestó." }],
+      });
+    }
+  },
   handleEvents: (ev) => {
     if (!ev.length) return;
     const s = get();
