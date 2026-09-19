@@ -26,11 +26,18 @@ body,
 #app {
   background: var(--color-bg);
   min-height: 100%;
-  height: 100%;
   color: var(--color-fg);
   font-family: var(--font-sans);
-  overflow: hidden;
+}
+
+/* Menus can be taller than a phone screen (browser bars + the Grok banner), so the
+   document itself scrolls. Only the root scrolls: nested overflow rules would break
+   sticky footers. The play screen is exactly one viewport tall and locks touch. */
+html {
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {

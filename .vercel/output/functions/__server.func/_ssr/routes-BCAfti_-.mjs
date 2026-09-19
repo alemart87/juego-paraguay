@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Swords, c as Play, d as Hand, f as Hammer, g as Bomb, h as CircleHelp, l as Pause, m as Crosshair, n as Wind, o as Settings, p as Gamepad2, r as Trophy, s as RotateCcw, t as X, u as MessageCircle } from "../_libs/lucide-react.mjs";
 import { t as create } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DzgnU8w1.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BCAfti_-.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var WEAPONS = {
@@ -6439,10 +6439,10 @@ function Select() {
 				const active = h.id === sel;
 				return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 					type: "button",
-					onClick: () => setSel(h.id),
+					onClick: () => active ? choose(h.id) : setSel(h.id),
 					className: `press flex flex-col overflow-hidden rounded-2xl bg-surface text-left ring-2 ${active ? "ring-accent" : "ring-line"}`,
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "select-stage relative h-40 overflow-hidden bg-black",
+						className: "select-stage relative h-32 overflow-hidden bg-black sm:h-40",
 						children: active ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("video", {
 							src: h.reel,
 							className: "pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_18%]",
@@ -6506,13 +6506,16 @@ function Select() {
 				]
 			})]
 		}),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "mt-auto pt-4",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Btn, {
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "sticky bottom-0 -mx-4 mt-auto bg-gradient-to-t from-bg via-bg/95 to-transparent px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-5",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Btn, {
 				onClick: () => choose(sel),
 				className: "w-full py-4 text-lg",
 				children: ["Jugar con ", hero.name]
-			})
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-1.5 text-center text-[11px] text-muted",
+				children: "Tocá una tarjeta para elegir y de nuevo para empezar."
+			})]
 		})
 	] });
 }

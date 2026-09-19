@@ -524,10 +524,10 @@ function Select() {
             <button
               key={h.id}
               type="button"
-              onClick={() => setSel(h.id)}
+              onClick={() => (active ? choose(h.id) : setSel(h.id))}
               className={`press flex flex-col overflow-hidden rounded-2xl bg-surface text-left ring-2 ${active ? "ring-accent" : "ring-line"}`}
             >
-              <div className="select-stage relative h-40 overflow-hidden bg-black">
+              <div className="select-stage relative h-32 overflow-hidden bg-black sm:h-40">
                 {active ? (
                   <video
                     src={h.reel}
@@ -572,10 +572,13 @@ function Select() {
           </div>
         </div>
       </div>
-      <div className="mt-auto pt-4">
+      <div className="sticky bottom-0 -mx-4 mt-auto bg-gradient-to-t from-bg via-bg/95 to-transparent px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-5">
         <Btn onClick={() => choose(sel)} className="w-full py-4 text-lg">
           Jugar con {hero.name}
         </Btn>
+        <p className="mt-1.5 text-center text-[11px] text-muted">
+          Tocá una tarjeta para elegir y de nuevo para empezar.
+        </p>
       </div>
     </Screen>
   );
