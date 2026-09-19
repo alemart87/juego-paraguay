@@ -53,6 +53,9 @@ import { getWorld, useGame } from "./store";
 import { unlockAudio } from "./audio";
 import { stepWorld, type WorldEvent } from "./world";
 
+/** Shown on the title screen and pause menu so it is obvious which build is running. */
+export const APP_VERSION = "v3.1 · móvil vertical";
+
 declare global {
   interface Window {
     __controlsTest?: {
@@ -494,6 +497,7 @@ function Title() {
             Cómo jugar
           </Btn>
         </div>
+        <p className="text-[10px] uppercase tracking-[0.2em] text-paper/50">{APP_VERSION}</p>
       </div>
       {overlay === "options" ? <OptionsPanel onClose={close} /> : null}
       {overlay === "help" ? <HelpPanel onClose={close} /> : null}
@@ -1313,6 +1317,9 @@ function PauseMenu() {
         <Btn variant="danger" onClick={quit}>
           Salir al menú
         </Btn>
+        <p className="text-center text-[10px] uppercase tracking-[0.2em] text-paper/40">
+          {APP_VERSION}
+        </p>
       </div>
     </Modal>
   );
