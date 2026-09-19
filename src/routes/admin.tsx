@@ -87,9 +87,10 @@ function AdminPage() {
   };
   const grant = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formElement = e.currentTarget;
     setGrantMessage("");
     setGranting(true);
-    const form = new FormData(e.currentTarget);
+    const form = new FormData(formElement);
     try {
       const response = await fetch("/api/admin/grants", {
         method: "POST",
@@ -109,7 +110,7 @@ function AdminPage() {
       if (!response.ok) throw new Error(result.statusMessage || "No se pudo entregar el premio");
       const item = SHOP_ITEMS.find((entry) => entry.sku === result.sku);
       setGrantMessage(`${item?.name ?? result.sku} asignado a ${result.player}.`);
-      e.currentTarget.reset();
+      formElement.reset();
       await load();
     } catch (cause) {
       setGrantMessage(cause instanceof Error ? cause.message : "No se pudo entregar el premio");

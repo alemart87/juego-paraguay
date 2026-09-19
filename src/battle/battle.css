@@ -4176,21 +4176,76 @@
 }
 @media (max-width: 700px) {
   .intro-pro-bosses {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+    padding: 2px;
+    animation-name: intro-pro-bosses-mobile;
   }
-  .intro-pro-bosses figure:nth-child(n + 3) {
-    display: none;
+  .intro-pro-bosses figure {
+    min-width: 0;
+    border: 0;
+    border-top: 3px solid var(--boss-color);
+    transform: none;
+    animation-name: intro-boss-mobile;
+    animation-duration: 0.32s;
+    animation-delay: calc(2.05s + var(--i) * 0.06s);
+  }
+  .intro-pro-bosses figure::after {
+    content: "";
+    position: absolute;
+    inset: 38% 0 0;
+    z-index: 2;
+    background: linear-gradient(transparent, #07060bf5 84%);
+  }
+  .intro-pro-bosses img {
+    object-position: 50% 22%;
+    transform: scale(1.01);
+  }
+  .intro-pro-bosses figcaption {
+    left: 10px;
+    right: 8px;
+    bottom: 10px;
+    z-index: 3;
+    transform: none;
+    text-shadow: 2px 2px #000;
+  }
+  .intro-pro-bosses small {
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    margin-bottom: 5px;
+  }
+  .intro-pro-bosses strong {
+    display: block;
+    max-width: 100%;
+    font-size: clamp(24px, 8vw, 34px);
+    line-height: 0.88;
+    overflow-wrap: anywhere;
   }
   .intro-pro-premium > div {
-    top: auto;
-    bottom: 3%;
-    height: 115px;
+    top: max(8px, env(safe-area-inset-top));
+    bottom: auto;
+    height: 82px;
+    padding: 0 12px;
+    justify-content: flex-start;
+    background: linear-gradient(90deg, #08070deb, transparent);
+  }
+  .intro-pro-premium {
+    animation-name: intro-pro-premium-mobile;
   }
   .intro-pro-premium > div .py-star-brand {
-    width: 70px;
+    width: 58px;
+  }
+  .intro-pro-premium > div > strong {
+    font-size: 25px;
+    line-height: 0.78;
+  }
+  .intro-pro-premium figure img {
+    object-fit: cover;
+    object-position: 50% 18%;
   }
   .intro-pro-premium figure figcaption {
-    bottom: 21%;
+    bottom: 7%;
     left: 4%;
     padding: 7px;
   }
@@ -4202,6 +4257,56 @@
   }
   .intro-pro-title strong,
   .intro-pro-title b {
-    font-size: 57px;
+    font-size: clamp(43px, 13vw, 54px);
+  }
+  .intro-pro-title span,
+  .intro-pro-title i {
+    max-width: 86vw;
+    font-size: 9px;
+    line-height: 1.35;
+    letter-spacing: 0.25em;
+    text-align: center;
+  }
+  .game-intro > button {
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    padding: 9px 12px;
+    font-size: 9px;
+  }
+}
+@keyframes intro-boss-mobile {
+  from {
+    opacity: 0;
+    transform: none;
+    filter: brightness(3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: brightness(1);
+  }
+}
+@keyframes intro-pro-bosses-mobile {
+  0%,
+  48% {
+    opacity: 0;
+  }
+  52%,
+  72% {
+    opacity: 1;
+  }
+  77%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes intro-pro-premium-mobile {
+  0%,
+  74% {
+    opacity: 0;
+  }
+  79%,
+  100% {
+    opacity: 1;
   }
 }
