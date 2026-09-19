@@ -88,14 +88,21 @@ h3 {
 @keyframes toastIn {
   0% {
     opacity: 0;
-    transform: translate(-50%, -8px) scale(0.96);
+    transform: translateY(-8px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 @keyframes toastOut {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+/* The banner is centred with translateX(-50%), so it keeps its own fade-out. */
+@keyframes bannerOut {
   to {
     opacity: 0;
     transform: translate(-50%, -6px);
@@ -155,7 +162,7 @@ input[type="range"] {
 .banner-in {
   animation:
     0.35s cubic-bezier(0.22, 1, 0.36, 1) bannerIn,
-    0.4s ease-in 1.4s forwards toastOut;
+    0.4s ease-in 1.4s forwards bannerOut;
 }
 @keyframes bannerIn {
   0% {

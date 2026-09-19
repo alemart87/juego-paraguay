@@ -70,7 +70,9 @@ type Frame = {
 
 /** Visible world units for a canvas size: the full 100 in landscape, fewer in portrait so sprites stay readable. */
 export function viewWidthFor(W: number, H: number) {
-  return H > W * 1.1 ? 62 : 100;
+  if (H <= W * 1.1) return 100;
+  // Portrait: phones show 50 world units so characters stay big; tablets 62.
+  return W < 560 ? 50 : 62;
 }
 
 const X = (f: Frame, x: number) => (x - f.cam) * f.unit;
@@ -576,7 +578,7 @@ export function drawWorld(
     unit,
     unitY,
     viewW,
-    ground: portrait ? H * 0.64 : H * GROUND,
+    ground: portrait ? H * 0.66 : H * GROUND,
   };
   const zoneW = 100 * unit;
   ctx.save();
@@ -600,10 +602,36 @@ export function drawWorld(
       ctx.fillRect(zx, 0, zoneW + 2, H);
       continue;
     }
-    const s = Math.max(zoneW / sp.w, H / sp.h);
+    // The painting's floor must sit right under the characters' feet, so the
+    // image is anchored to the ground line (its bottom lands 8 "vh" below the
+    // feet, like the original 16:9 layout) instead of to the canvas bottom.
+    const bgBottom = Math.min(H, f.ground + VH(f, 8));
+    const s = Math.max(zoneW / sp.w, bgBottom / sp.h);
     const sw = zoneW / s;
-    const sh = H / s;
-    ctx.drawImage(sp.img, (sp.w - sw) / 2, (sp.h - sh) / 2, sw, sh, zx, 0, zoneW + 2, H);
+    const sh = bgBottom / s;
+    ctx.drawImage(sp.img, (sp.w - sw) / 2, sp.h - sh, sw, sh, zx, 0, zoneW + 2, bgBottom);
+    if (bgBottom < H) {
+      // Under the floor (where the touch controls live): a stretched, darkened
+      // band of the painting's bottom edge so the ground looks continuous.
+      const stripH = H - bgBottom;
+      const srcBand = Math.max(4, Math.min(sp.h * 0.12, stripH / s));
+      ctx.drawImage(
+        sp.img,
+        (sp.w - sw) / 2,
+        sp.h - srcBand,
+        sw,
+        srcBand,
+        zx,
+        bgBottom,
+        zoneW + 2,
+        stripH,
+      );
+      const g = ctx.createLinearGradient(0, bgBottom, 0, H);
+      g.addColorStop(0, "rgba(0,0,0,0.25)");
+      g.addColorStop(1, "rgba(0,0,0,0.7)");
+      ctx.fillStyle = g;
+      ctx.fillRect(zx, bgBottom, zoneW + 2, stripH);
+    }
   }
 
   /* props */
