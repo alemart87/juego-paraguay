@@ -217,6 +217,36 @@ function drawWeaponShape(ctx: CanvasRenderingContext2D, id: WeaponId, len: numbe
     ctx.beginPath();
     ctx.roundRect(len * 0.05, -len * 0.1, len * 0.22, len * 0.2, 3);
     ctx.fill();
+  } else if (id === "ak") {
+    // Wooden stock and handguard, dark receiver, curved magazine.
+    ctx.fillStyle = "#7a4a22";
+    ctx.beginPath();
+    ctx.roundRect(-len / 2, -len * 0.07, len * 0.28, len * 0.15, 3);
+    ctx.fill();
+    ctx.fillStyle = "#2a2d31";
+    ctx.beginPath();
+    ctx.roundRect(-len * 0.24, -len * 0.09, len * 0.42, len * 0.17, 2);
+    ctx.fill();
+    ctx.fillStyle = "#8a5a2a";
+    ctx.beginPath();
+    ctx.roundRect(len * 0.14, -len * 0.07, len * 0.2, len * 0.13, 2);
+    ctx.fill();
+    ctx.fillStyle = "#3a3f47";
+    ctx.beginPath();
+    ctx.roundRect(len * 0.3, -len * 0.035, len * 0.2, len * 0.07, 2);
+    ctx.fill();
+    ctx.fillStyle = "#1b1d21";
+    ctx.beginPath();
+    ctx.moveTo(-len * 0.06, len * 0.08);
+    ctx.lineTo(len * 0.08, len * 0.08);
+    ctx.lineTo(len * 0.03, len * 0.34);
+    ctx.lineTo(-len * 0.11, len * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#5a3a1c";
+    ctx.beginPath();
+    ctx.roundRect(-len * 0.2, len * 0.06, len * 0.08, len * 0.16, 2);
+    ctx.fill();
   } else if (id === "smg") {
     ctx.fillStyle = "#23262b";
     ctx.beginPath();
@@ -734,7 +764,7 @@ export function drawWorld(
       rot: (w.t * 900 + s.x * 30) % 360,
     });
   for (const s of w.shots) {
-    const size = s.kind === "shotgun" ? 12 : s.kind === "smg" ? 14 : 18;
+    const size = s.kind === "shotgun" ? 12 : s.kind === "smg" ? 14 : s.kind === "ak" ? 16 : 18;
     drawSprite(f, getSprite("/sprites/bullet.png"), X(f, s.x), Y(f, s.y) + size / 2, size, {
       flip: s.face === 1,
       rot: ((Math.atan2(-s.vy, Math.abs(s.vx)) * 180) / Math.PI) * (s.face === 1 ? 1 : -1),
@@ -779,7 +809,7 @@ export function drawWorld(
         ? 0.36
         : p.stomping
           ? 0.5
-          : ["pistol", "shotgun", "smg"].includes(p.attackKind)
+          : ["pistol", "ak", "shotgun", "smg"].includes(p.attackKind)
             ? 0.16
             : 0.28;
   const attackT = p.attackUntil > w.t ? 1 - (p.attackUntil - w.t) / atkDur : 1;
@@ -835,7 +865,11 @@ export function drawWorld(
       ctx.translate(hx, hy + 6);
       const swing = p.weapon === "bat" ? (attackT < 1 ? -1.6 + attackT * 2.6 : 0.6) : -kick * 0.3;
       ctx.rotate(p.facing === 1 ? -swing : Math.PI + swing);
-      drawWeaponShape(ctx, p.weapon, p.weapon === "bat" ? 62 : p.weapon === "shotgun" ? 64 : 46);
+      drawWeaponShape(
+        ctx,
+        p.weapon,
+        p.weapon === "bat" ? 62 : p.weapon === "shotgun" ? 64 : p.weapon === "ak" ? 70 : 46,
+      );
       ctx.restore();
     }
   }

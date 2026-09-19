@@ -159,7 +159,7 @@ const emptyHud: Hud = {
   maxHp: 100,
   coins: 0,
   ammo: 0,
-  weapon: "pistol",
+  weapon: "ak",
   hasKnife: false,
   timer: 0,
   score: 0,
@@ -178,7 +178,7 @@ const emptyHud: Hud = {
   enemies: [],
   markers: [],
   grenades: 0,
-  weapons: ["fist", "pistol"],
+  weapons: ["fist", "pistol", "ak"],
   dashReady: true,
   boss: null,
 };
@@ -437,7 +437,7 @@ export const useGame = create<State>((set, get) => ({
       if (!world) return set({ phase: "missions", clip: null });
       if (isChapterLoaded(chapter)) {
         set({ phase: "play", overlay: null, clip: null });
-        pushToast("W salta · S agacha · Shift esquiva · E habla · G granada");
+        pushToast("AK-47 cargado: mantené el ataque. W salta · Shift esquiva · E habla");
       } else {
         set({ phase: "loading", clip: null });
       }

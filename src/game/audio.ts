@@ -28,6 +28,7 @@ export type SfxName =
   | "dash"
   | "shotgun"
   | "smg"
+  | "ak"
   | "bat"
   | "grenade"
   | "explode"
@@ -127,6 +128,7 @@ function noise(
 const MIN_GAP: Partial<Record<SfxName, number>> = {
   shot: 40,
   smg: 30,
+  ak: 40,
   ally: 200,
   hit: 60,
   coin: 30,
@@ -212,6 +214,10 @@ export function sfx(name: SfxName) {
     case "shotgun":
       noise(0.3, { gain: 0.8, from: 5000, to: 200 });
       tone(90, 0.2, { type: "sawtooth", gain: 0.35, slide: 30 });
+      break;
+    case "ak":
+      noise(0.09, { gain: 0.45, from: 6500, to: 500 });
+      tone(160, 0.07, { type: "sawtooth", gain: 0.18, slide: 50 });
       break;
     case "smg":
       noise(0.06, { gain: 0.35, from: 7000, to: 700 });

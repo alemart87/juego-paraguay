@@ -106,8 +106,8 @@ export type HazardDef = {
 /* Weapons                                                             */
 /* ------------------------------------------------------------------ */
 
-export type WeaponId = "fist" | "knife" | "bat" | "pistol" | "shotgun" | "smg" | "grenade";
-export type GunId = "pistol" | "shotgun" | "smg" | "grenade";
+export type WeaponId = "fist" | "knife" | "bat" | "pistol" | "ak" | "shotgun" | "smg" | "grenade";
+export type GunId = "pistol" | "ak" | "shotgun" | "smg" | "grenade";
 
 export type WeaponDef = {
   id: WeaponId;
@@ -183,6 +183,19 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     start: 12,
     hint: "Precisa. Mantené para disparar seguido.",
   },
+  ak: {
+    id: "ak",
+    name: "AK-47",
+    short: "AK-47",
+    kind: "gun",
+    dmg: 2,
+    cooldown: 0.11,
+    speed: 330,
+    spread: 1,
+    pickup: 60,
+    start: 1000,
+    hint: "Arranca cargado con 1000 balas. Mantené apretado y barré la zona.",
+  },
   shotgun: {
     id: "shotgun",
     name: "Escopeta",
@@ -230,7 +243,7 @@ export const WEAPON_NAME: Record<WeaponId, string> = Object.fromEntries(
 ) as Record<WeaponId, string>;
 
 /** Cycle order for the swap button (grenades have their own button). */
-export const WEAPON_ORDER: WeaponId[] = ["fist", "knife", "bat", "pistol", "shotgun", "smg"];
+export const WEAPON_ORDER: WeaponId[] = ["ak", "pistol", "shotgun", "smg", "bat", "knife", "fist"];
 
 function stepsOf(id: string) {
   return [0, 1, 2, 3].map((i) => `/sprites/walk/${id}-${i}.png`);
@@ -949,12 +962,7 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
       { x: 408, w: 24, h: 11 },
       { x: 470, w: 20, h: 12 },
     ],
-    crates: [
-      { x: 176, w: 8, h: 9 },
-      { x: 300, w: 8, h: 9 },
-      { x: 426, w: 10, h: 9 },
-      { x: 522, w: 8, h: 9 },
-    ],
+    crates: [],
     ambush: { 2: ["gallaguer"], 3: ["pablito"], 4: ["marcos", "gallaguer"] },
     boss: {
       id: "masivo",
@@ -1035,12 +1043,7 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
       { x: 395, w: 20, h: 11 },
       { x: 500, w: 22, h: 12 },
     ],
-    crates: [
-      { x: 212, w: 8, h: 9 },
-      { x: 320, w: 8, h: 9 },
-      { x: 450, w: 10, h: 9 },
-      { x: 530, w: 8, h: 9 },
-    ],
+    crates: [],
     ambush: { 2: ["pablito"], 3: ["gallaguer"], 4: ["masivo", "pablito"] },
     boss: {
       id: "marcos",
@@ -1121,13 +1124,7 @@ export const CHAPTERS: Record<1 | 2 | 3, Chapter> = {
       { x: 395, w: 22, h: 11 },
       { x: 455, w: 20, h: 12 },
     ],
-    crates: [
-      { x: 160, w: 8, h: 9 },
-      { x: 265, w: 8, h: 9 },
-      { x: 335, w: 8, h: 9 },
-      { x: 425, w: 10, h: 9 },
-      { x: 540, w: 8, h: 9 },
-    ],
+    crates: [],
     ambush: { 1: ["gallaguer"], 3: ["masivo"], 4: ["marcos", "gallaguer"] },
     boss: {
       id: "pablito",

@@ -304,11 +304,12 @@ export function createWorld(chapter: 1 | 2 | 3, hero: HeroId, difficulty: Diffic
       invUntil: 0,
       slowUntil: 0,
       attackUntil: 0,
-      attackKind: "pistol",
-      weapon: "pistol",
-      weapons: ["fist", "pistol"],
+      attackKind: "ak",
+      weapon: "ak",
+      weapons: ["fist", "pistol", "ak"],
       ammo: {
         pistol: Math.round(tune.startAmmo * (perk.ammo / 12)),
+        ak: 1000,
         shotgun: 0,
         smg: 0,
         grenade: 0,
@@ -791,8 +792,8 @@ function fireGun(w: World, gun: GunId, ev: WorldEvent[]) {
     });
   }
   fx(w, p.x + dir * 8, y, "muzzle", dir);
-  if (gun !== "smg") fx(w, p.x + dir * 22, y, "tracer", dir);
-  shake(w, gun === "shotgun" ? 7 : gun === "smg" ? 1.5 : 3);
+  if (gun !== "smg" && gun !== "ak") fx(w, p.x + dir * 22, y, "tracer", dir);
+  shake(w, gun === "shotgun" ? 7 : gun === "smg" ? 1.5 : gun === "ak" ? 2.2 : 3);
   if (gun === "shotgun") p.vx -= dir * 30;
   ev.push({ t: "sfx", name: gun === "pistol" ? "shot" : gun }, { t: "hud" });
 }
@@ -896,9 +897,16 @@ function addWeapon(w: World, id: WeaponId, ev: WorldEvent[]) {
   }
   if (!p.weapons.includes(id)) p.weapons.push(id);
   if (isGun(id)) p.ammo[id] += Math.max(1, Math.round(def.start * w.tune.startAmmoMul));
-  p.weapon = id;
+  // Only switch hands when the current weapon is fists or a gun that ran dry:
+  // the AK-47 stays equipped unless the player asks for something else.
+  const cur = p.weapon;
+  const curEmpty = isGun(cur) && p.ammo[cur] <= 0;
+  if (cur === "fist" || curEmpty) p.weapon = id;
   addScore(w, 20);
-  ev.push({ t: "toast", msg: `${def.name}. ${def.hint}` });
+  ev.push({
+    t: "toast",
+    msg: `${def.name}. ${def.hint}${p.weapon === id ? "" : " Q para cambiar."}`,
+  });
 }
 
 function grab(w: World, p: Pickup, ev: WorldEvent[]) {
