@@ -91,10 +91,12 @@ for (let section = 0; section < 5; section++) {
   }
 }
 await desktop.getByText(/El feed es tuyo/i).waitFor({ timeout: 10000 });
+await desktop.waitForTimeout(900);
 await desktop.screenshot({ path: "screenshots/battle-result-prod.png", fullPage: true });
 await desktop.getByRole("button", { name: /Compartir partida/ }).click();
 await desktop.getByRole("dialog", { name: "Compartir partida" }).waitFor();
 await desktop.locator(".share-preview").waitFor({ timeout: 10000 });
+await desktop.locator(".share-preview").screenshot({ path: "screenshots/share-card-preview.png" });
 const challenge = await desktop.getByLabel("Enlace del desafío").inputValue();
 if (!challenge.includes("fighter=") || !challenge.includes("seed="))
   errors.push("desktop: enlace de desafío incompleto");

@@ -41,6 +41,7 @@ import { Scene } from "./Scene";
 import { challengeUrl, downloadCard, resultCard, type ShareResult } from "./share";
 import { Intro } from "./Intro";
 import { Leaderboard } from "./LeaderboardPanel";
+import { BrandLogo } from "./BrandLogo";
 import { chatWithNpc, type AgentTurn } from "../game/agent";
 import { unlockAudio, sfx } from "../game/audio";
 import "./battle.css";
@@ -225,6 +226,7 @@ export function BattleGame() {
               <b>BATTLE</b>
             </span>
           </button>
+          <BrandLogo className="publisher-header" />
           <div className="header-location">
             <i /> Hecho para el quilombo. <span>Paraguay.</span>
           </div>
@@ -327,7 +329,7 @@ export function BattleGame() {
             </div>
           </section>
           <footer className="ib-footer">
-            <span>INFLUENCERS BATTLE / PARAGUAY</span>
+            <BrandLogo className="publisher-footer" />
             <p>{FICTION}</p>
             <span>18+</span>
           </footer>
@@ -559,6 +561,7 @@ export function BattleGame() {
         <section className={`result-page ${won ? "won" : ""}`}>
           <div className="result-art" style={{ backgroundImage: `url(${episode(level).bg})` }} />
           <div className="result-main">
+            <BrandLogo animated className="result-publisher" />
             <span className="result-symbol">
               {won ? <Trophy size={42} /> : <RotateCcw size={42} />}
             </span>

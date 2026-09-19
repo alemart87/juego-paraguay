@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { FIGHTERS, BOSSES } from "./content";
+import { BrandLogo } from "./BrandLogo";
 
 export function Intro({ onDone }: { onDone: () => void }) {
   const done = useRef(onDone);
@@ -10,6 +11,10 @@ export function Intro({ onDone }: { onDone: () => void }) {
   }, []);
   return (
     <section className="game-intro" aria-label="Introducción de Influencers Battle">
+      <div className="intro-frame intro-publisher">
+        <BrandLogo animated />
+        <span>UNA PRODUCCIÓN PARAGUAYA</span>
+      </div>
       <div className="intro-frame intro-logo">
         <span>PARAGUAY PRESENTA</span>
         <strong>

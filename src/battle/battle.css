@@ -2505,6 +2505,63 @@
 }
 
 /* 3-second opening sequence */
+.py-star-brand {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.py-star-brand img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.py-star-brand.is-animated {
+  animation: py-star-arrival 850ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.publisher-header {
+  width: 38px;
+  height: 38px;
+  margin-left: 4px;
+  filter: drop-shadow(0 0 12px #f6e75a22);
+}
+.publisher-footer {
+  width: 78px;
+  height: 78px;
+}
+.result-publisher {
+  width: 92px;
+  height: 92px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 8px 22px #0009);
+}
+.ranking-publisher {
+  float: right;
+  width: 76px;
+  height: 76px;
+  margin: -10px 18px 4px 20px;
+  filter: drop-shadow(0 8px 18px #0008);
+}
+@keyframes py-star-arrival {
+  0% {
+    opacity: 0;
+    transform: scale(1.7) rotate(-8deg);
+    filter: brightness(3);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.92) rotate(2deg);
+    filter: brightness(1.35);
+  }
+  78% {
+    transform: scale(1.06) rotate(-1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+    filter: brightness(1);
+  }
+}
 .game-intro {
   position: fixed;
   inset: 0;
@@ -2546,6 +2603,26 @@
   opacity: 0;
   pointer-events: none;
   will-change: transform, opacity;
+}
+.intro-publisher {
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  background:
+    radial-gradient(circle at center, #163b9e55, transparent 47%),
+    repeating-linear-gradient(125deg, transparent 0 24px, #ffffff08 25px 26px), #08070b;
+  animation: intro-publisher 3s both;
+}
+.intro-publisher .py-star-brand {
+  width: min(66vw, 390px);
+  aspect-ratio: 1;
+  filter: drop-shadow(0 16px 34px #000a);
+}
+.intro-publisher > span:last-child {
+  margin-top: -5%;
+  color: #f6e75a;
+  font: 900 10px/1 var(--font-sans);
+  letter-spacing: 0.34em;
 }
 .intro-logo {
   place-content: center;
@@ -2647,17 +2724,34 @@
   color: #fff3dc;
   text-shadow: 5px 5px 0 #e9257e;
 }
-@keyframes intro-logo {
+@keyframes intro-publisher {
   0% {
     opacity: 0;
-    transform: scale(1.35);
+    transform: scale(1.25);
   }
-  4%,
-  16% {
+  3%,
+  17% {
     opacity: 1;
     transform: scale(1);
   }
   21%,
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes intro-logo {
+  0%,
+  18% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  22%,
+  31% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  35%,
   100% {
     opacity: 0;
     transform: scale(0.88);
@@ -2665,16 +2759,16 @@
 }
 @keyframes intro-heroes {
   0%,
-  18% {
+  32% {
     opacity: 0;
     transform: translateX(-7%);
   }
-  22%,
-  40% {
+  36%,
+  49% {
     opacity: 1;
     transform: translateX(0);
   }
-  45%,
+  53%,
   100% {
     opacity: 0;
     transform: translateX(5%);
@@ -2682,16 +2776,16 @@
 }
 @keyframes intro-bosses {
   0%,
-  41% {
+  50% {
     opacity: 0;
     transform: scale(1.08);
   }
-  45%,
-  68% {
+  54%,
+  70% {
     opacity: 1;
     transform: scale(1);
   }
-  73%,
+  74%,
   100% {
     opacity: 0;
     transform: scale(0.96);
@@ -2699,11 +2793,11 @@
 }
 @keyframes intro-final {
   0%,
-  69% {
+  71% {
     opacity: 0;
     transform: scale(1.12);
   }
-  74%,
+  76%,
   100% {
     opacity: 1;
     transform: scale(1);
@@ -2713,16 +2807,19 @@
   0%,
   17%,
   20%,
-  40%,
-  43%,
-  68%,
-  71%,
+  31%,
+  34%,
+  49%,
+  52%,
+  70%,
+  73%,
   100% {
     opacity: 0;
   }
   18%,
-  41%,
-  69% {
+  32%,
+  50%,
+  71% {
     opacity: 0.92;
   }
 }
@@ -2930,6 +3027,23 @@
 }
 
 @media (max-width: 720px) {
+  .publisher-header {
+    display: none;
+  }
+  .publisher-footer {
+    width: 64px;
+    height: 64px;
+  }
+  .result-publisher {
+    width: 74px;
+    height: 74px;
+    margin: 0 auto 4px;
+  }
+  .ranking-publisher {
+    width: 62px;
+    height: 62px;
+    margin-right: 8px;
+  }
   .header-ranking {
     width: 40px;
     height: 40px;
@@ -2997,5 +3111,8 @@
   }
   .game-intro::after {
     display: none;
+  }
+  .py-star-brand.is-animated {
+    animation: none;
   }
 }

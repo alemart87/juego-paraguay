@@ -29,7 +29,10 @@ export async function resultCard(result: ShareResult): Promise<Blob> {
       i.onerror = reject;
       i.src = src;
     });
-  const bg = await load("/media/characters/cover-v2.webp");
+  const [bg, publisher] = await Promise.all([
+    load("/media/characters/cover-v2.webp"),
+    load("/brand/py-star-games.webp"),
+  ]);
   g.drawImage(bg, 0, 0, 1080, 1620);
   const shade = g.createLinearGradient(0, 700, 0, 1920);
   shade.addColorStop(0, "#11101800");
@@ -37,6 +40,7 @@ export async function resultCard(result: ShareResult): Promise<Blob> {
   shade.addColorStop(1, "#111018");
   g.fillStyle = shade;
   g.fillRect(0, 700, 1080, 1220);
+  g.drawImage(publisher, 68, 915, 190, 190);
   g.textAlign = "left";
   g.fillStyle = "#f6e75a";
   g.font = "bold 34px sans-serif";

@@ -3,6 +3,7 @@ import { Check, LoaderCircle, Mail, Phone, Trophy } from "lucide-react";
 import { fighter } from "./content";
 import { getLeaderboard, submitLeaderboardScore, type LeaderboardEntry } from "./leaderboard";
 import type { ShareResult } from "./share";
+import { BrandLogo } from "./BrandLogo";
 
 export function Leaderboard({
   result,
@@ -72,6 +73,7 @@ export function Leaderboard({
   return (
     <div className="ranking-layout">
       <div className="ranking-head">
+        <BrandLogo animated className="ranking-publisher" />
         <span className="eyebrow">CLASIFICACIÓN NACIONAL</span>
         <h2>El feed tiene ranking.</h2>
         <p>Tu contacto nunca se muestra. Guardamos un hash para reconocer tu mejor partida.</p>

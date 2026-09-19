@@ -13,6 +13,7 @@ Juego de acción satírica para móvil ambientado en Paraguay. Seis personajes j
 - Tres jefes, secuaces y lenguajes de ataque diferentes.
 - Controles multitáctiles, teclado, pausa y modo para zurdos.
 - Intro cinematográfica de tres segundos con flashes de personajes y jefes.
+- Identidad de estudio **PY-STAR GAMES** animada en intro, finales, ranking y tarjetas sociales.
 - Ranking PostgreSQL: publica apodo, personaje y puntaje; correo o teléfono se guarda únicamente como hash HMAC.
 - Tarjeta vertical de resultado para descargar o compartir desde el teléfono.
 - Desafíos reproducibles por URL con episodio, personaje y semilla.
@@ -93,6 +94,7 @@ migrations/0001_leaderboard.sql
 server/routes/health.ts        health check de Render
 server/routes/media/           imágenes desde /persistent
 public/battle/                 recursos fuente empaquetados
+public/brand/                  identidad visual de PY-STAR GAMES
 scripts/seed-persistent.mjs    copia idempotente al disco
 Dockerfile                     imagen de producción Node/Nitro
 render.yaml                    infraestructura como código
