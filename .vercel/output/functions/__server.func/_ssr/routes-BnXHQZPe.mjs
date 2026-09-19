@@ -1,8 +1,9 @@
 import { i as __toESM } from "../_runtime.mjs";
-import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
+import { b as require_jsx_runtime, q as require_react } from "../_libs/@tanstack/react-router+[...].mjs";
+import { n as TSS_SERVER_FUNCTION, r as getServerFnById, t as createServerFn } from "./ssr.mjs";
 import { a as Swords, c as Play, d as Hand, f as Hammer, g as Bomb, h as CircleHelp, l as Pause, m as Crosshair, n as Wind, o as Settings, p as Gamepad2, r as Trophy, s as RotateCcw, t as X, u as MessageCircle } from "../_libs/lucide-react.mjs";
 import { t as create } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-KQWUFjzM.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BnXHQZPe.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var WEAPONS = {
@@ -5460,6 +5461,20 @@ function drawWorld(ctx, w, W, H, opts) {
 		});
 	}
 }
+var createSsrRpc = (functionId) => {
+	const url = "/_serverFn/" + functionId;
+	const serverFnMeta = { id: functionId };
+	const fn = async (...args) => {
+		return (await getServerFnById(functionId, { origin: "server" }))(...args);
+	};
+	return Object.assign(fn, {
+		url,
+		serverFnMeta,
+		[TSS_SERVER_FUNCTION]: true
+	});
+};
+createServerFn({ method: "POST" }).handler(createSsrRpc("e8422483ec6fdd0a5658777b451994d595ccfec8df5554f3d20a70d68112541e"));
+var chatWithNpc = createServerFn({ method: "POST" }).validator((d) => d).handler(createSsrRpc("4827ca590fa65ad9bacff161c271da834d9a1de91f3f0ec67edc9c19edb2bd60"));
 var world = null;
 function getWorld() {
 	return world;
@@ -5635,6 +5650,8 @@ function finishMission() {
 		},
 		overlay: null,
 		talkKey: null,
+		agentChat: [],
+		agentBusy: false,
 		phase: "cinema",
 		clip: {
 			src: ch.outro.src,
@@ -5654,6 +5671,8 @@ var useGame = create((set, get) => ({
 	talkKey: null,
 	script: [],
 	line: 0,
+	agentChat: [],
+	agentBusy: false,
 	toast: "",
 	banner: null,
 	hud: emptyHud,
@@ -5884,7 +5903,9 @@ var useGame = create((set, get) => ({
 			overlay: "talk",
 			talkKey: key,
 			script,
-			line: 0
+			line: 0,
+			agentChat: [],
+			agentBusy: false
 		});
 	},
 	advance: (choice) => {
@@ -5901,7 +5922,9 @@ var useGame = create((set, get) => ({
 				overlay: null,
 				talkKey: null,
 				script: [],
-				line: 0
+				line: 0,
+				agentChat: [],
+				agentBusy: false
 			});
 			get().syncHud();
 		};
@@ -5933,9 +5956,49 @@ var useGame = create((set, get) => ({
 			overlay: null,
 			talkKey: null,
 			script: [],
-			line: 0
+			line: 0,
+			agentChat: [],
+			agentBusy: false
 		});
 		get().syncHud();
+	},
+	sendAgent: async (text) => {
+		const s = get();
+		const who = s.script[s.line]?.who;
+		const msg = text.trim().slice(0, 400);
+		if (!msg || s.agentBusy || !who || who === "narrator") return;
+		const history = s.agentChat;
+		set({
+			agentBusy: true,
+			agentChat: [...history, {
+				role: "user",
+				text: msg
+			}]
+		});
+		try {
+			const reply = (await chatWithNpc({ data: {
+				who,
+				player: s.hero ?? "rafa",
+				history,
+				message: msg
+			} })).text || "…";
+			set({
+				agentBusy: false,
+				agentChat: [...get().agentChat, {
+					role: "assistant",
+					text: reply
+				}]
+			});
+			sfx("blip");
+		} catch {
+			set({
+				agentBusy: false,
+				agentChat: [...get().agentChat, {
+					role: "assistant",
+					text: "El agente no contestó."
+				}]
+			});
+		}
 	},
 	handleEvents: (ev) => {
 		if (!ev.length) return;
@@ -6819,14 +6882,54 @@ function Win() {
 		]
 	});
 }
+/**
+* Height of the on-screen keyboard (or other browser UI) covering the bottom of
+* the layout viewport. iOS Safari does not resize the page for the keyboard, it
+* only shrinks the visual viewport, so the sheet is lifted by this amount.
+*/
+function useKeyboardInset() {
+	const [inset, setInset] = (0, import_react.useState)(0);
+	(0, import_react.useEffect)(() => {
+		const vv = window.visualViewport;
+		if (!vv) return;
+		const update = () => {
+			const covered = window.innerHeight - vv.height - vv.offsetTop;
+			setInset(covered > 40 ? Math.round(covered) : 0);
+		};
+		vv.addEventListener("resize", update);
+		vv.addEventListener("scroll", update);
+		return () => {
+			vv.removeEventListener("resize", update);
+			vv.removeEventListener("scroll", update);
+		};
+	}, []);
+	return inset;
+}
+function faceOf(who) {
+	return who === "narrator" ? null : HERO_BY_ID[who] ?? HAZARD_BY_ID[who] ?? null;
+}
+/**
+* Conversation sheet. A chat log that scrolls inside a fixed-height bottom sheet,
+* with the script choices and the free-text field pinned underneath, so nothing
+* ever grows past the phone screen or zooms the page.
+*/
 function Talk() {
 	const talkKey = useGame((s) => s.talkKey);
 	const script = useGame((s) => s.script);
 	const idx = useGame((s) => s.line);
 	const advance = useGame((s) => s.advance);
+	const dismiss = useGame((s) => s.dismissTalk);
+	const sendAgent = useGame((s) => s.sendAgent);
+	const agentChat = useGame((s) => s.agentChat);
+	const agentBusy = useGame((s) => s.agentBusy);
 	const [shown, setShown] = (0, import_react.useState)(0);
+	const [draft, setDraft] = (0, import_react.useState)("");
+	const logRef = (0, import_react.useRef)(null);
+	const inputRef = (0, import_react.useRef)(null);
+	const inset = useKeyboardInset();
 	const line = talkKey ? script[idx] ?? null : null;
 	const text = line?.text ?? "";
+	const canChat = Boolean(line && line.who !== "narrator");
 	(0, import_react.useEffect)(() => {
 		setShown(0);
 		if (!text) return;
@@ -6843,8 +6946,21 @@ function Talk() {
 		talkKey
 	]);
 	(0, import_react.useEffect)(() => {
+		setDraft("");
+	}, [talkKey]);
+	(0, import_react.useEffect)(() => {
+		const el = logRef.current;
+		if (el) el.scrollTop = el.scrollHeight;
+	}, [
+		idx,
+		shown,
+		agentChat,
+		agentBusy
+	]);
+	(0, import_react.useEffect)(() => {
 		const onKey = (e) => {
 			if (!line) return;
+			if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 			if (e.code === "Enter" || e.code === "Space" || e.code === "KeyE") {
 				e.preventDefault();
 				if (shown < text.length) setShown(text.length);
@@ -6864,49 +6980,163 @@ function Talk() {
 		text.length
 	]);
 	if (!talkKey || !line) return null;
-	const face = line.who === "narrator" ? null : HERO_BY_ID[line.who] ?? HAZARD_BY_ID[line.who] ?? null;
+	const face = faceOf(line.who);
 	const complete = shown >= text.length;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black via-black/90 to-transparent px-4 pb-[max(1.2rem,env(safe-area-inset-bottom))] pt-16",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "modal-in mx-auto max-w-lg rounded-2xl bg-surface/95 p-3 ring-1 ring-line",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex gap-3",
-				children: [face ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-					src: face.portrait,
-					alt: "",
-					className: "size-14 rounded-xl object-cover"
-				}) : null, /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "min-w-0 flex-1",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "text-[10px] font-semibold uppercase tracking-[0.16em] text-accent",
-						children: face ? face.name : "Misión"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						className: "mt-1 min-h-[2.6em] text-sm leading-snug text-paper",
-						onClick: () => setShown(text.length),
-						children: [text.slice(0, shown), !complete ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "text-accent",
-							children: "▌"
-						}) : null]
-					})]
+	const submitChat = () => {
+		const t = draft.trim();
+		if (!t || agentBusy) return;
+		setDraft("");
+		sendAgent(t);
+		inputRef.current?.focus();
+	};
+	const npcBubble = "rounded-2xl rounded-bl-md bg-elevated px-3 py-2 text-sm leading-snug text-paper";
+	const bubbles = [];
+	for (let i = 0; i <= idx; i++) {
+		const l = script[i];
+		if (!l) continue;
+		const f = faceOf(l.who);
+		const current = i === idx;
+		bubbles.push(/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: `flex items-end gap-2 ${current ? "" : "opacity-60"}`,
+			children: [f ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+				src: f.portrait,
+				alt: "",
+				className: "size-7 shrink-0 rounded-full object-cover"
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "size-7 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "min-w-0 max-w-[85%]",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-[10px] font-semibold uppercase tracking-[0.14em] text-accent",
+					children: f ? f.name : "Misión"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: `mt-0.5 ${npcBubble}`,
+					onClick: current ? () => setShown(text.length) : void 0,
+					children: [current ? text.slice(0, shown) : l.text, current && !complete ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "text-accent",
+						children: "▌"
+					}) : null]
 				})]
-			}), line.choices ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-3 grid gap-2",
-				children: line.choices.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-					type: "button",
-					className: "press flex min-h-11 items-center gap-2 rounded-xl bg-accent px-3 text-left text-sm font-medium text-accent-fg",
-					onClick: () => advance(i),
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "grid size-6 shrink-0 place-items-center rounded-full bg-black/20 text-xs font-bold",
-						children: i + 1
-					}), c.label]
-				}, c.label))
-			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-				type: "button",
-				className: "press mt-3 h-12 w-full rounded-xl bg-accent text-sm font-medium text-accent-fg",
-				onClick: () => complete ? advance() : setShown(text.length),
-				children: complete ? "Seguir" : "…"
 			})]
+		}, `l${i}`));
+	}
+	agentChat.forEach((m, i) => {
+		bubbles.push(m.role === "user" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "flex justify-end",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "max-w-[85%] rounded-2xl rounded-br-md bg-accent px-3 py-2 text-sm leading-snug text-accent-fg",
+				children: m.text
+			})
+		}, `c${i}`) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex items-end gap-2",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "size-7 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: `max-w-[85%] ${npcBubble}`,
+				children: m.text
+			})]
+		}, `c${i}`));
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-10",
+		style: inset ? { transform: `translateY(-${inset}px)` } : void 0,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "pointer-events-auto modal-in flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-surface/95 ring-1 ring-line sm:mb-3 sm:rounded-2xl",
+			style: {
+				maxHeight: inset ? `calc(100dvh - ${inset}px - 0.5rem)` : "min(72dvh, 34rem)",
+				paddingBottom: inset ? 0 : "env(safe-area-inset-bottom)"
+			},
+			"data-testid": "talk-sheet",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex shrink-0 items-center gap-2 border-b border-line px-3 py-2",
+					children: [
+						face ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+							src: face.portrait,
+							alt: "",
+							className: "size-9 rounded-lg object-cover"
+						}) : null,
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "min-w-0 flex-1",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "truncate text-sm font-semibold text-paper",
+								children: face ? face.name : "Misión"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "truncate text-[11px] text-muted",
+								children: face ? `${face.role}${canChat ? " · agente" : ""}` : "Objetivo"
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							"aria-label": "Cerrar",
+							className: "press grid size-9 shrink-0 place-items-center rounded-full bg-elevated text-muted",
+							onClick: dismiss,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, { className: "size-4" })
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					ref: logRef,
+					className: "min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-3 py-2",
+					style: { minHeight: "5.5rem" },
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid gap-2",
+						children: [bubbles, agentBusy ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-end gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "size-7 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "rounded-2xl rounded-bl-md bg-elevated px-3 py-2 text-sm text-muted",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "animate-pulse",
+									children: "escribiendo…"
+								})
+							})]
+						}) : null]
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "shrink-0 border-t border-line px-3 pb-2 pt-2",
+					children: [line.choices ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "grid gap-1.5",
+						children: line.choices.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							className: "press flex min-h-10 items-center gap-2 rounded-xl bg-accent px-3 py-1.5 text-left text-sm font-medium text-accent-fg",
+							onClick: () => advance(i),
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "grid size-5 shrink-0 place-items-center rounded-full bg-black/20 text-[11px] font-bold",
+								children: i + 1
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "min-w-0 flex-1",
+								children: c.label
+							})]
+						}, c.label))
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: "press h-10 w-full rounded-xl bg-accent text-sm font-medium text-accent-fg",
+						onClick: () => complete ? advance() : setShown(text.length),
+						children: complete ? "Seguir" : "…"
+					}), canChat ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+						className: "mt-2 flex gap-2",
+						onSubmit: (e) => {
+							e.preventDefault();
+							submitChat();
+						},
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							ref: inputRef,
+							value: draft,
+							onChange: (e) => setDraft(e.target.value),
+							placeholder: `Escribile a ${face?.name ?? "él"}…`,
+							"aria-label": `Escribile a ${face?.name ?? "el personaje"}`,
+							maxLength: 400,
+							autoComplete: "off",
+							autoCapitalize: "sentences",
+							enterKeyHint: "send",
+							disabled: agentBusy,
+							className: "h-11 min-w-0 flex-1 rounded-xl bg-black/40 px-3 text-base text-paper outline-none ring-1 ring-line placeholder:text-muted focus:ring-accent disabled:opacity-60"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "submit",
+							disabled: agentBusy || !draft.trim(),
+							className: "press h-11 shrink-0 rounded-xl bg-accent px-4 text-sm font-bold text-accent-fg disabled:opacity-40",
+							children: "Decir"
+						})]
+					}) : null]
+				})
+			]
 		})
 	});
 }

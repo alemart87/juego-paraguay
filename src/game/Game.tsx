@@ -827,6 +827,41 @@ function Win() {
 /* Talk overlay                                                        */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Height of the on-screen keyboard (or other browser UI) covering the bottom of
+ * the layout viewport. iOS Safari does not resize the page for the keyboard, it
+ * only shrinks the visual viewport, so the sheet is lifted by this amount.
+ */
+function useKeyboardInset() {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const covered = window.innerHeight - vv.height - vv.offsetTop;
+      setInset(covered > 40 ? Math.round(covered) : 0);
+    };
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+  return inset;
+}
+
+function faceOf(who: string) {
+  return who === "narrator"
+    ? null
+    : (HERO_BY_ID[who as HeroId] ?? HAZARD_BY_ID[who as HazardId] ?? null);
+}
+
+/**
+ * Conversation sheet. A chat log that scrolls inside a fixed-height bottom sheet,
+ * with the script choices and the free-text field pinned underneath, so nothing
+ * ever grows past the phone screen or zooms the page.
+ */
 function Talk() {
   const talkKey = useGame((s) => s.talkKey);
   const script = useGame((s) => s.script);
@@ -836,10 +871,11 @@ function Talk() {
   const sendAgent = useGame((s) => s.sendAgent);
   const agentChat = useGame((s) => s.agentChat);
   const agentBusy = useGame((s) => s.agentBusy);
-  const hero = useGame((s) => s.hero);
   const [shown, setShown] = useState(0);
   const [draft, setDraft] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const inset = useKeyboardInset();
   const line = talkKey ? (script[idx] ?? null) : null;
   const text = line?.text ?? "";
   const canChat = Boolean(line && line.who !== "narrator");
@@ -855,8 +891,13 @@ function Talk() {
     return () => window.clearInterval(id);
   }, [text, idx, talkKey]);
   useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
-  }, [agentChat, agentBusy]);
+    setDraft("");
+  }, [talkKey]);
+  // Keep the newest bubble in view.
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [idx, shown, agentChat, agentBusy]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!line) return;
@@ -875,113 +916,169 @@ function Talk() {
     return () => window.removeEventListener("keydown", onKey);
   }, [line, advance, shown, text.length]);
   if (!talkKey || !line) return null;
-  const face =
-    line.who === "narrator"
-      ? null
-      : (HERO_BY_ID[line.who as HeroId] ?? HAZARD_BY_ID[line.who as HazardId] ?? null);
+  const face = faceOf(line.who);
   const complete = shown >= text.length;
-  function submitChat() {
+  const submitChat = () => {
     const t = draft.trim();
     if (!t || agentBusy) return;
     setDraft("");
     void sendAgent(t);
+    inputRef.current?.focus();
+  };
+  const npcBubble =
+    "rounded-2xl rounded-bl-md bg-elevated px-3 py-2 text-sm leading-snug text-paper";
+  const bubbles: ReactNode[] = [];
+  for (let i = 0; i <= idx; i++) {
+    const l = script[i];
+    if (!l) continue;
+    const f = faceOf(l.who);
+    const current = i === idx;
+    bubbles.push(
+      <div key={`l${i}`} className={`flex items-end gap-2 ${current ? "" : "opacity-60"}`}>
+        {f ? (
+          <img src={f.portrait} alt="" className="size-7 shrink-0 rounded-full object-cover" />
+        ) : (
+          <span className="size-7 shrink-0" />
+        )}
+        <div className="min-w-0 max-w-[85%]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
+            {f ? f.name : "Misión"}
+          </p>
+          <p
+            className={`mt-0.5 ${npcBubble}`}
+            onClick={current ? () => setShown(text.length) : undefined}
+          >
+            {current ? text.slice(0, shown) : l.text}
+            {current && !complete ? <span className="text-accent">▌</span> : null}
+          </p>
+        </div>
+      </div>,
+    );
   }
+  agentChat.forEach((m, i) => {
+    bubbles.push(
+      m.role === "user" ? (
+        <div key={`c${i}`} className="flex justify-end">
+          <p className="max-w-[85%] rounded-2xl rounded-br-md bg-accent px-3 py-2 text-sm leading-snug text-accent-fg">
+            {m.text}
+          </p>
+        </div>
+      ) : (
+        <div key={`c${i}`} className="flex items-end gap-2">
+          <span className="size-7 shrink-0" />
+          <p className={`max-w-[85%] ${npcBubble}`}>{m.text}</p>
+        </div>
+      ),
+    );
+  });
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black via-black/90 to-transparent px-4 pb-[max(1.2rem,env(safe-area-inset-bottom))] pt-16">
-      <div className="pointer-events-auto modal-in mx-auto max-w-lg rounded-2xl bg-surface/95 p-3 ring-1 ring-line">
-        <div className="flex gap-3">
+    <div
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-10"
+      style={inset ? { transform: `translateY(-${inset}px)` } : undefined}
+    >
+      <div
+        className="pointer-events-auto modal-in flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-surface/95 ring-1 ring-line sm:mb-3 sm:rounded-2xl"
+        style={{
+          maxHeight: inset ? `calc(100dvh - ${inset}px - 0.5rem)` : "min(72dvh, 34rem)",
+          paddingBottom: inset ? 0 : "env(safe-area-inset-bottom)",
+        }}
+        data-testid="talk-sheet"
+      >
+        <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-2">
           {face ? (
-            <img src={face.portrait} alt="" className="size-14 rounded-xl object-cover" />
+            <img src={face.portrait} alt="" className="size-9 rounded-lg object-cover" />
           ) : null}
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
+            <p className="truncate text-sm font-semibold text-paper">
               {face ? face.name : "Misión"}
-              {canChat ? " · agente" : ""}
             </p>
-            <p
-              className="mt-1 min-h-[2.6em] text-sm leading-snug text-paper"
-              onClick={() => setShown(text.length)}
-            >
-              {text.slice(0, shown)}
-              {!complete ? <span className="text-accent">▌</span> : null}
+            <p className="truncate text-[11px] text-muted">
+              {face ? `${face.role}${canChat ? " · agente" : ""}` : "Objetivo"}
             </p>
           </div>
-        </div>
-        {agentChat.length ? (
-          <div ref={logRef} className="mt-2 max-h-28 space-y-1.5 overflow-y-auto pr-1">
-            {agentChat.map((m, i) => (
-              <p
-                key={`${m.role}-${i}`}
-                className={
-                  m.role === "user"
-                    ? "rounded-lg bg-black/35 px-2 py-1 text-right text-xs text-muted"
-                    : "rounded-lg bg-accent/15 px-2 py-1 text-xs leading-snug text-paper"
-                }
-              >
-                {m.role === "user" ? `${HERO_BY_ID[hero ?? "rafa"].name}: ` : ""}
-                {m.text}
-              </p>
-            ))}
-            {agentBusy ? <p className="text-[11px] text-accent">escribiendo…</p> : null}
-          </div>
-        ) : null}
-        {line.choices ? (
-          <div className="mt-3 grid gap-2">
-            {line.choices.map((c, i) => (
-              <button
-                key={c.label}
-                type="button"
-                className="press flex min-h-11 items-center gap-2 rounded-xl bg-accent px-3 text-left text-sm font-medium text-accent-fg"
-                onClick={() => advance(i)}
-              >
-                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-black/20 text-xs font-bold">
-                  {i + 1}
-                </span>
-                {c.label}
-              </button>
-            ))}
-          </div>
-        ) : (
           <button
             type="button"
-            className="press mt-3 h-11 w-full rounded-xl bg-accent text-sm font-medium text-accent-fg"
-            onClick={() => (complete ? advance() : setShown(text.length))}
+            aria-label="Cerrar"
+            className="press grid size-9 shrink-0 place-items-center rounded-full bg-elevated text-muted"
+            onClick={dismiss}
           >
-            {complete ? "Seguir" : "…"}
+            <X className="size-4" />
           </button>
-        )}
-        {canChat ? (
-          <form
-            className="mt-2 flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              submitChat();
-            }}
-          >
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={`Escribile a ${face?.name ?? "él"}…`}
-              maxLength={400}
-              disabled={agentBusy}
-              className="h-11 min-w-0 flex-1 rounded-xl bg-black/40 px-3 text-sm text-paper outline-none ring-1 ring-line placeholder:text-muted"
-            />
-            <button
-              type="submit"
-              disabled={agentBusy || !draft.trim()}
-              className="press h-11 rounded-xl bg-accent px-3 text-sm font-bold text-accent-fg disabled:opacity-40"
-            >
-              Decir
-            </button>
-          </form>
-        ) : null}
-        <button
-          type="button"
-          className="mt-2 w-full text-center text-[11px] text-muted"
-          onClick={dismiss}
+        </div>
+        <div
+          ref={logRef}
+          className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-3 py-2"
+          style={{ minHeight: "5.5rem" }}
         >
-          Cerrar
-        </button>
+          <div className="grid gap-2">
+            {bubbles}
+            {agentBusy ? (
+              <div className="flex items-end gap-2">
+                <span className="size-7 shrink-0" />
+                <p className="rounded-2xl rounded-bl-md bg-elevated px-3 py-2 text-sm text-muted">
+                  <span className="animate-pulse">escribiendo…</span>
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="shrink-0 border-t border-line px-3 pb-2 pt-2">
+          {line.choices ? (
+            <div className="grid gap-1.5">
+              {line.choices.map((c, i) => (
+                <button
+                  key={c.label}
+                  type="button"
+                  className="press flex min-h-10 items-center gap-2 rounded-xl bg-accent px-3 py-1.5 text-left text-sm font-medium text-accent-fg"
+                  onClick={() => advance(i)}
+                >
+                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-black/20 text-[11px] font-bold">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">{c.label}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="press h-10 w-full rounded-xl bg-accent text-sm font-medium text-accent-fg"
+              onClick={() => (complete ? advance() : setShown(text.length))}
+            >
+              {complete ? "Seguir" : "…"}
+            </button>
+          )}
+          {canChat ? (
+            <form
+              className="mt-2 flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitChat();
+              }}
+            >
+              <input
+                ref={inputRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={`Escribile a ${face?.name ?? "él"}…`}
+                aria-label={`Escribile a ${face?.name ?? "el personaje"}`}
+                maxLength={400}
+                autoComplete="off"
+                autoCapitalize="sentences"
+                enterKeyHint="send"
+                disabled={agentBusy}
+                className="h-11 min-w-0 flex-1 rounded-xl bg-black/40 px-3 text-base text-paper outline-none ring-1 ring-line placeholder:text-muted focus:ring-accent disabled:opacity-60"
+              />
+              <button
+                type="submit"
+                disabled={agentBusy || !draft.trim()}
+                className="press h-11 shrink-0 rounded-xl bg-accent px-4 text-sm font-bold text-accent-fg disabled:opacity-40"
+              >
+                Decir
+              </button>
+            </form>
+          ) : null}
+        </div>
       </div>
     </div>
   );
