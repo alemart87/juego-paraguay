@@ -380,14 +380,23 @@ function drawEnemy(f: Frame, w: World, e: Enemy) {
 
   const walking = e.chasing && !e.calm && !e.cry;
   const charging = e.isBoss && w.t < e.chargeUntil;
+  const windup = e.isBoss && e.windupUntil > 0 && w.t < e.windupUntil;
   drawActor(f, def.sprite, def.steps, e.x, e.y, 30, face, {
     walk: walking,
     idle: !walking,
     cry: e.cry,
-    flash: charging ? 0.35 + e.flash : e.flash,
-    scale,
-    spin: charging ? face * 8 : 0,
+    flash: charging ? 0.35 + e.flash : windup ? 0.6 : e.flash,
+    scale: windup ? scale * (1 + Math.sin(w.t * 40) * 0.03) : scale,
+    spin: charging ? face * 8 : windup ? -face * 6 : 0,
   });
+  if (windup) {
+    drawTag(f, "!", cx, base - H - 34, {
+      bg: "rgba(255,200,40,0.98)",
+      fg: "#1b1410",
+      size: 16,
+      pad: 10,
+    });
+  }
   if (charging) {
     // Speed lines while a boss charges.
     const { ctx } = f;

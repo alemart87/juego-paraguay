@@ -2,7 +2,7 @@ import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Swords, c as Play, d as Hand, f as Hammer, g as Bomb, h as CircleHelp, l as Pause, m as Crosshair, n as Wind, o as Settings, p as Gamepad2, r as Trophy, s as RotateCcw, t as X, u as MessageCircle } from "../_libs/lucide-react.mjs";
 import { t as create } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-0QB5vAII.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DAteR8gf.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var WEAPONS = {
@@ -2970,6 +2970,10 @@ var TUNING = {
 		ammoPickup: 10,
 		respawnSeconds: 14,
 		enemyHp: .7,
+		chargeEvery: 4.4,
+		bossHp: .85,
+		ambush: 1,
+		startAmmoMul: 1.5,
 		label: "Fácil"
 	},
 	normal: {
@@ -2980,6 +2984,10 @@ var TUNING = {
 		ammoPickup: 8,
 		respawnSeconds: 10,
 		enemyHp: 1,
+		chargeEvery: 3.2,
+		bossHp: 1,
+		ambush: 2,
+		startAmmoMul: 1,
 		label: "Normal"
 	},
 	dificil: {
@@ -2990,6 +2998,10 @@ var TUNING = {
 		ammoPickup: 6,
 		respawnSeconds: 7,
 		enemyHp: 1.5,
+		chargeEvery: 2.3,
+		bossHp: 1.1,
+		ambush: 3,
+		startAmmoMul: .7,
 		label: "Difícil"
 	}
 };
@@ -3037,6 +3049,7 @@ function enemyAt(id, x, hpMul) {
 		nextBarkAt: 0,
 		chargeUntil: 0,
 		nextChargeAt: 0,
+		windupUntil: 0,
 		hitPlayerAt: -10,
 		noLeashUntil: 0
 	};
@@ -3721,7 +3734,7 @@ function addWeapon(w, id, ev) {
 		return;
 	}
 	if (!p.weapons.includes(id)) p.weapons.push(id);
-	if (isGun(id)) p.ammo[id] += def.start;
+	if (isGun(id)) p.ammo[id] += Math.max(1, Math.round(def.start * w.tune.startAmmoMul));
 	p.weapon = id;
 	addScore(w, 20);
 	ev.push({
@@ -3897,17 +3910,28 @@ function stepEnemy(w, e, ev) {
 	}
 	if (e.isBoss) {
 		speed *= 1.3;
-		if (t > e.nextChargeAt) {
-			e.chargeUntil = t + .55;
-			e.nextChargeAt = t + (e.id === "pablito" ? 2.3 : 3.1);
+		if (e.windupUntil === 0 && t > e.nextChargeAt) {
+			e.windupUntil = t + .5;
 			bark(w, e, "¡AHÍ VOY!");
 			ev.push({
 				t: "sfx",
-				name: "dash"
+				name: "alert"
 			});
 		}
+		if (e.windupUntil > 0) {
+			if (t < e.windupUntil) speed = 0;
+			else {
+				e.windupUntil = 0;
+				e.chargeUntil = t + .55;
+				e.nextChargeAt = t + w.tune.chargeEvery * (e.id === "pablito" ? .75 : 1);
+				ev.push({
+					t: "sfx",
+					name: "dash"
+				});
+			}
+		}
 		if (t < e.chargeUntil) speed *= 3.4;
-		if (dist > 6) e.x = clamp(e.x + dir * speed * w.dt, 8, maxX);
+		if (dist > 6 && speed > 0) e.x = clamp(e.x + dir * speed * w.dt, 8, maxX);
 		if (dist < 12 && Math.abs(p.y - e.y) < 14 && t > p.invUntil && t > e.hitPlayerAt + .8 && t > w.talkLockUntil) {
 			e.hitPlayerAt = t;
 			if (hurtPlayer(w, 12, ev, pick(def.bossBarks))) {
@@ -3986,7 +4010,7 @@ function stepBossTrigger(w, ev) {
 	if (bd.team && !TEAM.every((id) => id === w.hero || w.recruited.includes(id))) return;
 	const e = w.enemies[bd.id];
 	Object.assign(e, enemyAt(bd.id, clamp(bd.zone * 100 + 72, 8, w.width - 8), 1));
-	e.hp = e.maxHp = Math.max(4, Math.round(bd.hp * w.tune.enemyHp));
+	e.hp = e.maxHp = Math.max(4, Math.round(bd.hp * w.tune.enemyHp * w.tune.bossHp));
 	e.isBoss = true;
 	e.chasing = true;
 	e.caught = false;
@@ -4028,8 +4052,16 @@ function stepZones(w, ev) {
 		p.hp = Math.min(p.maxHp, p.hp + 10);
 		fx(w, p.x, p.y + 38, "heal", 1, `+${p.hp - before}`);
 	}
-	const list = ch.ambush[zone];
-	if (!list || w.t < w.talkLockUntil) return;
+	const base = ch.ambush[zone];
+	if (!base || w.t < w.talkLockUntil) return;
+	let list = base.slice(0, w.tune.ambush);
+	if (w.tune.ambush > base.length) {
+		const extra = HAZARDS.map((h) => h.id).find((id) => {
+			const e = w.enemies[id];
+			return !base.includes(id) && isAlive(e) && !e.chasing && !e.isBoss && !e.calm && id !== ch.boss.id;
+		});
+		if (extra) list = [...list, extra];
+	}
 	const names = [];
 	list.forEach((id, i) => {
 		const e = w.enemies[id];
@@ -4931,13 +4963,20 @@ function drawEnemy(f, w, e) {
 	}
 	const walking = e.chasing && !e.calm && !e.cry;
 	const charging = e.isBoss && w.t < e.chargeUntil;
+	const windup = e.isBoss && e.windupUntil > 0 && w.t < e.windupUntil;
 	drawActor(f, def.sprite, def.steps, e.x, e.y, 30, face, {
 		walk: walking,
 		idle: !walking,
 		cry: e.cry,
-		flash: charging ? .35 + e.flash : e.flash,
-		scale,
-		spin: charging ? face * 8 : 0
+		flash: charging ? .35 + e.flash : windup ? .6 : e.flash,
+		scale: windup ? scale * (1 + Math.sin(w.t * 40) * .03) : scale,
+		spin: charging ? face * 8 : windup ? -face * 6 : 0
+	});
+	if (windup) drawTag(f, "!", cx, base - H - 34, {
+		bg: "rgba(255,200,40,0.98)",
+		fg: "#1b1410",
+		size: 16,
+		pad: 10
 	});
 	if (charging) {
 		const { ctx } = f;

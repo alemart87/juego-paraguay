@@ -88,6 +88,7 @@ export type Enemy = {
   nextBarkAt: number;
   chargeUntil: number;
   nextChargeAt: number;
+  windupUntil: number;
   hitPlayerAt: number;
   noLeashUntil: number;
 };
@@ -261,6 +262,7 @@ function enemyAt(id: HazardId, x: number, hpMul: number): Enemy {
     nextBarkAt: 0,
     chargeUntil: 0,
     nextChargeAt: 0,
+    windupUntil: 0,
     hitPlayerAt: -10,
     noLeashUntil: 0,
   };
@@ -890,7 +892,7 @@ function addWeapon(w: World, id: WeaponId, ev: WorldEvent[]) {
     return;
   }
   if (!p.weapons.includes(id)) p.weapons.push(id);
-  if (isGun(id)) p.ammo[id] += def.start;
+  if (isGun(id)) p.ammo[id] += Math.max(1, Math.round(def.start * w.tune.startAmmoMul));
   p.weapon = id;
   addScore(w, 20);
   ev.push({ t: "toast", msg: `${def.name}. ${def.hint}` });
@@ -1050,14 +1052,23 @@ function stepEnemy(w: StepWorld, e: Enemy, ev: WorldEvent[]) {
 
   if (e.isBoss) {
     speed *= 1.3;
-    if (t > e.nextChargeAt) {
-      e.chargeUntil = t + 0.55;
-      e.nextChargeAt = t + (e.id === "pablito" ? 2.3 : 3.1);
+    // Telegraphed charge: the boss plants its feet for half a second, then rushes.
+    if (e.windupUntil === 0 && t > e.nextChargeAt) {
+      e.windupUntil = t + 0.5;
       bark(w, e, "¡AHÍ VOY!");
-      ev.push({ t: "sfx", name: "dash" });
+      ev.push({ t: "sfx", name: "alert" });
+    }
+    if (e.windupUntil > 0) {
+      if (t < e.windupUntil) speed = 0;
+      else {
+        e.windupUntil = 0;
+        e.chargeUntil = t + 0.55;
+        e.nextChargeAt = t + w.tune.chargeEvery * (e.id === "pablito" ? 0.75 : 1);
+        ev.push({ t: "sfx", name: "dash" });
+      }
     }
     if (t < e.chargeUntil) speed *= 3.4;
-    if (dist > 6) e.x = clamp(e.x + dir * speed * w.dt, 8, maxX);
+    if (dist > 6 && speed > 0) e.x = clamp(e.x + dir * speed * w.dt, 8, maxX);
     if (
       dist < 12 &&
       Math.abs(p.y - e.y) < 14 &&
@@ -1123,7 +1134,7 @@ function stepBossTrigger(w: World, ev: WorldEvent[]) {
   if (bd.team && !TEAM.every((id) => id === w.hero || w.recruited.includes(id))) return;
   const e = w.enemies[bd.id];
   Object.assign(e, enemyAt(bd.id, clamp(bd.zone * 100 + 72, 8, w.width - 8), 1));
-  e.hp = e.maxHp = Math.max(4, Math.round(bd.hp * w.tune.enemyHp));
+  e.hp = e.maxHp = Math.max(4, Math.round(bd.hp * w.tune.enemyHp * w.tune.bossHp));
   e.isBoss = true;
   e.chasing = true;
   e.caught = false;
@@ -1157,8 +1168,19 @@ function stepZones(w: World, ev: WorldEvent[]) {
     p.hp = Math.min(p.maxHp, p.hp + 10);
     fx(w, p.x, p.y + 38, "heal", 1, `+${p.hp - before}`);
   }
-  const list = ch.ambush[zone];
-  if (!list || w.t < w.talkLockUntil) return;
+  const base = ch.ambush[zone];
+  if (!base || w.t < w.talkLockUntil) return;
+  let list: HazardId[] = base.slice(0, w.tune.ambush);
+  if (w.tune.ambush > base.length) {
+    // Hard mode: one more enemy joins the ambush, whoever is idle and alive.
+    const extra = HAZARDS.map((h) => h.id).find((id) => {
+      const e = w.enemies[id];
+      return (
+        !base.includes(id) && isAlive(e) && !e.chasing && !e.isBoss && !e.calm && id !== ch.boss.id
+      );
+    });
+    if (extra) list = [...list, extra];
+  }
   const names: string[] = [];
   list.forEach((id, i) => {
     const e = w.enemies[id];

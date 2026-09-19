@@ -109,6 +109,14 @@ export type Tuning = {
   ammoPickup: number;
   respawnSeconds: number;
   enemyHp: number;
+  /** Seconds between boss charges. */
+  chargeEvery: number;
+  /** Boss health multiplier on top of enemyHp. */
+  bossHp: number;
+  /** How many enemies an ambush can throw at you at once. */
+  ambush: number;
+  /** Starting ammo multiplier for picked-up guns. */
+  startAmmoMul: number;
   label: string;
 };
 
@@ -121,6 +129,10 @@ export const TUNING: Record<Difficulty, Tuning> = {
     ammoPickup: 10,
     respawnSeconds: 14,
     enemyHp: 0.7,
+    chargeEvery: 4.4,
+    bossHp: 0.85,
+    ambush: 1,
+    startAmmoMul: 1.5,
     label: "Fácil",
   },
   normal: {
@@ -131,6 +143,10 @@ export const TUNING: Record<Difficulty, Tuning> = {
     ammoPickup: 8,
     respawnSeconds: 10,
     enemyHp: 1,
+    chargeEvery: 3.2,
+    bossHp: 1,
+    ambush: 2,
+    startAmmoMul: 1,
     label: "Normal",
   },
   dificil: {
@@ -141,6 +157,10 @@ export const TUNING: Record<Difficulty, Tuning> = {
     ammoPickup: 6,
     respawnSeconds: 7,
     enemyHp: 1.5,
+    chargeEvery: 2.3,
+    bossHp: 1.1,
+    ambush: 3,
+    startAmmoMul: 0.7,
     label: "Difícil",
   },
 };
