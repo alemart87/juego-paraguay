@@ -4,7 +4,7 @@ import { isAdmin } from "../../../utils/admin-auth";
 export default defineEventHandler(async (event) => {
   if (!isAdmin(event)) throw createError({ statusCode: 401, statusMessage: "Iniciá sesión" });
   const sql = await (await import("../../../../src/lib/db")).getSql();
-  const [summary, levels, heroes, dailyRows, leaders] = await Promise.all([
+  const [summary, levels, heroes, dailyRows, leaders, players, grants] = await Promise.all([
     sql.query<{
       players: number;
       active_players: number;
@@ -37,6 +37,43 @@ export default defineEventHandler(async (event) => {
     sql.query<{ name: string; score: number; games: number }>(
       `SELECT display_name name,total_score score,games_played games FROM leaderboard_players ORDER BY total_score DESC LIMIT 10`,
     ),
+    sql.query<{
+      id: number;
+      name: string;
+      contact_kind: string;
+      score: number;
+      games: number;
+      benefits: string[];
+    }>(
+      `SELECT p.id, p.display_name name, p.contact_kind,
+              p.total_score score, p.games_played games,
+              COALESCE(array_agg(DISTINCT benefits.game_sku)
+                FILTER (WHERE benefits.game_sku IS NOT NULL), ARRAY[]::varchar[]) benefits
+         FROM leaderboard_players p
+         LEFT JOIN (
+           SELECT player_id, game_sku FROM player_entitlements WHERE status='active'
+           UNION ALL
+           SELECT player_id, game_sku FROM admin_entitlement_grants
+         ) benefits ON benefits.player_id = p.id
+        GROUP BY p.id
+        ORDER BY p.updated_at DESC
+        LIMIT 250`,
+    ),
+    sql.query<{
+      id: number;
+      player: string;
+      sku: string;
+      quantity: number;
+      note: string | null;
+      granted_at: string;
+    }>(
+      `SELECT g.id, p.display_name player, g.game_sku sku, g.quantity,
+              g.note, to_char(g.granted_at, 'DD/MM/YYYY HH24:MI') granted_at
+         FROM admin_entitlement_grants g
+         JOIN leaderboard_players p ON p.id = g.player_id
+        ORDER BY g.granted_at DESC
+        LIMIT 40`,
+    ),
   ]);
   return {
     ok: true,
@@ -45,5 +82,7 @@ export default defineEventHandler(async (event) => {
     heroes,
     days: dailyRows.map((row) => ({ day: row.label, visits: row.visits, plays: row.plays })),
     leaders,
+    players,
+    grants,
   };
 });

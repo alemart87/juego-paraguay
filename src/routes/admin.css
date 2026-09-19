@@ -193,6 +193,150 @@
   flex: 1;
   color: #aaa3b4;
 }
+.admin-grants {
+  margin-top: 16px;
+  border: 1px solid #ffffff22;
+  background: #100e15;
+  padding: clamp(20px, 4vw, 42px);
+  display: grid;
+  grid-template-columns: minmax(240px, 0.7fr) minmax(420px, 1.3fr);
+  gap: 28px 42px;
+}
+.admin-grants-copy > span {
+  color: #ed2b8f;
+  font-size: 11px;
+  font-weight: 1000;
+  letter-spacing: 0.23em;
+}
+.admin-grants h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 14px;
+  font: 1000 clamp(32px, 4vw, 56px) / 0.9 "Barlow Condensed";
+}
+.admin-grants h2 svg {
+  color: #f6e75a;
+}
+.admin-grants-copy p,
+.admin-empty {
+  color: #aaa3b4;
+  line-height: 1.55;
+}
+.admin-grants form {
+  display: grid;
+  grid-template-columns: 1.4fr 1.2fr 0.55fr;
+  gap: 12px;
+  align-content: start;
+}
+.admin-grants label {
+  display: grid;
+  gap: 7px;
+  color: #f6e75a;
+  font-size: 11px;
+  font-weight: 1000;
+  letter-spacing: 0.15em;
+}
+.admin-grants select,
+.admin-grants input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid #ffffff2d;
+  border-radius: 0;
+  outline: 0;
+  background: #07060a;
+  color: #fff3dc;
+  font:
+    700 14px Figtree,
+    sans-serif;
+}
+.admin-grants select:focus,
+.admin-grants input:focus {
+  border-color: #f6e75a;
+}
+.admin-grant-note {
+  grid-column: 1 / -1;
+}
+.admin-grants form button {
+  grid-column: 1 / -1;
+  min-height: 54px;
+  border: 0;
+  background: #f6e75a;
+  color: #09080d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font:
+    1000 15px Figtree,
+    sans-serif;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+}
+.admin-grants form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.admin-grants form > strong {
+  grid-column: 1 / -1;
+  border-left: 3px solid #ed2b8f;
+  padding: 10px 14px;
+  background: #ed2b8f12;
+}
+.admin-users,
+.admin-grant-history {
+  border-top: 1px solid #ffffff22;
+  padding-top: 24px;
+}
+.admin-grant-history {
+  grid-column: 2;
+}
+.admin-users h3,
+.admin-grant-history h3 {
+  margin: 0 0 14px;
+  color: #f6e75a;
+  font: 1000 19px "Barlow Condensed";
+  letter-spacing: 0.08em;
+}
+.admin-users article,
+.admin-grant-history article {
+  display: grid;
+  grid-template-columns: 44px minmax(120px, 1fr) minmax(120px, auto);
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid #ffffff13;
+}
+.admin-users article > b,
+.admin-grant-history article > b {
+  color: #ed2b8f;
+}
+.admin-users article span,
+.admin-grant-history article span {
+  display: grid;
+  gap: 3px;
+}
+.admin-users article small,
+.admin-grant-history article small {
+  color: #8f8997;
+}
+.admin-users article em,
+.admin-grant-history article em {
+  color: #d8d1de;
+  font-size: 12px;
+  font-style: normal;
+  text-align: right;
+}
+.spin {
+  animation: admin-spin 0.7s linear infinite;
+}
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .admin-login {
   width: min(480px, calc(100% - 32px));
   margin: auto;
@@ -261,5 +405,30 @@
   }
   .admin-top b {
     display: none;
+  }
+  .admin-grants {
+    grid-template-columns: 1fr;
+  }
+  .admin-grant-history {
+    grid-column: auto;
+  }
+}
+@media (max-width: 620px) {
+  .admin-grants form {
+    grid-template-columns: 1fr;
+  }
+  .admin-grant-note,
+  .admin-grants form button,
+  .admin-grants form > strong {
+    grid-column: auto;
+  }
+  .admin-users article,
+  .admin-grant-history article {
+    grid-template-columns: 40px 1fr;
+  }
+  .admin-users article em,
+  .admin-grant-history article em {
+    grid-column: 2;
+    text-align: left;
   }
 }

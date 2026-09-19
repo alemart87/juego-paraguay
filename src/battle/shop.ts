@@ -7,6 +7,11 @@ export type { ShopSku } from "./shop-catalog";
 
 const input = z.object({ sku: z.enum(SHOP_SKUS) });
 
+const DEFAULT_CHECKOUTS: Partial<Record<ShopSku, string>> = {
+  pablito: "https://whop.com/checkout/plan_xhlnD3vpqBt4D",
+  marito: "https://whop.com/checkout/plan_faICB6iGn6vYl",
+};
+
 export const getWhopCheckout = createServerFn({ method: "POST" })
   .validator((value: unknown) => input.parse(value))
   .handler(async ({ data }) => {
@@ -22,7 +27,7 @@ export const getWhopCheckout = createServerFn({ method: "POST" })
       luison: process.env.WHOP_CHECKOUT_LUISON,
       avance: process.env.WHOP_CHECKOUT_AVANCE,
     };
-    const url = env[data.sku]?.trim();
+    const url = env[data.sku]?.trim() || DEFAULT_CHECKOUTS[data.sku];
     if (url) {
       try {
         const parsed = new URL(url);

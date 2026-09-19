@@ -9,8 +9,11 @@ import {
   ShoppingBag,
   Trophy,
   Users,
+  Gift,
+  LoaderCircle,
 } from "lucide-react";
 import { fighter } from "@/battle/content";
+import { SHOP_ITEMS, type ShopSku } from "@/battle/shop-catalog";
 import "./admin.css";
 
 export const Route = createFileRoute("/admin")({
@@ -37,11 +40,29 @@ type Stats = {
   heroes: { hero: string; plays: number }[];
   days: { day: string; visits: number; plays: number }[];
   leaders: { name: string; score: number; games: number }[];
+  players: {
+    id: number;
+    name: string;
+    contact_kind: string;
+    score: number;
+    games: number;
+    benefits: ShopSku[];
+  }[];
+  grants: {
+    id: number;
+    player: string;
+    sku: ShopSku;
+    quantity: number;
+    note: string | null;
+    granted_at: string;
+  }[];
 };
 function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [granting, setGranting] = useState(false),
+    [grantMessage, setGrantMessage] = useState("");
   const load = async () => {
     setLoading(true);
     const r = await fetch("/api/admin/stats");
@@ -63,6 +84,38 @@ function AdminPage() {
     });
     if (r.ok) void load();
     else setError("Correo o contraseña incorrectos.");
+  };
+  const grant = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setGrantMessage("");
+    setGranting(true);
+    const form = new FormData(e.currentTarget);
+    try {
+      const response = await fetch("/api/admin/grants", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          playerId: Number(form.get("playerId")),
+          sku: form.get("sku"),
+          quantity: Number(form.get("quantity") || 1),
+          note: form.get("note"),
+        }),
+      });
+      const result = (await response.json()) as {
+        player?: string;
+        sku?: ShopSku;
+        statusMessage?: string;
+      };
+      if (!response.ok) throw new Error(result.statusMessage || "No se pudo entregar el premio");
+      const item = SHOP_ITEMS.find((entry) => entry.sku === result.sku);
+      setGrantMessage(`${item?.name ?? result.sku} asignado a ${result.player}.`);
+      e.currentTarget.reset();
+      await load();
+    } catch (cause) {
+      setGrantMessage(cause instanceof Error ? cause.message : "No se pudo entregar el premio");
+    } finally {
+      setGranting(false);
+    }
   };
   if (loading)
     return (
@@ -200,6 +253,89 @@ function AdminPage() {
             )}
           </section>
         </div>
+        <section className="admin-grants">
+          <div className="admin-grants-copy">
+            <span>PREMIOS SIN LÍMITE</span>
+            <h2>
+              <Gift /> ASIGNAR BENEFICIOS
+            </h2>
+            <p>
+              Entregá personajes premium, armamento o poderes a cualquier perfil registrado. Cada
+              operación queda guardada en el historial.
+            </p>
+          </div>
+          <form onSubmit={grant}>
+            <label>
+              USUARIO
+              <select name="playerId" required defaultValue="">
+                <option value="" disabled>
+                  Seleccioná un jugador
+                </option>
+                {stats.players.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    #{player.id} · {player.name} · {player.games} partidas
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              PREMIO
+              <select name="sku" required defaultValue="marito">
+                {SHOP_ITEMS.map((item) => (
+                  <option key={item.sku} value={item.sku}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              CANTIDAD
+              <input name="quantity" type="number" min="1" max="9999" defaultValue="1" required />
+            </label>
+            <label className="admin-grant-note">
+              NOTA INTERNA
+              <input name="note" maxLength={240} placeholder="Ej.: premio de torneo" />
+            </label>
+            <button disabled={granting || !stats.players.length}>
+              {granting ? <LoaderCircle className="spin" /> : <Gift />}
+              {granting ? "ASIGNANDO…" : "ENTREGAR PREMIO"}
+            </button>
+            {grantMessage && <strong>{grantMessage}</strong>}
+          </form>
+          <div className="admin-users">
+            <h3>USUARIOS Y BENEFICIOS</h3>
+            {stats.players.map((player) => (
+              <article key={player.id}>
+                <b>#{player.id}</b>
+                <span>
+                  <strong>{player.name}</strong>
+                  <small>
+                    {player.contact_kind === "email" ? "Correo" : "Teléfono"} · {player.games}{" "}
+                    partidas
+                  </small>
+                </span>
+                <em>{player.benefits.length ? player.benefits.join(" · ") : "Sin premios"}</em>
+              </article>
+            ))}
+          </div>
+          <div className="admin-grant-history">
+            <h3>ÚLTIMAS ASIGNACIONES</h3>
+            {stats.grants.length ? (
+              stats.grants.map((entry) => (
+                <article key={entry.id}>
+                  <b>{entry.quantity}×</b>
+                  <span>
+                    <strong>{entry.player}</strong>
+                    <small>{entry.granted_at}</small>
+                  </span>
+                  <em>{SHOP_ITEMS.find((item) => item.sku === entry.sku)?.name ?? entry.sku}</em>
+                </article>
+              ))
+            ) : (
+              <p className="admin-empty">Todavía no asignaste premios manuales.</p>
+            )}
+          </div>
+        </section>
       </section>
     </main>
   );

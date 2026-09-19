@@ -103,10 +103,17 @@ export const getPlayerBenefits = createServerFn({ method: "POST" })
       return { ok: false as const, message: "Actualizá tu perfil para sincronizar compras." };
     const sql = await (await import("@/lib/db")).getSql();
     const rows = await sql.query<{ game_sku: string }>(
-      `SELECT DISTINCT e.game_sku
-         FROM player_entitlements e
-         JOIN leaderboard_players p ON p.id = e.player_id
-        WHERE p.contact_hash = $1 AND e.status = 'active'`,
+      `SELECT DISTINCT benefits.game_sku
+         FROM (
+           SELECT e.player_id, e.game_sku
+             FROM player_entitlements e
+            WHERE e.status = 'active'
+           UNION ALL
+           SELECT g.player_id, g.game_sku
+             FROM admin_entitlement_grants g
+         ) benefits
+         JOIN leaderboard_players p ON p.id = benefits.player_id
+        WHERE p.contact_hash = $1`,
       [hash],
     );
     const valid = new Set<string>(SHOP_SKUS);
