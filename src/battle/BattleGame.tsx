@@ -74,6 +74,36 @@ type Dialog =
   | "shop"
   | "chat"
   | null;
+const CHAT_FOCUS_KEY = "ib-chat-focus-v1";
+const CHAT_FOCUS_DELAY_MS = 3000;
+const CHAT_FOCUS_AUTO_HIDE_MS = 9000;
+const CHAT_FOCUS_PAD = 7;
+const CHAT_FOCUS_CARD_WIDTH = 300;
+type ChatFocusRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  cardTop: number;
+  cardRight: number;
+  arrowRight: number;
+};
+/** Recorta el botón del header y ubica la tarjeta debajo, siempre dentro del viewport. */
+function measureFocus(rect: DOMRect): ChatFocusRect {
+  const left = rect.left - CHAT_FOCUS_PAD;
+  const top = rect.top - CHAT_FOCUS_PAD;
+  const width = rect.width + CHAT_FOCUS_PAD * 2;
+  const height = rect.height + CHAT_FOCUS_PAD * 2;
+  const viewport = window.innerWidth;
+  const margin = 12;
+  const centerX = rect.left + rect.width / 2;
+  // Tarjeta alineada al centro del botón, corrida si se sale por los bordes.
+  let cardRight = viewport - centerX - CHAT_FOCUS_CARD_WIDTH / 2;
+  cardRight = Math.max(margin, Math.min(cardRight, viewport - CHAT_FOCUS_CARD_WIDTH - margin));
+  const cardRightEdge = viewport - cardRight;
+  const arrowRight = Math.max(18, Math.min(cardRightEdge - centerX - 9, CHAT_FOCUS_CARD_WIDTH - 30));
+  return { left, top, width, height, cardTop: top + height + 14, cardRight, arrowRight };
+}
 const formatTime = (time: number) =>
   `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, "0")}`;
 const statStyle = (color: string) => ({ "--fighter-color": color }) as CSSProperties;
@@ -96,6 +126,9 @@ export function BattleGame() {
   const [weeklyChismeDone, setWeeklyChismeDone] = useState(false);
   /** "Omitir intros y seleccionar juego" del superadmin: episodio y personaje a lanzar. */
   const [autoStart, setAutoStart] = useState<{ level: EpisodeId; hero: FighterId } | null>(null);
+  /** Foco sobre el botón del chat anónimo, 3 s después de entrar a la portada (una vez por sesión). */
+  const [chatFocus, setChatFocus] = useState<ChatFocusRect | null>(null);
+  const chatButton = useRef<HTMLButtonElement>(null);
   const [rankingName, setRankingName] = useState("");
   const [rankingSync, setRankingSync] = useState<"idle" | "uploading" | "success" | "error">(
     "idle",
@@ -253,6 +286,37 @@ export function BattleGame() {
     setRankingSync("idle");
     autoRankSubmitted.current = false;
     sfx("ui");
+  };
+  useEffect(() => {
+    if (intro || !weeklyChismeDone || screen !== "home" || dialog || autoStart) return;
+    if (sessionStorage.getItem(CHAT_FOCUS_KEY)) return;
+    const timer = window.setTimeout(() => {
+      const rect = chatButton.current?.getBoundingClientRect();
+      if (!rect || !rect.width) return;
+      sessionStorage.setItem(CHAT_FOCUS_KEY, "1");
+      setChatFocus(measureFocus(rect));
+    }, CHAT_FOCUS_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [intro, weeklyChismeDone, screen, dialog, autoStart]);
+  useEffect(() => {
+    if (!chatFocus) return;
+    const remeasure = () => {
+      const rect = chatButton.current?.getBoundingClientRect();
+      if (rect && rect.width) setChatFocus(measureFocus(rect));
+    };
+    const timer = window.setTimeout(() => setChatFocus(null), CHAT_FOCUS_AUTO_HIDE_MS);
+    window.addEventListener("resize", remeasure);
+    window.addEventListener("scroll", remeasure, true);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("resize", remeasure);
+      window.removeEventListener("scroll", remeasure, true);
+    };
+  }, [chatFocus]);
+  const openChatFromFocus = () => {
+    setChatFocus(null);
+    sfx("ui");
+    setDialog("chat");
   };
   useEffect(() => {
     if (!autoStart) return;
@@ -469,6 +533,7 @@ export function BattleGame() {
               <ShoppingBag size={17} /> Tienda
             </button>
             <button
+              ref={chatButton}
               className="header-chat"
               onClick={() => {
                 sfx("ui");
@@ -508,6 +573,48 @@ export function BattleGame() {
             </button>
           </nav>
         </header>
+      )}
+
+      {chatFocus && screen === "home" && !dialog && (
+        <div className="chat-focus" role="dialog" aria-label="Chat anónimo en vivo">
+          <button
+            type="button"
+            className="chat-focus-scrim"
+            aria-label="Cerrar aviso"
+            onClick={() => setChatFocus(null)}
+          />
+          <button
+            type="button"
+            className="chat-focus-ring"
+            style={{
+              left: chatFocus.left,
+              top: chatFocus.top,
+              width: chatFocus.width,
+              height: chatFocus.height,
+            }}
+            aria-label="Abrir chismes en vivo"
+            onClick={openChatFromFocus}
+          />
+          <div
+            className="chat-focus-card"
+            style={{ top: chatFocus.cardTop, right: chatFocus.cardRight }}
+          >
+            <i className="chat-focus-arrow" style={{ right: chatFocus.arrowRight }} />
+            <span className="eyebrow">
+              <i className="live-dot" /> CHAT ANÓNIMO · EN VIVO
+            </span>
+            <strong>¿Tenés un chisme? Tiralo acá.</strong>
+            <p>Sin nombre, sin cuenta, sin filtro. Todo el mundo lo lee al instante.</p>
+            <div>
+              <button type="button" className="primary" onClick={openChatFromFocus}>
+                <MessageCircle size={17} /> Escribir ahora
+              </button>
+              <button type="button" className="text-button" onClick={() => setChatFocus(null)}>
+                Después
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {screen === "home" && (
