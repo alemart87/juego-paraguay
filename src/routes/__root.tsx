@@ -7,7 +7,7 @@ const APP_NAME = "Influencers Battle · Paraguay";
 const SITE_URL = "https://www.influencerspy.pro";
 const OG_IMAGE = `${SITE_URL}/og.jpg`;
 const DESCRIPTION =
-  "Elegí tu influencer, dominá cuatro escenarios paraguayos y enfrentá jefes imposibles en una batalla arcade creada para móvil.";
+  "Elegí tu influencer, dominá cinco escenarios paraguayos y enfrentá jefes imposibles en una batalla arcade creada para móvil.";
 const GA_MEASUREMENT_ID = "G-2DYRW5P77W";
 const GA_INLINE = `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}

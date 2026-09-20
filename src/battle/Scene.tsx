@@ -331,7 +331,7 @@ export function Scene({
         </button>
       </div>
       <div className="mission-hud">
-        <span>{String(world.level).padStart(2, "0")} / 04</span>
+        <span>{String(world.level).padStart(2, "0")} / 05</span>
         <p>{hud.objective}</p>
         <div className="mission-track">
           <i style={{ width: `${hud.progress * 100}%` }} />
@@ -355,8 +355,20 @@ export function Scene({
         <button onClick={() => trigger("swap")} aria-label="Cambiar arma">
           <Crosshair size={19} />
           <span>
-            {WEAPON_LABEL[hud.weapon]}
-            <small>{Number.isFinite(hud.ammo) ? `${hud.ammo} balas` : "Sin límite"}</small>
+            {world.hero === "rose"
+              ? "NOTEBOOK DE COMBATE"
+              : world.hero === "marito"
+                ? "TOMAHAWK AUTÓNOMO"
+                : world.hero === "pablito"
+                  ? "FLASH VIRAL"
+                  : WEAPON_LABEL[hud.weapon]}
+            <small>
+              {["rose", "marito", "pablito"].includes(world.hero)
+                ? "Poder premium"
+                : Number.isFinite(hud.ammo)
+                  ? `${hud.ammo} balas`
+                  : "Sin límite"}
+            </small>
           </span>
           <Repeat2 size={16} />
         </button>

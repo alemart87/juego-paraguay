@@ -464,6 +464,11 @@ const CRIES: Record<string, Record<"power" | "boss" | "streak", string>> = {
     boss: "¡Despliegue total!",
     streak: "¡Objetivo neutralizado!",
   },
+  rose: {
+    power: "¡Notebook lista!",
+    boss: "¡Masivo, cubrime!",
+    streak: "¡Familia imparable!",
+  },
 };
 let lastCry = 0;
 export function battleCry(fighter: string, cue: "power" | "boss" | "streak") {

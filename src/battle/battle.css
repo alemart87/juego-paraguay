@@ -243,6 +243,42 @@
   width: 100%;
   font-size: 15px;
 }
+.rose-launch {
+  width: min(100%, 355px);
+  margin-top: 18px;
+  padding: 13px 15px;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  color: #fff3dc;
+  border: 1px solid #ff47d7 !important;
+  border-left: 6px solid #ff47d7 !important;
+  background: linear-gradient(90deg, #ff47d726, transparent 60%), #08070d;
+  box-shadow: 8px 8px 0 #65e4ff22;
+}
+.rose-launch span,
+.rose-launch small {
+  font:
+    900 9px/1.2 "Figtree",
+    sans-serif;
+  letter-spacing: 0.15em;
+}
+.rose-launch span {
+  color: #65e4ff;
+}
+.rose-launch strong {
+  font:
+    1000 24px/0.95 "Barlow Condensed",
+    Impact,
+    sans-serif;
+}
+.rose-launch small {
+  color: #f6e75a;
+}
+.rose-launch:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 11px 11px 0 #65e4ff2f;
+}
 .hero-meta {
   display: flex;
   flex-wrap: wrap;
@@ -1872,6 +1908,24 @@
   }
 }
 @media (max-width: 700px) {
+  .intro-pro-title {
+    animation-name: intro-pro-title-mobile;
+    transform: none;
+    padding: 28px 18px;
+  }
+  .intro-pro-title strong,
+  .intro-pro-title b {
+    width: 100%;
+    max-width: 350px;
+    transform: none;
+    text-align: center;
+    overflow-wrap: normal;
+    text-shadow: 3px 3px 0 #000;
+    -webkit-text-stroke-width: 1px;
+  }
+  .intro-pro-noise {
+    opacity: 0.08;
+  }
   .ib-header {
     height: 74px;
     padding: 0 6%;
@@ -2660,6 +2714,105 @@
   background: #09080d;
   color: #fff3dc;
   isolation: isolate;
+}
+.weekly-chisme-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 610;
+  background: #050408;
+}
+.weekly-chisme {
+  position: fixed;
+  inset: 0;
+  z-index: 620;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto 5px;
+  place-items: center;
+  gap: 12px;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(12px, env(safe-area-inset-bottom));
+  overflow: hidden;
+  color: #fff3dc;
+  background:
+    radial-gradient(circle at 50% 30%, #ff47d735, transparent 45%),
+    repeating-linear-gradient(120deg, transparent 0 30px, #ffffff05 31px), #050408;
+}
+.weekly-chisme-head {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  text-align: center;
+}
+.weekly-chisme-head span {
+  color: #65e4ff;
+  font:
+    1000 9px/1 "Figtree",
+    sans-serif;
+  letter-spacing: 0.25em;
+}
+.weekly-chisme-head strong {
+  color: #f6e75a;
+  font:
+    1000 clamp(34px, 6vw, 64px)/0.85 "Barlow Condensed",
+    Impact,
+    sans-serif;
+  text-shadow: 4px 4px 0 #ed2b8f;
+}
+.weekly-chisme-player {
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: 9 / 16;
+  max-width: min(94vw, 440px);
+  border: 3px solid #fff3dc;
+  box-shadow: 10px 10px 0 #ed2b8f;
+  background: #000;
+  overflow: hidden;
+}
+.weekly-chisme-player iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.weekly-chisme-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.weekly-chisme-actions button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 14px;
+  border: 1px solid #ffffff44;
+  color: white;
+  background: #17141f;
+  font:
+    900 10px/1 "Figtree",
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+.weekly-chisme > i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 5px;
+  background: #f6e75a;
+  transition: width 0.2s linear;
+}
+@media (max-width: 600px) {
+  .weekly-chisme {
+    gap: 8px;
+  }
+  .weekly-chisme-head strong {
+    font-size: 35px;
+  }
+  .weekly-chisme-player {
+    max-width: min(88vw, 390px);
+  }
+  .weekly-chisme-actions button {
+    padding: 10px;
+    font-size: 9px;
+  }
 }
 .game-intro::after {
   content: "";
@@ -3957,7 +4110,7 @@
 }
 .intro-pro-bosses {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: #07060b;
   animation: intro-pro-bosses 4.2s both;
 }
@@ -4044,6 +4197,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+  flex-direction: column;
   pointer-events: none;
 }
 .intro-pro-premium > div .py-star-brand {
@@ -4053,6 +4207,14 @@
 .intro-pro-premium > div > strong {
   font: 1000 clamp(32px, 5vw, 78px)/0.78 var(--font-display);
   text-shadow: 4px 4px #000;
+  text-align: center;
+}
+.intro-pro-premium > div > small {
+  color: #fff;
+  background: #ed2b8f;
+  padding: 8px 12px;
+  font: 1000 10px/1 var(--font-sans);
+  letter-spacing: 0.22em;
 }
 .intro-pro-premium em {
   color: #f6e75a;
@@ -4175,9 +4337,22 @@
   }
 }
 @media (max-width: 700px) {
+  .intro-pro-title {
+    animation-name: intro-pro-title-mobile;
+    transform: none;
+    padding: 28px 18px;
+  }
+  .intro-pro-title strong,
+  .intro-pro-title b {
+    width: 100%;
+    max-width: 350px;
+    transform: none;
+    text-align: center;
+    overflow-wrap: normal;
+  }
   .intro-pro-bosses {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
     gap: 2px;
     padding: 2px;
     animation-name: intro-pro-bosses-mobile;
@@ -4227,8 +4402,8 @@
     bottom: auto;
     height: 82px;
     padding: 0 12px;
-    justify-content: flex-start;
-    background: linear-gradient(90deg, #08070deb, transparent);
+    justify-content: center;
+    background: linear-gradient(180deg, #08070df2, transparent);
   }
   .intro-pro-premium {
     animation-name: intro-pro-premium-mobile;
@@ -4237,8 +4412,11 @@
     width: 58px;
   }
   .intro-pro-premium > div > strong {
-    font-size: 25px;
+    font-size: 28px;
     line-height: 0.78;
+  }
+  .intro-pro-premium > div > small {
+    font-size: 8px;
   }
   .intro-pro-premium figure img {
     object-fit: cover;
@@ -4300,6 +4478,23 @@
     opacity: 0;
   }
 }
+@keyframes intro-pro-title-mobile {
+  0%,
+  24% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  29%,
+  46% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  51%,
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
 @keyframes intro-pro-premium-mobile {
   0%,
   74% {
@@ -4308,5 +4503,25 @@
   79%,
   100% {
     opacity: 1;
+  }
+}
+@media (max-width: 700px) {
+  .intro-pro-title {
+    animation-name: intro-pro-title-mobile;
+    transform: none;
+    padding: 28px 18px;
+  }
+  .intro-pro-title strong,
+  .intro-pro-title b {
+    width: 100%;
+    max-width: 350px;
+    transform: none;
+    text-align: center;
+    overflow-wrap: normal;
+    text-shadow: 3px 3px 0 #000;
+    -webkit-text-stroke-width: 1px;
+  }
+  .intro-pro-noise {
+    opacity: 0.08;
   }
 }

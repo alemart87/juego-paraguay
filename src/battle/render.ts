@@ -11,6 +11,7 @@ export interface Art {
   apostolCombatants: HTMLImageElement;
   premium: HTMLImageElement[];
   tomahawk: HTMLImageElement;
+  sebastian: HTMLImageElement;
 }
 const images = new Map<string, Promise<HTMLImageElement>>();
 function load(src: string): Promise<HTMLImageElement> {
@@ -105,6 +106,8 @@ export async function loadArt(level: World["level"]): Promise<Art> {
     pablito,
     marito,
     tomahawk,
+    rose,
+    sebastian,
   ] = await Promise.all([
     load(episode(level).bg),
     frames(),
@@ -116,6 +119,8 @@ export async function loadArt(level: World["level"]): Promise<Art> {
     load("/battle/premium/pablito-atlas.webp"),
     load("/battle/premium/marito-atlas.webp"),
     load("/battle/tomahawk-py01-v2.webp"),
+    load("/battle/premium/rose-atlas.webp"),
+    load("/battle/sebastian-atlas.webp"),
   ]);
   return {
     background,
@@ -125,8 +130,9 @@ export async function loadArt(level: World["level"]): Promise<Art> {
     minions,
     asuncionCombatants,
     apostolCombatants,
-    premium: [pablito, marito],
+    premium: [pablito, marito, rose],
     tomahawk,
+    sebastian,
   };
 }
 function rect(
@@ -247,6 +253,24 @@ function drawMinion(
   g.save();
   g.translate(x, y + bob);
   g.scale(e.face, 1);
+  if (level === 5) {
+    g.shadowColor = "#cf48ff";
+    g.shadowBlur = 16;
+    ellipse(g, 0, -64, 31, 25, "#23162f");
+    rect(g, -20, -82, 40, 60, "#111923", 8);
+    rect(g, -14, -75, 28, 40, e.hit > t ? "#ffffff" : "#6aeaff", 5);
+    ellipse(g, 0, -55, 7, 7, "#090b11");
+    g.strokeStyle = "#cf48ff";
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(-22, -48);
+    g.lineTo(-39, -27);
+    g.moveTo(22, -48);
+    g.lineTo(39, -27);
+    g.stroke();
+    g.restore();
+    return;
+  }
   const col = e.hit > t ? 3 : e.windup > 0 ? 2 : Math.floor(t * 7 + e.id) % 2;
   const sheet =
     level === 1 ? art.apostolCombatants : level === 4 ? art.asuncionCombatants : art.minions;
@@ -279,6 +303,24 @@ function drawBoss(
   g.translate(x, y);
   ellipse(g, 0, 0, 105, 16, "#10121dcc");
   g.scale(e.face, 1);
+  if (level === 5) {
+    const frame = e.hit > t ? 7 : e.charge > t ? 6 : e.windup > 0 ? 3 + (e.pattern % 3) : 0;
+    if (e.hit > t) g.globalAlpha = 0.65;
+    const size = frame === 6 ? 330 : 250;
+    g.drawImage(
+      art.sebastian,
+      (frame % 4) * 256,
+      Math.floor(frame / 4) * 256,
+      256,
+      256,
+      -size / 2,
+      -size,
+      size,
+      size,
+    );
+    g.restore();
+    return;
+  }
   const col = e.hit > t ? 3 : e.windup > 0 ? (e.pattern % 3 === 2 ? 2 : 1) : 0;
   const sheet =
     level === 1 ? art.apostolCombatants : level === 4 ? art.asuncionCombatants : art.bosses;
@@ -322,7 +364,15 @@ export function render(
   const bx = -(bw - view) / 2 - Math.sin((w.camera / 3600) * Math.PI) * 55;
   g.drawImage(bg, bx, 0, bw, bh);
   const floorColor =
-    w.level === 1 ? "#33202a" : w.level === 2 ? "#29241e" : w.level === 3 ? "#26383a" : "#241d2d";
+    w.level === 1
+      ? "#33202a"
+      : w.level === 2
+        ? "#29241e"
+        : w.level === 3
+          ? "#26383a"
+          : w.level === 5
+            ? "#171229"
+            : "#241d2d";
   rect(g, 0, bh - 1, view, Math.max(1, logicalHeight - bh + 1), floorColor);
   const shade = g.createLinearGradient(0, 0, 0, logicalHeight);
   shade.addColorStop(0, "#11101880");
@@ -350,7 +400,15 @@ export function render(
     rect(g, x - 21, floor - 60, 42, 27, clear ? "#f6e75a" : "#705965", 3);
     label(
       g,
-      w.level === 1 ? "ALTAR" : w.level === 2 ? "USB" : w.level === 3 ? "IPS" : "PALACIO",
+      w.level === 1
+        ? "ALTAR"
+        : w.level === 2
+          ? "USB"
+          : w.level === 3
+            ? "IPS"
+            : w.level === 5
+              ? "STORE"
+              : "PALACIO",
       x,
       floor - 42,
       17,
@@ -520,6 +578,29 @@ export function render(
     label(g, "TOMAHAWK PY-01", 10, 91, 12, "#f6e75a");
     g.restore();
   }
+  if (w.rosePartner) {
+    const partner = w.rosePartner;
+    const partnerX = sx(partner.x),
+      partnerY = floor - partner.y;
+    ellipse(g, partnerX, floor + 4, 34, 7, "#11101866");
+    drawFighter(
+      g,
+      art,
+      fighter("masivo").row,
+      partnerX,
+      partnerY,
+      partner.face,
+      w.t,
+      Math.abs(partner.x - p.x) > 82,
+      1,
+      false,
+      partner.attackPose > w.t,
+      partner.y > 4,
+      false,
+      partner.dash > w.t,
+    );
+    if (partner.attackPose > w.t) label(g, "¡YO CUBRO!", partnerX, partnerY - 150, 15, "#efb764");
+  }
   ellipse(g, px, floor + 5, 35, 7, "#11101860");
   if (p.shield > w.t) {
     g.strokeStyle = "#83caa8";
@@ -665,6 +746,37 @@ export function render(
       g.lineWidth = 14;
       g.globalAlpha = 0.28;
       g.stroke();
+      g.restore();
+    } else if (s.kind === "data") {
+      g.save();
+      g.translate(x, y);
+      g.rotate(Math.sin(s.age * 22) * 0.15);
+      g.globalCompositeOperation = "lighter";
+      g.shadowColor = s.color;
+      g.shadowBlur = 20;
+      rect(g, -18, -12, 36, 24, "#221332", 4);
+      rect(g, -14, -9, 28, 16, s.color, 3);
+      g.strokeStyle = "#72f6ff";
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(-24, 0);
+      g.lineTo(-40, 0);
+      g.moveTo(24, 0);
+      g.lineTo(40, 0);
+      g.stroke();
+      g.restore();
+    } else if (s.kind === "phone" || s.kind === "camera") {
+      g.save();
+      g.translate(x, y);
+      g.rotate(s.age * 10 * Math.sign(s.vx));
+      if (s.kind === "phone") {
+        rect(g, -9, -16, 18, 32, "#141923", 5);
+        rect(g, -6, -12, 12, 21, "#67eaff", 3);
+      } else {
+        rect(g, -17, -12, 34, 24, "#ececf2", 8);
+        ellipse(g, 2, 0, 8, 8, "#241733");
+        ellipse(g, 2, 0, 4, 4, "#cf48ff");
+      }
       g.restore();
     } else if (s.kind === "can") {
       g.save();

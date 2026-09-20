@@ -11,6 +11,7 @@ const heroes = new Set([
   "secre",
   "pablito",
   "marito",
+  "rose",
 ]);
 export default defineEventHandler(async (event) => {
   const body = await readBody<{
@@ -26,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const secret = process.env.LEADERBOARD_SECRET?.trim() || "local-analytics";
   const hash = createHmac("sha256", secret).update(body.sessionId).digest("hex");
   const level =
-    Number.isInteger(body.level) && Number(body.level) >= 1 && Number(body.level) <= 4
+    Number.isInteger(body.level) && Number(body.level) >= 1 && Number(body.level) <= 5
       ? body.level
       : null;
   const hero = body.hero && heroes.has(body.hero) ? body.hero : null;

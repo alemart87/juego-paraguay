@@ -11,6 +11,8 @@ import {
   Users,
   Gift,
   LoaderCircle,
+  Save,
+  Video,
 } from "lucide-react";
 import { fighter } from "@/battle/content";
 import { SHOP_ITEMS, type ShopSku } from "@/battle/shop-catalog";
@@ -62,12 +64,23 @@ function AdminPage() {
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [granting, setGranting] = useState(false),
-    [grantMessage, setGrantMessage] = useState("");
+    [grantMessage, setGrantMessage] = useState(""),
+    [chismeUrl, setChismeUrl] = useState(""),
+    [chismeEnabled, setChismeEnabled] = useState(false),
+    [chismeMessage, setChismeMessage] = useState("");
   const load = async () => {
     setLoading(true);
-    const r = await fetch("/api/admin/stats");
+    const [r, chisme] = await Promise.all([
+      fetch("/api/admin/stats"),
+      fetch("/api/weekly-chisme", { cache: "no-store" }),
+    ]);
     if (r.ok) setStats(await r.json());
     else setStats(null);
+    if (chisme.ok) {
+      const data = (await chisme.json()) as { url?: string; enabled?: boolean };
+      setChismeUrl(data.url ?? "");
+      setChismeEnabled(Boolean(data.enabled));
+    }
     setLoading(false);
   };
   useEffect(() => {
@@ -116,6 +129,27 @@ function AdminPage() {
       setGrantMessage(cause instanceof Error ? cause.message : "No se pudo entregar el premio");
     } finally {
       setGranting(false);
+    }
+  };
+  const saveChisme = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setChismeMessage("Guardando…");
+    try {
+      const response = await fetch("/api/admin/weekly-chisme", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: chismeUrl, enabled: chismeEnabled }),
+      });
+      const result = (await response.json()) as { statusMessage?: string; url?: string };
+      if (!response.ok) throw new Error(result.statusMessage || "No se pudo guardar el video");
+      if (result.url) setChismeUrl(result.url);
+      setChismeMessage(
+        chismeEnabled
+          ? "Chisme activo: aparecerá 10 segundos antes de la intro."
+          : "Chisme pausado.",
+      );
+    } catch (cause) {
+      setChismeMessage(cause instanceof Error ? cause.message : "No se pudo guardar el video");
     }
   };
   if (loading)
@@ -254,6 +288,41 @@ function AdminPage() {
             )}
           </section>
         </div>
+        <section className="admin-chisme">
+          <div>
+            <span>PORTADA CONTROLADA POR SUPERADMIN</span>
+            <h2>
+              <Video /> CHISME DE LA SEMANA
+            </h2>
+            <p>
+              Pegá el enlace completo de un video público de TikTok. Se reproduce al abrir el juego
+              y desaparece automáticamente a los 10 segundos.
+            </p>
+          </div>
+          <form onSubmit={saveChisme}>
+            <label>
+              LINK DE TIKTOK
+              <input
+                type="url"
+                value={chismeUrl}
+                onChange={(event) => setChismeUrl(event.target.value)}
+                placeholder="https://www.tiktok.com/@usuario/video/123…"
+              />
+            </label>
+            <label className="admin-switch">
+              <input
+                type="checkbox"
+                checked={chismeEnabled}
+                onChange={(event) => setChismeEnabled(event.target.checked)}
+              />
+              MOSTRAR AL INICIAR
+            </label>
+            <button>
+              <Save /> GUARDAR CHISME
+            </button>
+            {chismeMessage && <strong>{chismeMessage}</strong>}
+          </form>
+        </section>
         <section className="admin-grants">
           <div className="admin-grants-copy">
             <span>PREMIOS SIN LÍMITE</span>

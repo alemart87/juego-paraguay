@@ -3,7 +3,7 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://www.influencerspy.pro/</loc>
-    <lastmod>2026-09-19</lastmod><changefreq>weekly</changefreq><priority>1.0</priority>
+    <lastmod>2026-09-20</lastmod><changefreq>weekly</changefreq><priority>1.0</priority>
     <image:image><image:loc>https://www.influencerspy.pro/og.jpg</image:loc><image:title>Influencers Battle Paraguay</image:title></image:image>
   </url>
   <url><loc>https://www.influencerspy.pro/personajes</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
@@ -15,10 +15,12 @@
   <url><loc>https://www.influencerspy.pro/personajes/la-secre</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority><image:image><image:loc>https://www.influencerspy.pro/battle/la-secre.webp</image:loc><image:title>La Secre</image:title></image:image></url>
   <url><loc>https://www.influencerspy.pro/personajes/pablito-pintos</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.9</priority><image:image><image:loc>https://www.influencerspy.pro/battle/pablito.webp</image:loc><image:title>Pablito Pintos</image:title></image:image></url>
   <url><loc>https://www.influencerspy.pro/personajes/marito</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.9</priority><image:image><image:loc>https://www.influencerspy.pro/battle/marito.webp</image:loc><image:title>Marito</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/rose</loc><lastmod>2026-09-20</lastmod><changefreq>monthly</changefreq><priority>0.95</priority><image:image><image:loc>https://www.influencerspy.pro/battle/rose.webp</image:loc><image:title>ROSE y Masivo</image:title></image:image></url>
   <url><loc>https://www.influencerspy.pro/personajes/padre-apostol</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.75</priority><image:image><image:loc>https://www.influencerspy.pro/battle/padre-apostol.webp</image:loc><image:title>Padre Apóstol</image:title></image:image></url>
   <url><loc>https://www.influencerspy.pro/personajes/lata-parara</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.75</priority><image:image><image:loc>https://www.influencerspy.pro/battle/boss-lata.webp</image:loc><image:title>Lata Parara</image:title></image:image></url>
   <url><loc>https://www.influencerspy.pro/personajes/lulax</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.75</priority><image:image><image:loc>https://www.influencerspy.pro/battle/boss-lulax.webp</image:loc><image:title>LULAX</image:title></image:image></url>
   <url><loc>https://www.influencerspy.pro/personajes/el-dictador</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.75</priority><image:image><image:loc>https://www.influencerspy.pro/battle/dictador-portrait.webp</image:loc><image:title>El Dictador</image:title></image:image></url>
+  <url><loc>https://www.influencerspy.pro/personajes/sebastian</loc><lastmod>2026-09-20</lastmod><changefreq>monthly</changefreq><priority>0.9</priority><image:image><image:loc>https://www.influencerspy.pro/battle/sebastian.webp</image:loc><image:title>Sebastián, jefe de ROSE VS SEBASTIÁN</image:title></image:image></url>
   <url><loc>https://www.influencerspy.pro/como-jugar</loc><lastmod>2026-09-19</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://www.influencerspy.pro/privacidad</loc><lastmod>2026-09-19</lastmod><changefreq>yearly</changefreq><priority>0.5</priority></url>
   <url><loc>https://www.influencerspy.pro/politica-de-compras</loc><lastmod>2026-09-19</lastmod><changefreq>yearly</changefreq><priority>0.6</priority></url>

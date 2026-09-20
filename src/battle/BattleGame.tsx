@@ -41,6 +41,7 @@ import { defaultSave, loadSave, saveResult, writeSave, type Save } from "./persi
 import { Scene } from "./Scene";
 import { challengeUrl, downloadCard, resultCard, type ShareResult } from "./share";
 import { Intro } from "./Intro";
+import { WeeklyChisme } from "./WeeklyChisme";
 import { Leaderboard } from "./LeaderboardPanel";
 import { loadLeaderboardProfile } from "./leaderboard-profile";
 import { getPlayerBenefits, submitLeaderboardScore } from "./leaderboard";
@@ -82,6 +83,7 @@ export function BattleGame() {
   const [shareImage, setShareImage] = useState("");
   const [shareError, setShareError] = useState("");
   const [intro, setIntro] = useState(true);
+  const [weeklyChismeDone, setWeeklyChismeDone] = useState(false);
   const [rankingName, setRankingName] = useState("");
   const [rankingSync, setRankingSync] = useState<"idle" | "uploading" | "success" | "error">(
     "idle",
@@ -119,7 +121,7 @@ export function BattleGame() {
     const id = Number(params.get("battle"));
     const selected = params.get("fighter");
     const challengeSeed = Number(params.get("seed"));
-    if ([1, 2, 3, 4].includes(id) && FIGHTERS.some((f) => f.id === selected)) {
+    if ([1, 2, 3, 4, 5].includes(id) && FIGHTERS.some((f) => f.id === selected)) {
       setLevel(id as EpisodeId);
       setSave({ ...local, hero: selected as FighterId });
       setSeed(
@@ -386,7 +388,11 @@ export function BattleGame() {
   };
   return (
     <main className={`ib-app ${screen === "play" ? "in-game" : ""}`}>
-      {intro && <Intro onDone={() => setIntro(false)} />}
+      {!weeklyChismeDone ? (
+        <WeeklyChisme onDone={() => setWeeklyChismeDone(true)} />
+      ) : (
+        intro && <Intro onDone={() => setIntro(false)} />
+      )}
       {screen !== "play" && (
         <header className="ib-header">
           <button className="brand" onClick={goHome} aria-label="Influencers Battle, inicio">
@@ -455,7 +461,7 @@ export function BattleGame() {
                 fetchPriority="high"
               />
               <div className="art-sticker">
-                <span>8 EGOS.</span>
+                <span>9 EGOS.</span>
                 <span>CERO FILTRO.</span>
               </div>
             </div>
@@ -472,8 +478,22 @@ export function BattleGame() {
               </h1>
               <p>
                 Del Templo del Último Avivamiento a una Asunción infestada. Elegí tu personaje, armá
-                el quilombo y derrotá a cuatro jefes imposibles.
+                el quilombo y derrotá a cinco jefes imposibles.
               </p>
+              <button
+                className="rose-launch"
+                onClick={() => {
+                  sfx("ui");
+                  updateSave({ ...save, hero: "rose" });
+                  setLevel(5);
+                  setChallenge(false);
+                  setScreen("brief");
+                }}
+              >
+                <span>NUEVO · EPISODIO 05</span>
+                <strong>ROSE VS SEBASTIÁN</strong>
+                <small>ROSE + MASIVO · JUGAR ESTRENO</small>
+              </button>
               <button
                 className="primary play-cta"
                 onClick={() => {
@@ -488,7 +508,7 @@ export function BattleGame() {
                   <Gamepad2 size={15} /> Móvil & PC
                 </span>
                 <span>
-                  <Swords size={15} /> 4 episodios
+                  <Swords size={15} /> 5 episodios
                 </span>
                 <span>
                   <MessageCircle size={15} /> Conversaciones IA
@@ -498,7 +518,7 @@ export function BattleGame() {
             <div className="hero-footer">
               <span>UNA CAMPAÑA. DEMASIADO DRAMA.</span>
               <span>
-                01 — 04 <ArrowRight size={16} />
+                01 — 05 <ArrowRight size={16} />
               </span>
             </div>
           </section>
@@ -555,7 +575,7 @@ export function BattleGame() {
               </h1>
             </div>
             <p>
-              Ocho estilos. Las mismas ganas
+              Nueve estilos. Las mismas ganas
               <br />
               de quedarse con el escenario.
             </p>
@@ -660,7 +680,7 @@ export function BattleGame() {
               <div>
                 <small>VAS CON</small>
                 <strong>{hero.name}</strong>
-                <span>{completed}/4 episodios completados</span>
+                <span>{completed}/5 episodios completados</span>
               </div>
             </div>
           </div>
@@ -836,12 +856,12 @@ export function BattleGame() {
               <button
                 className="primary"
                 onClick={() =>
-                  won && level < 4
+                  won && level < 5
                     ? (setLevel((level + 1) as EpisodeId), setScreen("brief"))
                     : play()
                 }
               >
-                {won && level < 4 ? "Siguiente episodio" : "Revancha"}
+                {won && level < 5 ? "Siguiente episodio" : "Revancha"}
                 <ArrowRight size={19} />
               </button>
               <button className="secondary" onClick={() => void openShare()}>

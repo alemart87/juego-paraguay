@@ -197,7 +197,8 @@ test("checkpoint cannot advance before clearing its arena", () => {
 });
 test("selected hero is never assigned as their own rival", () => {
   for (const f of FIGHTERS)
-    for (const level of [1, 2, 3, 4] as EpisodeId[]) assert.notEqual(rivalFor(level, f.id), f.id);
+    for (const level of [1, 2, 3, 4, 5] as EpisodeId[])
+      assert.notEqual(rivalFor(level, f.id), f.id);
 });
 test("same seed and input produce the same battle", () => {
   const a = createWorld("comadre", 2, "tranqui", 345),
@@ -226,7 +227,7 @@ test("save rejects corrupt records and retains independent best score/time/medal
 });
 test("all episodes can be completed through real attacks and checkpoint interactions", () => {
   for (const hero of FIGHTERS)
-    for (const level of [1, 2, 3, 4] as EpisodeId[]) {
+    for (const level of [1, 2, 3, 4, 5] as EpisodeId[]) {
       const w = createWorld(hero.id, level, "tranqui", 54321);
       for (let frame = 0; frame < 60 * 300 && !w.ended; frame++) {
         if (w.paused) {
@@ -269,8 +270,9 @@ test("each episode spawns its named boss with a unique projectile language", () 
     2: { name: "LATA PARARA", shot: "can" },
     3: { name: "LULAX", shot: "word" },
     4: { name: "EL DICTADOR", shot: "sling" },
+    5: { name: "SEBASTIÁN", shot: "phone" },
   } as const;
-  for (const level of [1, 2, 3, 4] as EpisodeId[]) {
+  for (const level of [1, 2, 3, 4, 5] as EpisodeId[]) {
     const w = createWorld("onichan", level, "tranqui", 99);
     for (const checkpoint of CHECKPOINTS) {
       w.enemies.forEach((enemy) => (enemy.hp = 0));
@@ -293,6 +295,19 @@ test("each episode spawns its named boss with a unique projectile language", () 
     }
     assert(seen, `${expected[level].name} did not use ${expected[level].shot}`);
   }
+});
+
+test("ROSE always enters with Masivo as an autonomous combat partner", () => {
+  const w = createWorld("rose", 5, "tranqui", 505);
+  assert(w.rosePartner);
+  const enemy = w.enemies[0];
+  assert(enemy);
+  w.player.x = enemy.x - 95;
+  w.rosePartner.x = enemy.x - 50;
+  w.rosePartner.attackReady = 0;
+  const hp = enemy.hp;
+  tick(w, 0.3, 0, false);
+  assert(enemy.hp < hp, "Masivo did not defend ROSE autonomously");
 });
 
 test("El Dictador consumes a full second life before the episode can end", () => {

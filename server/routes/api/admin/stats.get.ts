@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
       `SELECT level, count(*)::int plays FROM game_analytics_events WHERE event_type='game_start' AND level IS NOT NULL GROUP BY level ORDER BY plays DESC`,
     ),
     sql.query<{ hero: string; plays: number }>(
-      `SELECT hero, count(*)::int plays FROM game_analytics_events WHERE event_type='game_start' AND hero IS NOT NULL GROUP BY hero ORDER BY plays DESC LIMIT 8`,
+      `SELECT hero, count(*)::int plays FROM game_analytics_events WHERE event_type='game_start' AND hero IS NOT NULL GROUP BY hero ORDER BY plays DESC LIMIT 9`,
     ),
     sql.query<{ label: string; visits: number; plays: number }>(
       `SELECT to_char(date_trunc('day',created_at),'DD/MM') AS label, count(DISTINCT session_hash) FILTER (WHERE event_type='page_view')::int AS visits, count(*) FILTER (WHERE event_type='game_start')::int AS plays FROM game_analytics_events WHERE created_at >= now()-interval '7 days' GROUP BY date_trunc('day',created_at) ORDER BY date_trunc('day',created_at)`,

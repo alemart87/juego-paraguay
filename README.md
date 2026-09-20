@@ -1,6 +1,6 @@
 # Influencers Battle — Paraguay
 
-Juego de acción satírica para móvil ambientado en Paraguay. Ocho personajes jugables atraviesan cuatro episodios, conversan con NPC mediante Venice AI y terminan en una Asunción infestada frente a El Dictador y su tanqueta.
+Juego de acción satírica para móvil ambientado en Paraguay. Nueve personajes jugables atraviesan cinco episodios, conversan con NPC mediante Venice AI y enfrentan jefes imposibles en escenarios reconocibles del país.
 
 ![Portada de Influencers Battle](public/battle/cover-v2.webp)
 
@@ -8,10 +8,10 @@ Juego de acción satírica para móvil ambientado en Paraguay. Ocho personajes j
 
 ## Qué incluye
 
-- Campaña de cuatro episodios: Templo del último avivamiento, Mercado 4, IPS y Asunción infestada.
+- Campaña de cinco episodios: Templo del último avivamiento, Mercado 4, IPS, Asunción infestada y ROSE vs SEBASTIÁN en Ameri Store.
 - Niveles ampliados cerca de 30%, con más recorrido, oleadas y acción.
 - Arsenal ampliado con Lanzacohetes Ka'aru, Lanzallamas Mbareté y Cañón de Itaipú, cada uno con proyectiles, daño y efectos propios.
-- Ocho combatientes con estadísticas, movimiento y poderes propios; Pablito y Marito son premium y admiten una prueba jugable de 10 segundos.
+- Nueve combatientes con estadísticas, movimiento y poderes propios; ROSE pelea siempre junto a Masivo, y Pablito y Marito son premium con prueba jugable de 10 segundos.
 - Marito despliega el Tomahawk PY-01 ilustrado, autónomo, con seguimiento de blancos, rotor animado y salvas explosivas.
 - Cuatro jefes, secuaces y lenguajes de ataque; El Dictador tiene dos vidas y hondita paraguaya.
 - Marketplace móvil con ocho power-ups y dos personajes premium de pago único, precios visibles y checkouts seguros de Whop.

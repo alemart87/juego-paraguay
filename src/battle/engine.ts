@@ -92,7 +92,10 @@ export interface Shot {
     | "trumpet"
     | "rocket"
     | "flame"
-    | "rail";
+    | "rail"
+    | "phone"
+    | "camera"
+    | "data";
   color: string;
   radius: number;
   age: number;
@@ -131,6 +134,15 @@ export interface AirSupport {
   bank: number;
   fireReady: number;
   fireFlash: number;
+  targetId: number | null;
+}
+export interface RosePartner {
+  x: number;
+  y: number;
+  face: 1 | -1;
+  attackReady: number;
+  attackPose: number;
+  dash: number;
   targetId: number | null;
 }
 export type GameEvent =
@@ -173,6 +185,7 @@ export interface World {
   seed: number;
   telegraphs: { x: number; w: number; until: number; fired: boolean }[];
   airSupport: AirSupport | null;
+  rosePartner: RosePartner | null;
 }
 export interface Snapshot {
   hp: number;
@@ -327,6 +340,18 @@ export function createWorld(
             bank: -0.12,
             fireReady: 0.85,
             fireFlash: 0,
+            targetId: null,
+          }
+        : null,
+    rosePartner:
+      hero === "rose"
+        ? {
+            x: 42,
+            y: 0,
+            face: 1,
+            attackReady: 0.5,
+            attackPose: 0,
+            dash: 0,
             targetId: null,
           }
         : null,
@@ -489,7 +514,8 @@ function hurt(w: World, amount: number, from: number) {
     event(w, "blip");
     return;
   }
-  const damage = amount * (w.difficulty === "tranqui" ? 0.58 : 1);
+  const guarded = w.rosePartner && Math.abs(w.rosePartner.x - p.x) < 150 ? 0.62 : 1;
+  const damage = amount * guarded * (w.difficulty === "tranqui" ? 0.58 : 1);
   p.hp = Math.max(0, p.hp - damage);
   w.damageTaken += damage;
   p.inv = w.t + 0.72;
@@ -569,6 +595,36 @@ function stepAirSupport(w: World, dt: number) {
     event(w, "grenade");
   }
 }
+function stepRosePartner(w: World, dt: number) {
+  const partner = w.rosePartner;
+  if (!partner) return;
+  const p = w.player;
+  const target = w.enemies
+    .filter((enemy) => enemy.hp > 0)
+    .sort((a, b) => Math.abs(a.x - partner.x) - Math.abs(b.x - partner.x))[0];
+  const followX = clamp(p.x - p.face * 78, w.stage * STAGE_WIDTH + 35, WORLD_WIDTH - 60);
+  let desiredX = followX;
+  if (target && Math.abs(target.x - p.x) < 360) {
+    partner.targetId = target.id;
+    partner.face = target.x >= partner.x ? 1 : -1;
+    desiredX = Math.abs(target.x - partner.x) > 82 ? target.x - partner.face * 74 : partner.x;
+    if (Math.abs(target.x - partner.x) < 105 && w.t >= partner.attackReady) {
+      partner.attackReady = w.t + 0.58;
+      partner.attackPose = w.t + 0.28;
+      partner.dash = w.t + 0.14;
+      hitEnemy(w, target, target.kind === "boss" ? 32 : 46, partner.face * 34);
+      effect(w, target.x, target.y + 62, "ring", "#efb764", 58, 0.2);
+      event(w, "punch");
+    }
+  } else {
+    partner.targetId = null;
+    partner.face = p.face;
+  }
+  const speed = partner.dash > w.t ? 760 : 380;
+  const delta = clamp(desiredX - partner.x, -speed * dt, speed * dt);
+  partner.x = clamp(partner.x + delta, w.stage * STAGE_WIDTH + 30, WORLD_WIDTH - 50);
+  partner.y += (p.y - partner.y) * Math.min(1, dt * 8);
+}
 function attack(w: World) {
   const p = w.player;
   if (w.t < p.attackReady) return;
@@ -597,6 +653,25 @@ function attack(w: World) {
     });
     effect(w, p.x + p.face * 50, p.y + 69, "spark", "#ffd6ef", 8, 0.12);
     event(w, "shot");
+    return;
+  }
+  if (w.hero === "rose") {
+    p.attackReady = w.t + 0.22;
+    p.attackPose = w.t + 0.3;
+    shoot(w, {
+      x: p.x + p.face * 44,
+      y: p.y + 72,
+      vx: p.face * 1120,
+      vy: Math.sin(w.t * 13) * 28,
+      life: 0.78,
+      damage: 34,
+      enemy: false,
+      kind: "data",
+      color: "#ff47d7",
+      radius: 12,
+    });
+    effect(w, p.x + p.face * 48, p.y + 72, "spark", "#5ff6ff", 10, 0.15);
+    event(w, "railgun");
     return;
   }
   const base = BASE_WEAPONS[w.weapon];
@@ -834,6 +909,18 @@ export function activatePower(w: World) {
         w.events.push({ type: "toast", text: "PROTOCOLO NUCLEAR · IMPACTO TOTAL" });
         event(w, "explode");
         break;
+      case "rose":
+        p.shield = w.t + 6;
+        for (const e of w.enemies)
+          if (e.hp > 0) {
+            e.slow = w.t + 5;
+            blast(w, e.x, e.y + 62, 125, 135, f.color);
+          }
+        if (w.rosePartner) {
+          w.rosePartner.dash = w.t + 1.1;
+          w.rosePartner.attackReady = 0;
+        }
+        break;
     }
     // Area damage can award hype while the super is resolving; the ultimate
     // still starts its next charge from zero after the animation completes.
@@ -899,6 +986,23 @@ export function activatePower(w: World) {
       w.shake = Math.max(w.shake, 0.48);
       w.events.push({ type: "toast", text: "TOMAHAWK PY-01 · LLUVIA DE MISILES" });
       event(w, "grenade");
+      break;
+    case "rose":
+      for (let i = -1; i <= 1; i++)
+        shoot(w, {
+          x: p.x + p.face * 38,
+          y: p.y + 72 + i * 24,
+          vx: p.face * (820 + Math.abs(i) * 70),
+          vy: i * 36,
+          life: 1.1,
+          damage: 58,
+          enemy: false,
+          kind: "data",
+          color: i === 0 ? "#ffffff" : f.color,
+          radius: 18,
+        });
+      p.shield = w.t + 2.5;
+      if (w.rosePartner) w.rosePartner.attackReady = 0;
       break;
   }
 }
@@ -1171,6 +1275,36 @@ function enemyStep(w: World, e: Enemy, dt: number) {
               78,
             );
           w.events.push({ type: "toast", text: "¡LLEGARON MÁS PYRAGUES!" });
+        } else if (w.level === 5 && pattern === 0) {
+          for (let i = 0; i < 3 + e.phase; i++)
+            shoot(w, {
+              x: e.x - 28,
+              y: 48 + i * 27,
+              vx: e.face * (340 + i * 24),
+              vy: (i - 2) * 28,
+              life: 3.2,
+              damage: 16,
+              enemy: true,
+              kind: i % 2 ? "phone" : "camera",
+              color: i % 2 ? "#67eaff" : "#cf48ff",
+              radius: 12,
+            });
+          w.events.push({ type: "toast", text: "¡OFERTA RELÁMPAGO DE CELULARES!" });
+        } else if (w.level === 5 && pattern === 1) {
+          e.charge = w.t + (e.phase === 3 ? 1.1 : 0.78);
+          e.chargeDir = e.face;
+          w.shake = Math.max(w.shake, 0.32);
+          w.events.push({ type: "toast", text: "¡SEBASTIÁN SACÓ EL AUTO!" });
+        } else if (w.level === 5) {
+          for (let i = 0; i < 5 + e.phase; i++)
+            w.telegraphs.push({
+              x: clamp(p.x + (i - 3) * 105, STAGE_WIDTH * 2 + 50, WORLD_WIDTH - 120),
+              w: 42,
+              until: w.t + 0.7 + (i % 2) * 0.12,
+              fired: false,
+            });
+          effect(w, e.x, 115, "ring", "#cf48ff", 240, 0.8);
+          w.events.push({ type: "toast", text: "TORMENTA DE ELECTRÓNICOS" });
         }
         event(w, "boom");
       } else if (w.level === 1 && distance < 92 && p.y < 100) {
@@ -1188,7 +1322,11 @@ function enemyStep(w: World, e: Enemy, dt: number) {
                 ? e.pattern++ % 2
                   ? "cigarette"
                   : "cane"
-                : "trumpet";
+                : w.level === 5
+                  ? e.pattern++ % 2
+                    ? "phone"
+                    : "camera"
+                  : "trumpet";
         shoot(w, {
           x: e.x,
           y: 52,
@@ -1281,6 +1419,7 @@ export function step(w: World, input: Input, dt: number) {
     p.vy = 0;
   }
   stepAirSupport(w, dt);
+  stepRosePartner(w, dt);
   if (input.attack) attack(w);
   for (const e of w.enemies) enemyStep(w, e, dt);
   for (const s of w.shots) {

@@ -3,8 +3,8 @@ import { BOSSES } from "./content";
 import { BrandLogo } from "./BrandLogo";
 
 const stars = [
-  { name: "PABLITO PINTOS", image: "/battle/pablito.webp", color: "#ff3190" },
-  { name: "MARITO", image: "/battle/marito.webp", color: "#f6e75a" },
+  { name: "ROSE + MASIVO", image: "/battle/rose.webp", color: "#ff3190" },
+  { name: "SEBASTIÁN", image: "/battle/sebastian.webp", color: "#65e4ff" },
 ];
 
 export function Intro({ onDone }: { onDone: () => void }) {
@@ -46,18 +46,18 @@ export function Intro({ onDone }: { onDone: () => void }) {
           <figure key={star.name} style={{ "--i": index, "--star": star.color } as CSSProperties}>
             <img src={star.image} alt="" />
             <figcaption>
-              <small>PREMIUM</small>
+              <small>{index === 0 ? "NUEVA DUPLA" : "NUEVO JEFE"}</small>
               <strong>{star.name}</strong>
             </figcaption>
           </figure>
         ))}
         <div>
-          <BrandLogo />
           <strong>
-            INFLUENCERS
+            ROSE
             <br />
-            <em>BATTLE</em>
+            <em>VS SEBASTIÁN</em>
           </strong>
+          <small>ESTRENO · EPISODIO 05</small>
         </div>
       </div>
       <button onClick={onDone}>Saltar intro</button>

@@ -1,6 +1,6 @@
 export type FighterId =
-  "masivo" | "onichan" | "anatomic" | "comadre" | "papu" | "secre" | "pablito" | "marito";
-export type EpisodeId = 1 | 2 | 3 | 4;
+  "masivo" | "onichan" | "anatomic" | "comadre" | "papu" | "secre" | "pablito" | "marito" | "rose";
+export type EpisodeId = 1 | 2 | 3 | 4 | 5;
 export type WeaponId = import("../game/content").WeaponId;
 export type Difficulty = "tranqui" | "picante";
 export interface Boss {
@@ -38,6 +38,13 @@ export const BOSSES: Record<EpisodeId, Boss> = {
     minion: "Pyrague del barrio",
     color: "#e8483f",
     portrait: "/battle/dictador-portrait.webp",
+  },
+  5: {
+    name: "SEBASTIÁN",
+    title: "El rey de los electrónicos",
+    minion: "Gadget poseído",
+    color: "#cf48ff",
+    portrait: "/battle/sebastian.webp",
   },
 };
 export const boss = (id: EpisodeId) => BOSSES[id];
@@ -180,6 +187,21 @@ export const FIGHTERS: Fighter[] = [
     cooldown: 3.5,
     premium: { sku: "marito", price: 19.99, trialSeconds: 10 },
   },
+  {
+    id: "rose",
+    name: "ROSE",
+    role: "Estrategia & familia",
+    quote: "Con una mano programo. Con la otra cuido lo que importa.",
+    color: "#ff47d7",
+    row: 8,
+    portrait: "/battle/rose.webp",
+    hp: 145,
+    speed: 285,
+    power: "Notebook viral",
+    powerHint: "Una descarga digital atraviesa la tienda mientras Masivo cubre tu espalda.",
+    superName: "Modo familia imparable",
+    cooldown: 6,
+  },
 ];
 export const fighter = (id: FighterId) => FIGHTERS.find((f) => f.id === id)!;
 export interface Episode {
@@ -292,6 +314,29 @@ export const EPISODES: Episode[] = [
       "Inmunidad provisoria aprobada. Ocho segundos, ni uno más.",
       "Sello rojo. Súper completo. Que atienda el siguiente.",
       "Receta paraguaya: tereré, descanso y seguir peleando.",
+    ],
+  },
+  {
+    id: 5,
+    location: "Ameri Store · Torre de las Américas",
+    title: "ROSE VS SEBASTIÁN",
+    subtitle: "Una notebook. Cien celulares. Masivo no deja pasar a nadie.",
+    bg: "/battle/rose-vs-sebastian.webp",
+    color: "#cf48ff",
+    intro:
+      "Sebastián electrificó su tienda y convirtió cada celular, cámara y notebook en munición. ROSE llega con su bebé seguro, la notebook cargada y Masivo cubriendo cada paso. Crucen la avenida, entren al local y frenen el auto antes del remate final.",
+    twist:
+      "La tormenta digital se corta, el auto queda sin batería y la notebook de ROSE publica la victoria antes de que Sebastián encuentre otro cargador.",
+    rival: "papu",
+    alternate: "anatomic",
+    npc: "masivo",
+    objectives: ["Apagá la lluvia de celulares", "Abrí el acceso a Ameri Store"],
+    taunt: "Vos ocupate de la notebook. Yo no dejo que se acerquen a ustedes.",
+    choices: ["Pedile cobertura", "Cargá la notebook", "Recuperen energía"],
+    replies: [
+      "Quedate detrás mío. El próximo golpe no pasa.",
+      "Te conseguí un cargador, bro. Súper completo.",
+      "Pausa corta, tereré y seguimos los tres.",
     ],
   },
 ];

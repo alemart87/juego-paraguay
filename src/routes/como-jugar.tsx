@@ -26,7 +26,7 @@ function HowToPlay() {
         <span className="seo-kicker">GUÍA OFICIAL</span>
         <h1>Entrá y peleá.</h1>
         <p>
-          Todo lo necesario para dominar los controles, las armas, el hype y los cuatro jefes desde
+          Todo lo necesario para dominar los controles, las armas, el hype y los cinco jefes desde
           un celular o una computadora.
         </p>
       </section>

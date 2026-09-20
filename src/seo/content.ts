@@ -44,7 +44,7 @@ export const CHARACTERS: CharacterPage[] = [
     type: "combatiente",
     kicker: "Velocidad · engaño · Paso UwU",
     description:
-      "Guía de Onichan en Influencers Battle: historia ficticia, poderes, movilidad y tácticas para dominar los cuatro episodios.",
+      "Guía de Onichan en Influencers Battle: historia ficticia, poderes, movilidad y tácticas para dominar los cinco episodios.",
     portrait: "/battle/onichan.webp",
     color: "#f48dc5",
     playStyle:
@@ -173,7 +173,7 @@ export const CHARACTERS: CharacterPage[] = [
     ],
     story: [
       "Dentro del universo satírico del juego, Pablito convierte cada escenario en una pasarela de combate donde un flash puede detener hasta al enemigo más ruidoso.",
-      "Es un desbloqueo permanente asociado al perfil del jugador y funciona en los cuatro episodios.",
+      "Es un desbloqueo permanente asociado al perfil del jugador y funciona en los cinco episodios.",
     ],
   },
   {
@@ -197,6 +197,29 @@ export const CHARACTERS: CharacterPage[] = [
     story: [
       "Marito llega a la campaña como una caricatura política ficticia con recursos absurdamente superiores: helicóptero, misiles e inmunidad total.",
       "El personaje puede probarse durante 10 segundos y luego desbloquearse de forma permanente para el perfil del jugador.",
+    ],
+  },
+  {
+    slug: "rose",
+    name: "ROSE",
+    type: "combatiente",
+    kicker: "Estrategia · notebook · dupla con Masivo",
+    description:
+      "ROSE es una combatiente jugable de Influencers Battle que pelea siempre junto a Masivo y usa una notebook como arma principal.",
+    portrait: "/battle/rose.webp",
+    color: "#ff47d7",
+    playStyle:
+      "Combina descargas digitales a distancia con la cobertura autónoma de Masivo. Lleva a su bebé protegido en un portabebés durante toda la animación y nunca entra sola al combate.",
+    ability:
+      "Notebook viral dispara ráfagas de datos que atraviesan enemigos. Modo familia imparable activa un escudo, potencia a Masivo y limpia la zona cercana.",
+    tactics: [
+      "Mantené al enemigo dentro del alcance de Masivo para que ataque automáticamente.",
+      "Usá la notebook desde media distancia mientras el compañero contiene la oleada.",
+      "Activá la súper cuando Sebastián combine el auto con su lluvia de electrónicos.",
+    ],
+    story: [
+      "ROSE protagoniza el episodio especial ROSE VS SEBASTIÁN en Ameri Store, frente a la Torre de las Américas.",
+      "La misión presenta una dupla inseparable: ROSE controla la tecnología y Masivo protege cada avance hasta llegar al jefe.",
     ],
   },
   {
@@ -286,6 +309,29 @@ export const CHARACTERS: CharacterPage[] = [
     story: [
       "El Dictador es el antagonista final de la ficción y espera frente a una Asunción nocturna e infestada. Representa una caricatura autoritaria dentro del universo del juego.",
       "La batalla final cierra la campaña cuando la tanqueta se apaga y las luces de la ciudad vuelven a encenderse.",
+    ],
+  },
+  {
+    slug: "sebastian",
+    name: "Sebastián",
+    type: "jefe",
+    kicker: "Jefe 05 · electrónicos y auto de combate",
+    description:
+      "Guía para vencer a Sebastián en ROSE VS SEBASTIÁN: celulares, cámaras, tormenta electrónica y carga del auto verde.",
+    portrait: "/battle/sebastian.webp",
+    color: "#cf48ff",
+    playStyle:
+      "Ataca con celulares y cámaras desde media distancia, electrifica sectores de la tienda y usa su auto verde para una carga de alta velocidad.",
+    ability:
+      "La tormenta de electrónicos superpone proyectiles, señales de energía y la embestida del vehículo durante la fase final.",
+    tactics: [
+      "Esquivá hacia adelante cuando la fila de celulares cierre el pasillo.",
+      "Saltá la carga del auto y atacá durante su frenada.",
+      "Aprovechá la cobertura automática de Masivo mientras ROSE dispara con la notebook.",
+    ],
+    story: [
+      "Sebastián domina una versión fantástica de Ameri Store junto a la Torre de las Américas y convierte su catálogo en un arsenal.",
+      "Es el jefe del quinto episodio y el rival central de la nueva dupla formada por ROSE y Masivo.",
     ],
   },
 ];

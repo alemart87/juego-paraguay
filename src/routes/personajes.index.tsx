@@ -4,7 +4,7 @@ import { SITE_URL } from "@/seo/content";
 
 const title = "Personajes de Influencers Battle Paraguay";
 const description =
-  "Conocé a los seis combatientes y cuatro jefes de Influencers Battle: poderes, historias ficticias y consejos para jugar.";
+  "Conocé a los nueve combatientes y cinco jefes de Influencers Battle: poderes, historias ficticias y consejos para jugar.";
 
 export const Route = createFileRoute("/personajes/")({
   head: () => ({
@@ -24,10 +24,10 @@ function CharactersPage() {
   return (
     <SeoLayout>
       <section className="seo-prose-hero">
-        <span className="seo-kicker">10 PERSONAJES · 4 EPISODIOS</span>
+        <span className="seo-kicker">14 PERSONAJES · 5 EPISODIOS</span>
         <h1>Elegí tu bando.</h1>
         <p>
-          Seis combatientes jugables y cuatro jefes convierten lugares reconocibles de Paraguay en
+          Nueve combatientes jugables y cinco jefes convierten lugares reconocibles de Paraguay en
           una campaña arcade rápida, absurda y creada para celulares.
         </p>
       </section>
