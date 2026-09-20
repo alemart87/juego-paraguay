@@ -13,9 +13,10 @@ import {
 import type { SfxName } from "../game/audio";
 import type { ShopSku } from "./shop-catalog";
 
-export const STAGE_WIDTH = 1500;
-export const WORLD_WIDTH = 4650;
-export const CHECKPOINTS = [1320, 2820] as const;
+/** Every arena is 30% longer than the original 1,500-unit layout. */
+export const STAGE_WIDTH = 1950;
+export const WORLD_WIDTH = 6045;
+export const CHECKPOINTS = [1716, 3666] as const;
 export type Action = "jump" | "dash" | "power" | "swap" | "grenade" | "interact";
 export interface Input {
   move: number;
@@ -88,7 +89,10 @@ export interface Shot {
     | "cigarette"
     | "sling"
     | "lightning"
-    | "trumpet";
+    | "trumpet"
+    | "rocket"
+    | "flame"
+    | "rail";
   color: string;
   radius: number;
   age: number;
@@ -131,6 +135,7 @@ export interface AirSupport {
 }
 export type GameEvent =
   | { type: "sfx"; name: SfxName }
+  | { type: "voice"; fighter: FighterId; cue: "power" | "boss" | "streak" }
   | { type: "talk"; npc: FighterId }
   | { type: "win" | "lose" }
   | { type: "toast"; text: string };
@@ -268,13 +273,13 @@ export function createWorld(
     effects: [],
     drops: [],
     platforms: [
-      { x: 420, w: 180, y: 78 },
-      { x: 770, w: 140, y: 110 },
-      { x: 1390, w: 190, y: 86 },
-      { x: 1820, w: 160, y: 110 },
-      { x: 2570, w: 170, y: 85 },
-      { x: 3340, w: 190, y: 95 },
-      { x: 3970, w: 150, y: 118 },
+      { x: 546, w: 180, y: 78 },
+      { x: 1001, w: 140, y: 110 },
+      { x: 1807, w: 190, y: 86 },
+      { x: 2366, w: 160, y: 110 },
+      { x: 3341, w: 170, y: 85 },
+      { x: 4342, w: 190, y: 95 },
+      { x: 5161, w: 150, y: 118 },
     ],
     t: 0,
     stage: 0,
@@ -295,6 +300,9 @@ export function createWorld(
       shotgun: 30,
       smg: 160,
       grenade: 4,
+      rocket: 8,
+      flamethrower: 90,
+      railgun: 12,
     },
     grenades: 4,
     camera: 0,
@@ -351,22 +359,23 @@ function spawn(w: World, x: number, kind: Enemy["kind"], id: FighterId, hp: numb
 }
 function spawnStage(w: World) {
   const start = w.stage * STAGE_WIDTH;
-  const count = w.stage === 2 ? 3 : 6 + (w.level > 1 ? 1 : 0);
+  const count = w.stage === 2 ? 4 : 8 + (w.level > 1 ? 1 : 0);
   for (let i = 0; i < count; i++)
     spawn(w, start + 380 + i * 130, "minion", rivalFor(w.level, w.hero), 42 + w.level * 7);
   if (w.stage === 2) {
     const bossHp = w.level === 1 ? 1120 : 760 + w.level * 170;
-    spawn(w, 4200, "boss", rivalFor(w.level, w.hero), bossHp);
+    spawn(w, 5460, "boss", rivalFor(w.level, w.hero), bossHp);
     w.events.push({
       type: "toast",
       text: `${boss(w.level).name} · JEFE FINAL`,
     });
+    w.events.push({ type: "voice", fighter: w.hero, cue: "boss" });
     event(w, "bossIntro");
   }
   w.spawned++;
   w.drops.push(
-    { x: start + 610, y: 88, kind: "ammo", taken: false },
-    { x: start + 840, y: 0, kind: "health", taken: false },
+    { x: start + 793, y: 88, kind: "ammo", taken: false },
+    { x: start + 1092, y: 0, kind: "health", taken: false },
   );
 }
 export function interactLabel(w: World): string | null {
@@ -457,6 +466,8 @@ function hitEnemy(w: World, e: Enemy, damage: number, knock = 0) {
     w.bestCombo = Math.max(w.bestCombo, w.streak);
     w.score += (e.kind === "minion" ? 150 : 1500) * (1 + Math.min(4, w.streak - 1) * 0.25);
     w.player.super = clamp(w.player.super + 10, 0, 100);
+    if (w.streak === 5 || w.streak === 10)
+      w.events.push({ type: "voice", fighter: w.hero, cue: "streak" });
     event(w, "ko");
     for (let i = 0; i < 8; i++) effect(w, e.x, e.y + 40, "spark", fighter(w.hero).color, 4, 0.6);
     if (e.kind === "minion" && random(w) < 0.45)
@@ -535,8 +546,8 @@ function stepAirSupport(w: World, dt: number) {
   const targetBias = target ? clamp(target.x - p.x, -190, 190) * 0.42 : 0;
   const desiredX = clamp(
     p.x + patrol + targetBias,
-    w.stage * STAGE_WIDTH + 70,
-    Math.min(WORLD_WIDTH - 80, (w.stage + 1) * STAGE_WIDTH - 70),
+    w.stage * STAGE_WIDTH + 205,
+    Math.min(WORLD_WIDTH - 205, (w.stage + 1) * STAGE_WIDTH - 205),
   );
   const desiredY = 245 + Math.sin(w.t * 2.1) * 20 + (target?.kind === "boss" ? 26 : 0);
   const oldX = air.x,
@@ -620,6 +631,60 @@ function attack(w: World) {
     event(w, w.weapon === "bat" ? "bat" : w.weapon === "knife" ? "slash" : "punch");
   } else {
     w.ammo[w.weapon]--;
+    if (w.weapon === "rocket") {
+      shoot(w, {
+        x: p.x + p.face * 44,
+        y: p.y + 66,
+        vx: p.face * 570,
+        vy: 35,
+        life: 1.65,
+        damage: 165 * boosted,
+        enemy: false,
+        kind: "rocket",
+        color: "#ff6b26",
+        radius: 18,
+      });
+      p.vx -= p.face * 75;
+      w.shake = Math.max(w.shake, 0.18);
+      effect(w, p.x + p.face * 48, p.y + 66, "ring", "#ffd35c", 34, 0.16);
+      event(w, "rocket");
+      return;
+    }
+    if (w.weapon === "flamethrower") {
+      for (let i = 0; i < 4; i++)
+        shoot(w, {
+          x: p.x + p.face * (40 + i * 5),
+          y: p.y + 58 + (random(w) - 0.5) * 18,
+          vx: p.face * (410 + random(w) * 180),
+          vy: (random(w) - 0.25) * 110,
+          life: 0.32 + random(w) * 0.16,
+          damage: 8 * boosted,
+          enemy: false,
+          kind: "flame",
+          color: i % 2 ? "#ff3b18" : "#ffcf35",
+          radius: 13,
+        });
+      event(w, "flame");
+      return;
+    }
+    if (w.weapon === "railgun") {
+      shoot(w, {
+        x: p.x + p.face * 45,
+        y: p.y + 64,
+        vx: p.face * 1900,
+        vy: 0,
+        life: 0.42,
+        damage: 92 * boosted,
+        enemy: false,
+        kind: "rail",
+        color: "#63e7ff",
+        radius: 13,
+      });
+      p.vx -= p.face * 38;
+      w.shake = Math.max(w.shake, 0.12);
+      event(w, "railgun");
+      return;
+    }
     const pellets = w.weapon === "shotgun" ? 5 : 1;
     for (let i = 0; i < pellets; i++) {
       const target = w.enemies
@@ -698,6 +763,7 @@ export function activatePower(w: World) {
   p.inv = Math.max(p.inv, w.t + 0.3);
   event(w, "stomp");
   effect(w, p.x, p.y + 155, "text", f.color, 22, 1, ultimate ? f.superName : f.power);
+  w.events.push({ type: "voice", fighter: w.hero, cue: "power" });
   if (ultimate) {
     p.buff = w.t + 5;
     p.shield = w.t + 1;
@@ -769,6 +835,9 @@ export function activatePower(w: World) {
         event(w, "explode");
         break;
     }
+    // Area damage can award hype while the super is resolving; the ultimate
+    // still starts its next charge from zero after the animation completes.
+    p.super = 0;
     return;
   }
   switch (w.hero) {
@@ -837,7 +906,8 @@ export function applyChoice(w: World, choice: number) {
   if (choice === 0) {
     w.player.shield = w.t + 8;
     for (const id of LOADOUT)
-      if (Number.isFinite(w.ammo[id])) w.ammo[id] += id === "shotgun" ? 12 : 65;
+      if (Number.isFinite(w.ammo[id]))
+        w.ammo[id] += id === "rocket" ? 3 : id === "railgun" ? 4 : id === "shotgun" ? 12 : 65;
     w.grenades = Math.min(6, w.grenades + 1);
   } else if (choice === 1) w.player.super = 100;
   else w.player.hp = Math.min(w.player.maxHp, w.player.hp + 65);
@@ -865,7 +935,10 @@ export function applyShopPowerup(w: World, sku: ShopSku) {
     case "marito":
       return { ok: false as const, message: "Elegí este personaje antes de iniciar la partida." };
     case "arsenal":
-      w.weapon = "ak";
+      w.weapon = "rocket";
+      w.ammo.rocket += 8;
+      w.ammo.flamethrower += 90;
+      w.ammo.railgun += 12;
       w.ammo.ak += 140;
       w.ammo.smg += 120;
       w.ammo.shotgun += 20;
@@ -1222,13 +1295,13 @@ export function step(w: World, input: Input, dt: number) {
         s.vx *= 0.75;
       }
     }
-    if (s.kind === "missile" && !s.enemy) {
+    if ((s.kind === "missile" || s.kind === "rocket") && !s.enemy) {
       const target = w.enemies
         .filter((enemy) => enemy.hp > 0)
         .sort(
           (a, b) => Math.hypot(a.x - s.x, a.y + 55 - s.y) - Math.hypot(b.x - s.x, b.y + 55 - s.y),
         )[0];
-      if (target) {
+      if (target && s.kind === "missile") {
         const desiredX = clamp((target.x - s.x) * 3.5, -620, 620);
         const desired = clamp((target.y + 55 - s.y) * 4.1, -580, 580);
         s.vx += clamp(desiredX - s.vx, -1050 * dt, 1050 * dt);
@@ -1247,8 +1320,8 @@ export function step(w: World, input: Input, dt: number) {
       blast(w, s.x, Math.max(25, s.y), 190, s.damage, s.color);
       event(w, "explode");
     }
-    if (s.kind === "missile" && s.life <= 0) {
-      blast(w, s.x, Math.max(25, s.y), 290, s.damage, s.color);
+    if ((s.kind === "missile" || s.kind === "rocket") && s.life <= 0) {
+      blast(w, s.x, Math.max(25, s.y), s.kind === "rocket" ? 250 : 290, s.damage, s.color);
       w.shake = Math.max(w.shake, 0.36);
       event(w, "explode");
     }
@@ -1268,8 +1341,8 @@ export function step(w: World, input: Input, dt: number) {
           e.x < high &&
           Math.abs(s.y - (e.y + 50)) < s.radius + (e.kind === "boss" ? 100 : 47)
         ) {
-          if (s.kind === "missile") {
-            blast(w, s.x, s.y, 290, s.damage, s.color);
+          if (s.kind === "missile" || s.kind === "rocket") {
+            blast(w, s.x, s.y, s.kind === "rocket" ? 250 : 290, s.damage, s.color);
             w.shake = Math.max(w.shake, 0.36);
             event(w, "explode");
             s.life = 0;
@@ -1277,7 +1350,7 @@ export function step(w: World, input: Input, dt: number) {
           } else {
             hitEnemy(w, e, s.damage, Math.sign(s.vx) * 3);
             s.hitIds.add(e.id);
-            if (s.kind === "bullet") {
+            if (s.kind === "bullet" || s.kind === "flame") {
               s.life = 0;
               break;
             }
@@ -1305,7 +1378,8 @@ export function step(w: World, input: Input, dt: number) {
       event(w, "heal");
     } else {
       for (const id of LOADOUT)
-        if (Number.isFinite(w.ammo[id])) w.ammo[id] += id === "shotgun" ? 8 : 45;
+        if (Number.isFinite(w.ammo[id]))
+          w.ammo[id] += id === "rocket" ? 2 : id === "railgun" ? 3 : id === "shotgun" ? 8 : 45;
       event(w, "pickup");
       effect(w, p.x, p.y + 110, "text", "#f6e75a", 18, 0.7, "MUNICIÓN");
     }

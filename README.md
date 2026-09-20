@@ -10,10 +10,13 @@ Juego de acción satírica para móvil ambientado en Paraguay. Ocho personajes j
 
 - Campaña de cuatro episodios: Templo del último avivamiento, Mercado 4, IPS y Asunción infestada.
 - Niveles ampliados cerca de 30%, con más recorrido, oleadas y acción.
+- Arsenal ampliado con Lanzacohetes Ka'aru, Lanzallamas Mbareté y Cañón de Itaipú, cada uno con proyectiles, daño y efectos propios.
 - Ocho combatientes con estadísticas, movimiento y poderes propios; Pablito y Marito son premium y admiten una prueba jugable de 10 segundos.
+- Marito despliega el Tomahawk PY-01 ilustrado, autónomo, con seguimiento de blancos, rotor animado y salvas explosivas.
 - Cuatro jefes, secuaces y lenguajes de ataque; El Dictador tiene dos vidas y hondita paraguaya.
 - Marketplace móvil con ocho power-ups y dos personajes premium de pago único, precios visibles y checkouts seguros de Whop.
 - Controles multitáctiles, teclado, pausa y modo para zurdos.
+- Música procedural por episodio, mezcla dinámica para parlantes móviles y gritos de combate en español.
 - Intro cinematográfica de 4,2 segundos con montaje de jefes, rayos y presentación premium.
 - Identidad de estudio **PY-STAR GAMES** animada en intro, finales, ranking y tarjetas sociales.
 - Ranking PostgreSQL acumulativo e idempotente: cada victoria suma una vez y el récord individual se conserva aparte.

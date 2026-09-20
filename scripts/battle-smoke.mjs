@@ -58,7 +58,7 @@ for (let section = 0; section < 5; section++) {
         if (w.player.super >= 100 || Math.abs(dx) < 230) actions.push("power");
         if (target.windup > w.t && Math.abs(dx) < 100) actions.push("dash");
       } else {
-        const goal = w.stage === 0 ? 1320 : 2820;
+        const goal = w.stage === 0 ? 1716 : 3666;
         move = Math.abs(w.player.x - goal) > 25 ? Math.sign(goal - w.player.x) : 0;
         actions.push("interact");
       }
@@ -82,7 +82,7 @@ for (let section = 0; section < 5; section++) {
       await desktop.getByText("PADRE APÓSTOL", { exact: true }).waitFor();
       await desktop.evaluate(() => {
         const w = window.__battleWorld();
-        w.player.x = 3900;
+        w.player.x = 5200;
         w.player.inv = w.t + 2;
       });
       await desktop.waitForTimeout(700);

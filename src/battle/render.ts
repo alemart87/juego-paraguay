@@ -10,6 +10,7 @@ export interface Art {
   asuncionCombatants: HTMLImageElement;
   apostolCombatants: HTMLImageElement;
   premium: HTMLImageElement[];
+  tomahawk: HTMLImageElement;
 }
 const images = new Map<string, Promise<HTMLImageElement>>();
 function load(src: string): Promise<HTMLImageElement> {
@@ -103,6 +104,7 @@ export async function loadArt(level: World["level"]): Promise<Art> {
     apostolCombatants,
     pablito,
     marito,
+    tomahawk,
   ] = await Promise.all([
     load(episode(level).bg),
     frames(),
@@ -113,6 +115,7 @@ export async function loadArt(level: World["level"]): Promise<Art> {
     load("/battle/apostol-combatants.webp"),
     load("/battle/premium/pablito-atlas.webp"),
     load("/battle/premium/marito-atlas.webp"),
+    load("/battle/tomahawk-py01-v2.webp"),
   ]);
   return {
     background,
@@ -123,6 +126,7 @@ export async function loadArt(level: World["level"]): Promise<Art> {
     asuncionCombatants,
     apostolCombatants,
     premium: [pablito, marito],
+    tomahawk,
   };
 }
 function rect(
@@ -437,120 +441,83 @@ export function render(
       const tx = sx(target.x),
         ty = floor - target.y - 52;
       g.save();
-      g.globalAlpha = 0.34 + Math.sin(w.t * 16) * 0.08;
+      g.globalAlpha = 0.35 + Math.sin(w.t * 16) * 0.08;
       g.strokeStyle = "#ff4b2b";
       g.lineWidth = 1.5;
       g.setLineDash([8, 9]);
       g.beginPath();
-      g.moveTo(heliX + air.face * 54, heliY + 26);
+      g.moveTo(heliX + air.face * 74, heliY + 24);
       g.lineTo(tx, ty);
       g.stroke();
       g.setLineDash([]);
       g.strokeStyle = "#f6e75a";
-      g.lineWidth = 2;
+      g.lineWidth = 2.5;
       g.beginPath();
       g.arc(tx, ty, 17 + Math.sin(w.t * 10) * 3, 0, Math.PI * 2);
-      g.moveTo(tx - 25, ty);
+      g.moveTo(tx - 27, ty);
       g.lineTo(tx - 8, ty);
       g.moveTo(tx + 8, ty);
-      g.lineTo(tx + 25, ty);
+      g.lineTo(tx + 27, ty);
       g.stroke();
       g.restore();
     }
+
     g.save();
     g.translate(heliX, heliY);
     g.rotate(air.bank);
     g.scale(air.face, 1);
-    g.shadowColor = "#05070a";
-    g.shadowBlur = 19;
-    g.globalAlpha = 0.18;
-    ellipse(g, -7, 65, 108, 17, "#050408");
+    const hover = Math.sin(w.t * 4.2) * 3;
+    g.shadowColor = "#000";
+    g.shadowBlur = 24;
+    g.globalAlpha = 0.22;
+    ellipse(g, 0, 64, 132, 19, "#050408");
     g.globalAlpha = 1;
+    g.shadowBlur = 14;
 
-    const rotor = w.t * 42;
-    g.strokeStyle = "#d7e2df";
-    g.lineWidth = 4;
-    g.beginPath();
-    g.moveTo(Math.cos(rotor) * -126, -50);
-    g.lineTo(Math.cos(rotor) * 126, -50);
-    g.moveTo(Math.sin(rotor) * -126, -50);
-    g.lineTo(Math.sin(rotor) * 126, -50);
-    g.stroke();
-    rect(g, -5, -49, 10, 20, "#4c565d", 3);
+    // The authored transparent vehicle is the body; animation stays in-engine.
+    g.drawImage(art.tomahawk, -154, -77 + hover, 308, 154);
 
-    g.fillStyle = "#222c31";
-    g.beginPath();
-    g.moveTo(-77, 9);
-    g.quadraticCurveTo(-69, -31, -23, -34);
-    g.lineTo(45, -29);
-    g.quadraticCurveTo(77, -21, 82, 8);
-    g.quadraticCurveTo(65, 32, 18, 34);
-    g.lineTo(-47, 31);
-    g.quadraticCurveTo(-73, 28, -77, 9);
-    g.closePath();
-    g.fill();
-    rect(g, 66, -13, 92, 14, "#222c31", 5);
-    g.fillStyle = "#222c31";
-    g.beginPath();
-    g.moveTo(133, -11);
-    g.lineTo(152, -35);
-    g.lineTo(159, -34);
-    g.lineTo(157, 13);
-    g.closePath();
-    g.fill();
-    g.strokeStyle = "#a9b5b6";
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(156, -11, 22, 0, Math.PI * 2);
-    g.moveTo(140, -27);
-    g.lineTo(172, 5);
-    g.moveTo(172, -27);
-    g.lineTo(140, 5);
-    g.stroke();
-
-    g.fillStyle = "#74cfe5";
-    g.beginPath();
-    g.moveTo(-66, 3);
-    g.quadraticCurveTo(-56, -24, -25, -25);
-    g.lineTo(-13, 3);
-    g.closePath();
-    g.fill();
-    rect(g, -7, -23, 23, 27, "#14252e", 4);
-    rect(g, 21, -22, 22, 26, "#14252e", 4);
-
-    g.fillStyle = "#303a40";
-    g.beginPath();
-    g.moveTo(-18, 8);
-    g.lineTo(70, 19);
-    g.lineTo(62, 28);
-    g.lineTo(-28, 21);
-    g.closePath();
-    g.fill();
-    rect(g, -50, 25, 38, 11, "#811f20", 5);
-    rect(g, 26, 25, 38, 11, "#811f20", 5);
-    for (const podX of [-43, 33]) {
-      for (let missile = 0; missile < 3; missile++)
-        ellipse(g, podX + missile * 11, 39, 4, 7, missile === 2 ? "#f6e75a" : "#c4c9c9");
-    }
-    if (air.fireFlash > w.t) {
-      const pulse = 1 - (air.fireFlash - w.t) / 0.2;
-      g.globalAlpha = 0.9 - pulse * 0.4;
-      ellipse(g, 78 + pulse * 18, 36, 18 + pulse * 22, 9 + pulse * 10, "#fff3a0");
-      ellipse(g, 88 + pulse * 30, 36, 12 + pulse * 18, 6 + pulse * 8, "#ff5728");
-      g.globalAlpha = 1;
-    }
-    rect(g, -55, 31, 5, 23, "#687278", 2);
-    rect(g, 48, 31, 5, 23, "#687278", 2);
-    g.strokeStyle = "#687278";
+    // High-speed rotor disk, turbine glow and downwash keep the craft alive.
+    g.shadowBlur = 0;
+    const rotorPulse = 0.3 + Math.abs(Math.sin(w.t * 46)) * 0.42;
+    g.globalAlpha = rotorPulse;
+    g.strokeStyle = "#edf7ff";
     g.lineWidth = 3;
     g.beginPath();
-    g.moveTo(-65, 55);
-    g.lineTo(-35, 55);
-    g.moveTo(38, 55);
-    g.lineTo(67, 55);
+    g.moveTo(-150, -55 + hover);
+    g.lineTo(150, -55 + hover);
     g.stroke();
-    label(g, "TOMAHAWK", 22, 17, 11, "#f6e75a");
-    label(g, "PY-01", 112, -1, 8, "#f6e75a");
+    g.globalAlpha = 0.22;
+    g.fillStyle = "#d9f3ff";
+    g.beginPath();
+    g.ellipse(5, -54 + hover, 148, 9, 0, 0, Math.PI * 2);
+    g.fill();
+    g.globalAlpha = 0.35;
+    for (let i = 0; i < 4; i++) {
+      g.strokeStyle = i % 2 ? "#8bdfff" : "#fff3b0";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(-96 + i * 58, 72);
+      g.lineTo(-116 + i * 62 + Math.sin(w.t * 9 + i) * 8, 104);
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+    const turbine = 0.75 + Math.sin(w.t * 17) * 0.2;
+    ellipse(g, -20, -6 + hover, 11 + turbine * 3, 6 + turbine, "#ff9b31");
+    ellipse(g, -20, -6 + hover, 5, 3, "#fff0a8");
+
+    if (air.fireFlash > w.t) {
+      const pulse = 1 - Math.max(0, air.fireFlash - w.t) / 0.5;
+      g.globalAlpha = 0.95 - pulse * 0.35;
+      for (const side of [-1, 1]) {
+        ellipse(g, 82 + pulse * 36, side * 24 + hover, 19 + pulse * 24, 9 + pulse * 9, "#fff3a0");
+        ellipse(g, 96 + pulse * 50, side * 24 + hover, 13 + pulse * 17, 6 + pulse * 7, "#ff5728");
+      }
+      g.globalAlpha = 1;
+    }
+    g.shadowColor = "#000";
+    g.shadowBlur = 4;
+    label(g, "TOMAHAWK PY-01", 10, 91, 12, "#f6e75a");
     g.restore();
   }
   ellipse(g, px, floor + 5, 35, 7, "#11101860");
@@ -583,9 +550,22 @@ export function render(
     g.save();
     g.translate(px + p.face * 22, py - 60);
     g.scale(p.face, 1);
-    rect(g, 0, -4, w.weapon === "pistol" ? 27 : 43, 8, "#191c24", 2);
+    const weaponLength = w.weapon === "rocket" ? 62 : w.weapon === "railgun" ? 58 : 43;
+    rect(g, 0, -4, w.weapon === "pistol" ? 27 : weaponLength, 8, "#191c24", 2);
     rect(g, 7, 3, 7, 10, "#232633", 1);
     rect(g, 3, -5, 8, 2, "#8996a0");
+    if (w.weapon === "rocket") {
+      rect(g, 9, -10, 49, 19, "#343d38", 8);
+      rect(g, 48, -7, 15, 13, "#a6352a", 5);
+    } else if (w.weapon === "flamethrower") {
+      rect(g, 21, -8, 27, 14, "#782b20", 6);
+      rect(g, 45, -6, 13, 10, "#e09a35", 4);
+    } else if (w.weapon === "railgun") {
+      g.shadowColor = "#63e7ff";
+      g.shadowBlur = 10;
+      rect(g, 12, -8, 48, 4, "#63e7ff", 2);
+      rect(g, 24, 4, 28, 3, "#d7fbff", 2);
+    }
     g.restore();
   } else if (
     !["pablito", "marito"].includes(w.hero) &&
@@ -616,7 +596,7 @@ export function render(
       g.moveTo(x, y);
       g.lineTo(x - Math.sign(s.vx) * 18, y + s.vy * 0.01);
       g.stroke();
-    } else if (s.kind === "missile") {
+    } else if (s.kind === "missile" || s.kind === "rocket") {
       g.save();
       g.translate(x, y);
       g.rotate(Math.atan2(-s.vy, s.vx));
@@ -643,15 +623,48 @@ export function render(
       g.lineTo(-37 - Math.cos(s.age * 39) * 7, 8);
       g.closePath();
       g.fill();
-      rect(g, -21, -7, 36, 14, "#31363b", 6);
+      rect(
+        g,
+        -21,
+        s.kind === "rocket" ? -10 : -7,
+        s.kind === "rocket" ? 48 : 36,
+        s.kind === "rocket" ? 20 : 14,
+        "#31363b",
+        6,
+      );
       g.fillStyle = "#f6e75a";
       g.beginPath();
-      g.moveTo(15, -7);
-      g.lineTo(29, 0);
-      g.lineTo(15, 7);
+      g.moveTo(s.kind === "rocket" ? 27 : 15, -7);
+      g.lineTo(s.kind === "rocket" ? 43 : 29, 0);
+      g.lineTo(s.kind === "rocket" ? 27 : 15, 7);
       g.closePath();
       g.fill();
       rect(g, -6, -8, 7, 16, "#b72c2c", 2);
+      g.restore();
+    } else if (s.kind === "flame") {
+      g.save();
+      g.globalCompositeOperation = "lighter";
+      g.globalAlpha = Math.max(0.15, s.life * 2.4);
+      g.shadowColor = "#ff4b16";
+      g.shadowBlur = 18;
+      ellipse(g, x, y, s.radius * 1.6, s.radius, s.color);
+      ellipse(g, x - Math.sign(s.vx) * 9, y, s.radius, s.radius * 0.65, "#fff09b");
+      g.restore();
+    } else if (s.kind === "rail") {
+      g.save();
+      g.globalCompositeOperation = "lighter";
+      g.shadowColor = "#63e7ff";
+      g.shadowBlur = 24;
+      g.strokeStyle = "#d7fbff";
+      g.lineWidth = 6;
+      g.beginPath();
+      g.moveTo(x - Math.sign(s.vx) * 150, y);
+      g.lineTo(x + Math.sign(s.vx) * 35, y);
+      g.stroke();
+      g.strokeStyle = "#3bc8ff";
+      g.lineWidth = 14;
+      g.globalAlpha = 0.28;
+      g.stroke();
       g.restore();
     } else if (s.kind === "can") {
       g.save();

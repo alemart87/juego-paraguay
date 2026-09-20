@@ -10,7 +10,14 @@ import {
   ShoppingBag,
   Zap,
 } from "lucide-react";
-import { configureAudio, sfx, unlockAudio } from "../game/audio";
+import {
+  battleCry,
+  configureAudio,
+  sfx,
+  startBattleMusic,
+  stopBattleMusic,
+  unlockAudio,
+} from "../game/audio";
 import {
   drainEvents,
   snapshot,
@@ -109,6 +116,7 @@ export function Scene({
     observer.observe(stage.current!);
     resize();
     configureAudio(settings.sound, 0.85);
+    startBattleMusic(world.level);
     const keydown = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest("input,textarea,select")) return;
       if (
@@ -195,6 +203,7 @@ export function Scene({
           if (steps >= 6) accumulator = 0;
           for (const e of drainEvents(world)) {
             if (e.type === "sfx") sfx(e.name);
+            else if (e.type === "voice") battleCry(e.fighter, e.cue);
             else callbacks.current.onEvent(e);
           }
           if (now - hudAt > 100) {
@@ -243,6 +252,7 @@ export function Scene({
       delete window.__battleControls;
       delete window.__battleWorld;
       delete window.__battleStep;
+      stopBattleMusic();
     };
   }, [world, settings.quality, settings.shake, settings.sound]);
   const trigger = (a: Action) => {

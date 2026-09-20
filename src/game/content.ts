@@ -106,8 +106,20 @@ export type HazardDef = {
 /* Weapons                                                             */
 /* ------------------------------------------------------------------ */
 
-export type WeaponId = "fist" | "knife" | "bat" | "pistol" | "ak" | "shotgun" | "smg" | "grenade";
-export type GunId = "pistol" | "ak" | "shotgun" | "smg" | "grenade";
+export type WeaponId =
+  | "fist"
+  | "knife"
+  | "bat"
+  | "pistol"
+  | "ak"
+  | "shotgun"
+  | "smg"
+  | "grenade"
+  | "rocket"
+  | "flamethrower"
+  | "railgun";
+export type GunId =
+  "pistol" | "ak" | "shotgun" | "smg" | "grenade" | "rocket" | "flamethrower" | "railgun";
 
 export type WeaponDef = {
   id: WeaponId;
@@ -236,6 +248,43 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     start: 2,
     hint: "Explota en área. Alejate.",
   },
+  rocket: {
+    id: "rocket",
+    name: "Lanzacohetes Ka'aru",
+    short: "RPG",
+    kind: "gun",
+    dmg: 9,
+    cooldown: 1.05,
+    speed: 180,
+    pickup: 3,
+    start: 8,
+    hint: "Cohete pesado con explosión de área.",
+  },
+  flamethrower: {
+    id: "flamethrower",
+    name: "Lanzallamas Mbareté",
+    short: "FUEGO",
+    kind: "gun",
+    dmg: 1,
+    cooldown: 0.08,
+    speed: 150,
+    range: 42,
+    pickup: 35,
+    start: 90,
+    hint: "Cono de fuego para controlar grupos.",
+  },
+  railgun: {
+    id: "railgun",
+    name: "Cañón de Itaipú",
+    short: "ITAIPÚ",
+    kind: "gun",
+    dmg: 7,
+    cooldown: 0.82,
+    speed: 520,
+    pickup: 4,
+    start: 12,
+    hint: "Rayo eléctrico que atraviesa enemigos.",
+  },
 };
 
 export const WEAPON_NAME: Record<WeaponId, string> = Object.fromEntries(
@@ -243,7 +292,18 @@ export const WEAPON_NAME: Record<WeaponId, string> = Object.fromEntries(
 ) as Record<WeaponId, string>;
 
 /** Cycle order for the swap button (grenades have their own button). */
-export const WEAPON_ORDER: WeaponId[] = ["ak", "pistol", "shotgun", "smg", "bat", "knife", "fist"];
+export const WEAPON_ORDER: WeaponId[] = [
+  "rocket",
+  "flamethrower",
+  "railgun",
+  "ak",
+  "pistol",
+  "shotgun",
+  "smg",
+  "bat",
+  "knife",
+  "fist",
+];
 
 function stepsOf(id: string) {
   return [0, 1, 2, 3].map((i) => `/sprites/walk/${id}-${i}.png`);

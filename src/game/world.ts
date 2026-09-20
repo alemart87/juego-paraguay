@@ -313,6 +313,9 @@ export function createWorld(chapter: 1 | 2 | 3, hero: HeroId, difficulty: Diffic
         shotgun: 0,
         smg: 0,
         grenade: 0,
+        rocket: 0,
+        flamethrower: 0,
+        railgun: 0,
       },
       grounded: true,
       onPlatform: false,
@@ -795,7 +798,20 @@ function fireGun(w: World, gun: GunId, ev: WorldEvent[]) {
   if (gun !== "smg" && gun !== "ak") fx(w, p.x + dir * 22, y, "tracer", dir);
   shake(w, gun === "shotgun" ? 7 : gun === "smg" ? 1.5 : gun === "ak" ? 2.2 : 3);
   if (gun === "shotgun") p.vx -= dir * 30;
-  ev.push({ t: "sfx", name: gun === "pistol" ? "shot" : gun }, { t: "hud" });
+  ev.push(
+    {
+      t: "sfx",
+      name:
+        gun === "pistol"
+          ? "shot"
+          : gun === "flamethrower"
+            ? "flame"
+            : gun === "railgun"
+              ? "railgun"
+              : gun,
+    },
+    { t: "hud" },
+  );
 }
 
 function melee(w: World, weapon: WeaponId, ev: WorldEvent[]) {

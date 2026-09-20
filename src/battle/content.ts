@@ -1,7 +1,7 @@
 export type FighterId =
   "masivo" | "onichan" | "anatomic" | "comadre" | "papu" | "secre" | "pablito" | "marito";
 export type EpisodeId = 1 | 2 | 3 | 4;
-export type WeaponId = "fist" | "knife" | "bat" | "pistol" | "ak" | "shotgun" | "smg" | "grenade";
+export type WeaponId = import("../game/content").WeaponId;
 export type Difficulty = "tranqui" | "picante";
 export interface Boss {
   name: string;
@@ -309,8 +309,22 @@ export const WEAPON_LABEL: Record<WeaponId, string> = {
   shotgun: "Escopeta",
   smg: "SMG",
   grenade: "Granada",
+  rocket: "Lanzacohetes Ka'aru",
+  flamethrower: "Lanzallamas Mbareté",
+  railgun: "Cañón de Itaipú",
 };
-export const LOADOUT: WeaponId[] = ["ak", "shotgun", "smg", "pistol", "bat", "knife", "fist"];
+export const LOADOUT: WeaponId[] = [
+  "rocket",
+  "flamethrower",
+  "railgun",
+  "ak",
+  "shotgun",
+  "smg",
+  "pistol",
+  "bat",
+  "knife",
+  "fist",
+];
 export const WEAPON_HINT: Record<WeaponId, string> = {
   fist: "Combo de tres golpes",
   knife: "Rápido a corta distancia",
@@ -320,6 +334,9 @@ export const WEAPON_HINT: Record<WeaponId, string> = {
   shotgun: "Dominá la corta distancia",
   smg: "Dispará en movimiento",
   grenade: "Control de área",
+  rocket: "Explosión pesada de área",
+  flamethrower: "Quemá grupos a corta distancia",
+  railgun: "Atravesá una fila completa",
 };
 export const FICTION =
   "Ficción satírica. Personajes y situaciones de videojuego; sin afiliación con las personas o instituciones representadas.";

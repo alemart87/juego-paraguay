@@ -35,7 +35,10 @@ export type SfxName =
   | "stomp"
   | "bossIntro"
   | "drop"
-  | "ally";
+  | "ally"
+  | "rocket"
+  | "flame"
+  | "railgun";
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -43,6 +46,9 @@ let noiseBuf: AudioBuffer | null = null;
 let enabled = true;
 let volume = 0.8;
 let warmed = false;
+let musicTimer: ReturnType<typeof setInterval> | null = null;
+let musicStep = 0;
+let musicLevel = 1;
 const lastPlay: Partial<Record<SfxName, number>> = {};
 
 type AudioSessionNavigator = Navigator & {
@@ -355,6 +361,19 @@ function playSfx(name: SfxName) {
     case "ally":
       noise(0.07, { gain: 0.25, from: 1000, to: 200 });
       break;
+    case "rocket":
+      noise(0.42, { gain: 0.75, from: 5200, to: 120 });
+      tone(115, 0.3, { type: "sawtooth", gain: 0.42, slide: 38 });
+      break;
+    case "flame":
+      noise(0.1, { gain: 0.28, from: 4200, to: 650, q: 1.2 });
+      tone(85, 0.09, { type: "sawtooth", gain: 0.08, slide: 45 });
+      break;
+    case "railgun":
+      tone(1640, 0.16, { type: "sine", gain: 0.28, slide: 130 });
+      tone(220, 0.3, { type: "sawtooth", gain: 0.22, slide: 70 });
+      noise(0.18, { gain: 0.35, from: 9000, to: 900, q: 2.5 });
+      break;
     case "recruit":
       [523, 659, 784, 1046].forEach((f, i) =>
         tone(f, 0.16, { type: "triangle", gain: 0.18, delay: i * 0.08 }),
@@ -371,6 +390,99 @@ function playSfx(name: SfxName) {
       );
       break;
   }
+}
+
+function musicTone(
+  freq: number,
+  duration: number,
+  gain: number,
+  type: OscillatorType = "triangle",
+) {
+  const c = ctx;
+  if (!c || !master || c.state !== "running" || !enabled) return;
+  const now = c.currentTime;
+  const oscillator = c.createOscillator();
+  const envelope = c.createGain();
+  const filter = c.createBiquadFilter();
+  oscillator.type = type;
+  oscillator.frequency.value = freq;
+  filter.type = "lowpass";
+  filter.frequency.value = type === "sawtooth" ? 850 : 2400;
+  envelope.gain.setValueAtTime(0.0001, now);
+  envelope.gain.exponentialRampToValueAtTime(gain, now + 0.018);
+  envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  oscillator.connect(filter).connect(envelope).connect(master);
+  oscillator.start(now);
+  oscillator.stop(now + duration + 0.03);
+}
+
+/** Procedural battle soundtrack: no downloads, loops cleanly and starts after the play gesture. */
+export function startBattleMusic(level = 1) {
+  musicLevel = level;
+  if (musicTimer) return;
+  musicStep = 0;
+  const roots = [55, 65.41, 73.42, 49];
+  const scales = [0, 3, 5, 7, 10, 12, 15, 17];
+  musicTimer = setInterval(() => {
+    if (!enabled || !ctx || ctx.state !== "running") return;
+    const step = musicStep++;
+    const root = roots[(musicLevel - 1) % roots.length];
+    if (step % 4 === 0) musicTone(root * (step % 16 === 12 ? 1.5 : 1), 0.42, 0.055, "sawtooth");
+    if (step % 2 === 0) {
+      const semitone = scales[(step / 2 + musicLevel * 2) % scales.length];
+      musicTone(root * 4 * 2 ** (semitone / 12), 0.14, 0.035, "square");
+    }
+    if (step % 4 === 2) noise(0.06, { gain: 0.055, from: 7600, to: 2500, q: 2 });
+    if (step % 8 === 7) noise(0.15, { gain: 0.07, from: 3200, to: 180 });
+  }, 145);
+}
+
+export function stopBattleMusic() {
+  if (musicTimer) clearInterval(musicTimer);
+  musicTimer = null;
+  musicStep = 0;
+}
+
+const CRIES: Record<string, Record<"power" | "boss" | "streak", string>> = {
+  masivo: { power: "¡Modo masivo!", boss: "¡Vení pues!", streak: "¡No me para nadie!" },
+  onichan: { power: "¡Modo anime!", boss: "¡Esta es mi temporada!", streak: "¡Combo perfecto!" },
+  anatomic: {
+    power: "¡Mercado en verde!",
+    boss: "¡Se viene la corrección!",
+    streak: "¡Todo para arriba!",
+  },
+  comadre: {
+    power: "¡Fuera de mi vivo!",
+    boss: "¡Atendeme una cosa!",
+    streak: "¡El rating es mío!",
+  },
+  papu: { power: "¡Subí el volumen!", boss: "¡Dale pues!", streak: "¡Remix total!" },
+  secre: { power: "¡Falta fotocopia!", boss: "¡Vuelva mañana!", streak: "¡Siguiente número!" },
+  pablito: { power: "¡Mirá bien!", boss: "¡Llegó la estrella!", streak: "¡Este escenario es mío!" },
+  marito: {
+    power: "¡Fuego presidencial!",
+    boss: "¡Despliegue total!",
+    streak: "¡Objetivo neutralizado!",
+  },
+};
+let lastCry = 0;
+export function battleCry(fighter: string, cue: "power" | "boss" | "streak") {
+  if (!enabled || typeof speechSynthesis === "undefined" || performance.now() - lastCry < 1300)
+    return;
+  lastCry = performance.now();
+  const line = CRIES[fighter]?.[cue];
+  if (!line) return;
+  const utterance = new SpeechSynthesisUtterance(line);
+  const spanish = speechSynthesis
+    .getVoices()
+    .find((voice) => voice.lang.toLowerCase().startsWith("es"));
+  if (spanish) utterance.voice = spanish;
+  utterance.lang = spanish?.lang ?? "es-PY";
+  utterance.rate = fighter === "marito" ? 0.9 : 1.08;
+  utterance.pitch = fighter === "pablito" ? 1.18 : fighter === "marito" ? 0.76 : 0.96;
+  utterance.volume = Math.min(1, volume);
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utterance);
 }
 
 export function sfx(name: SfxName) {

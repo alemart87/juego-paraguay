@@ -24,7 +24,8 @@ export const SHOP_ITEMS = [
     name: "Arsenal guaraní",
     icon: "💥",
     image: "/battle/shop/arsenal.webp",
-    description: "Bazuca, granadas y hondita paraguaya para dominar una partida.",
+    description:
+      "Lanzacohetes Ka'aru, Lanzallamas Mbareté y Cañón de Itaipú, más granadas y munición.",
     price: 3.99,
     badge: "MÁS VENDIDO",
     category: "ARMAS",

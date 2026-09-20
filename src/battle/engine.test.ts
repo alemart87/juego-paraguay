@@ -8,6 +8,9 @@ import {
   applyChoice,
   applyShopPowerup,
   drainEvents,
+  CHECKPOINTS,
+  STAGE_WIDTH,
+  WORLD_WIDTH,
   type Action,
   type World,
 } from "./engine";
@@ -148,16 +151,42 @@ test("Marito's Tomahawk follows overhead and attacks autonomously", () => {
     "Tomahawk launches its own missile salvo",
   );
 });
+test("battle arenas are 30 percent longer and carry more action", () => {
+  assert.equal(STAGE_WIDTH, 1950);
+  assert.equal(WORLD_WIDTH, 6045);
+  assert.deepEqual(CHECKPOINTS, [1716, 3666]);
+  const w = createWorld("masivo", 1, "picante");
+  assert.equal(w.enemies.length, 8);
+  assert(w.platforms.some((platform) => platform.x > 5000));
+});
+test("the three new weapons have distinct projectile mechanics", () => {
+  const cases = [
+    ["rocket", "rocket"],
+    ["flamethrower", "flame"],
+    ["railgun", "rail"],
+  ] as const;
+  for (const [weapon, projectile] of cases) {
+    const w = createWorld("masivo", 1, "tranqui");
+    w.weapon = weapon;
+    tick(w, 0.02, 0, true);
+    assert(
+      w.shots.some((shot) => shot.kind === projectile),
+      `${weapon} creates ${projectile}`,
+    );
+    assert(w.ammo[weapon] < (weapon === "rocket" ? 8 : weapon === "flamethrower" ? 90 : 12));
+  }
+});
 test("empty gun swaps to an available weapon; melee remains usable", () => {
   const w = createWorld("masivo", 1, "tranqui");
-  for (const id of ["ak", "pistol", "smg", "shotgun"] as const) w.ammo[id] = 0;
+  for (const id of ["rocket", "flamethrower", "railgun", "ak", "pistol", "smg", "shotgun"] as const)
+    w.ammo[id] = 0;
   tick(w, 0.1, 0, true);
   assert.equal(w.weapon, "bat");
   assert.equal(w.player.hp, w.player.maxHp);
 });
 test("checkpoint cannot advance before clearing its arena", () => {
   const w = createWorld("masivo", 1, "tranqui");
-  w.player.x = 1320;
+  w.player.x = CHECKPOINTS[0];
   tick(w, 0.1, 0, false, ["interact"]);
   assert.equal(w.stage, 0);
   w.enemies.forEach((e) => (e.hp = 0));
@@ -220,7 +249,7 @@ test("all episodes can be completed through real attacks and checkpoint interact
           if (p.super >= 100 || Math.abs(dx) < 230) actions.add("power");
           if (target.windup > w.t && Math.abs(dx) < 100) actions.add("dash");
         } else {
-          const goal = w.stage === 0 ? 1320 : 2820;
+          const goal = CHECKPOINTS[w.stage as 0 | 1];
           move = Math.abs(p.x - goal) > 25 ? Math.sign(goal - p.x) : 0;
           actions.add("interact");
         }
@@ -243,7 +272,7 @@ test("each episode spawns its named boss with a unique projectile language", () 
   } as const;
   for (const level of [1, 2, 3, 4] as EpisodeId[]) {
     const w = createWorld("onichan", level, "tranqui", 99);
-    for (const checkpoint of [1320, 2820]) {
+    for (const checkpoint of CHECKPOINTS) {
       w.enemies.forEach((enemy) => (enemy.hp = 0));
       w.player.x = checkpoint;
       tick(w, 0.05, 0, false, ["interact"]);
@@ -255,7 +284,7 @@ test("each episode spawns its named boss with a unique projectile language", () 
     w.enemies.forEach((enemy) => {
       if (enemy.kind === "minion") enemy.hp = 0;
     });
-    w.player.x = 3900;
+    w.player.x = 5200;
     w.player.inv = Infinity;
     let seen = false;
     for (let frame = 0; frame < 60 * 4 && !seen; frame++) {
@@ -268,7 +297,7 @@ test("each episode spawns its named boss with a unique projectile language", () 
 
 test("El Dictador consumes a full second life before the episode can end", () => {
   const w = createWorld("masivo", 4, "tranqui", 404);
-  for (const checkpoint of [1320, 2820]) {
+  for (const checkpoint of CHECKPOINTS) {
     w.enemies.forEach((enemy) => (enemy.hp = 0));
     w.player.x = checkpoint;
     tick(w, 0.05, 0, false, ["interact"]);
