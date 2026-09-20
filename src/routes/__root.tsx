@@ -8,6 +8,11 @@ const SITE_URL = "https://www.influencerspy.pro";
 const OG_IMAGE = `${SITE_URL}/og.jpg`;
 const DESCRIPTION =
   "Elegí tu influencer, dominá cuatro escenarios paraguayos y enfrentá jefes imposibles en una batalla arcade creada para móvil.";
+const GA_MEASUREMENT_ID = "G-2DYRW5P77W";
+const GA_INLINE = `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_MEASUREMENT_ID}');`;
 const STRUCTURED_DATA = JSON.stringify([
   {
     "@context": "https://schema.org",
@@ -98,6 +103,11 @@ export const Route = createRootRoute({
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800;900&display=swap",
       },
+    ],
+    // Google tag (gtag.js) — rendered in <head> by <HeadContent />.
+    scripts: [
+      { src: `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`, async: true },
+      { children: GA_INLINE },
     ],
   }),
   component: () => (
