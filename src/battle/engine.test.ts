@@ -106,13 +106,19 @@ test("premium fighters have complete combat mechanics", () => {
   const targetHp = marito.enemies[0]!.hp;
   marito.player.face = 1;
   tick(marito, 0.05, 0, true);
-  assert(marito.shots.some((shot) => shot.kind === "missile"), "Marito fires missiles");
+  assert(
+    marito.shots.some((shot) => shot.kind === "missile"),
+    "Marito fires missiles",
+  );
   tick(marito, 0.8);
   assert(marito.enemies[0]!.hp < targetHp, "Marito missile locks onto a target");
   marito.player.super = 100;
   const hpBeforeNuke = marito.enemies.reduce((total, enemy) => total + enemy.hp, 0);
   activatePower(marito);
-  assert(marito.effects.some((effect) => effect.kind === "nuke"), "Marito has a nuclear ultimate");
+  assert(
+    marito.effects.some((effect) => effect.kind === "nuke"),
+    "Marito has a nuclear ultimate",
+  );
   assert(
     marito.enemies.reduce((total, enemy) => total + enemy.hp, 0) < hpBeforeNuke,
     "The nuclear ultimate deals area damage",
@@ -126,6 +132,21 @@ test("premium fighters have complete combat mechanics", () => {
     "Pablito charms and slows nearby enemies",
   );
   assert(pablito.effects.length > 0, "Pablito power has visible effects");
+});
+test("Marito's Tomahawk follows overhead and attacks autonomously", () => {
+  const w = createWorld("marito", 1, "picante");
+  const startX = w.airSupport!.x;
+  const enemyHp = w.enemies.reduce((total, enemy) => total + enemy.hp, 0);
+  tick(w, 1.05);
+  assert(w.airSupport, "Tomahawk air support remains active");
+  assert.notEqual(w.airSupport.x, startX, "Tomahawk patrols independently");
+  assert(w.airSupport.y > w.player.y + 180, "Tomahawk stays above Marito");
+  assert(w.airSupport.targetId !== null, "Tomahawk acquires its own target");
+  assert(
+    w.shots.some((shot) => shot.kind === "missile") ||
+      w.enemies.reduce((total, enemy) => total + enemy.hp, 0) < enemyHp,
+    "Tomahawk launches its own missile salvo",
+  );
 });
 test("empty gun swaps to an available weapon; melee remains usable", () => {
   const w = createWorld("masivo", 1, "tranqui");

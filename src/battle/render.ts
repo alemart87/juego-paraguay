@@ -428,45 +428,129 @@ export function render(
   const p = w.player,
     px = sx(p.x),
     py = floor - p.y;
-  if (w.hero === "marito" && w.t < 6.5) {
-    const arrival = Math.min(1, w.t / 1.2);
-    const departure = Math.max(0, (w.t - 3.6) / 2.9);
-    const heliX = px + (1 - arrival) * 320 + departure * 430;
-    const heliY = py - 226 - Math.sin(w.t * 8) * 5 - departure * 90;
-    g.save();
-    g.translate(heliX, heliY);
-    g.shadowColor = "#111018";
-    g.shadowBlur = 15;
-    g.strokeStyle = "#d9e2e5";
-    g.lineWidth = 4;
-    g.beginPath();
-    g.moveTo(-112 - Math.sin(w.t * 34) * 20, -47);
-    g.lineTo(112 + Math.sin(w.t * 34) * 20, -47);
-    g.moveTo(0, -41);
-    g.lineTo(0, -29);
-    g.stroke();
-    rect(g, -76, -28, 144, 52, "#202a31", 23);
-    rect(g, 47, -14, 94, 15, "#202a31", 5);
-    g.fillStyle = "#81d3e7";
-    g.beginPath();
-    g.arc(-34, -8, 26, Math.PI, Math.PI * 2);
-    g.fill();
-    rect(g, -50, 19, 21, 25, "#343b42", 3);
-    rect(g, 27, 19, 21, 25, "#343b42", 3);
-    rect(g, -65, 25, 37, 8, "#a62222", 3);
-    rect(g, 20, 25, 37, 8, "#a62222", 3);
-    label(g, "PY-01", 9, 12, 13, "#f6e75a");
-    if (w.t < 1.8) {
-      g.globalAlpha = 0.55;
-      g.strokeStyle = "#fff3dc";
+  if (w.airSupport) {
+    const air = w.airSupport;
+    const heliX = sx(air.x);
+    const heliY = floor - air.y;
+    const target = w.enemies.find((enemy) => enemy.id === air.targetId && enemy.hp > 0);
+    if (target) {
+      const tx = sx(target.x),
+        ty = floor - target.y - 52;
+      g.save();
+      g.globalAlpha = 0.34 + Math.sin(w.t * 16) * 0.08;
+      g.strokeStyle = "#ff4b2b";
+      g.lineWidth = 1.5;
+      g.setLineDash([8, 9]);
+      g.beginPath();
+      g.moveTo(heliX + air.face * 54, heliY + 26);
+      g.lineTo(tx, ty);
+      g.stroke();
+      g.setLineDash([]);
+      g.strokeStyle = "#f6e75a";
       g.lineWidth = 2;
       g.beginPath();
-      g.moveTo(-28, 36);
-      g.lineTo(-15, 143);
-      g.moveTo(28, 36);
-      g.lineTo(15, 143);
+      g.arc(tx, ty, 17 + Math.sin(w.t * 10) * 3, 0, Math.PI * 2);
+      g.moveTo(tx - 25, ty);
+      g.lineTo(tx - 8, ty);
+      g.moveTo(tx + 8, ty);
+      g.lineTo(tx + 25, ty);
       g.stroke();
+      g.restore();
     }
+    g.save();
+    g.translate(heliX, heliY);
+    g.rotate(air.bank);
+    g.scale(air.face, 1);
+    g.shadowColor = "#05070a";
+    g.shadowBlur = 19;
+    g.globalAlpha = 0.18;
+    ellipse(g, -7, 65, 108, 17, "#050408");
+    g.globalAlpha = 1;
+
+    const rotor = w.t * 42;
+    g.strokeStyle = "#d7e2df";
+    g.lineWidth = 4;
+    g.beginPath();
+    g.moveTo(Math.cos(rotor) * -126, -50);
+    g.lineTo(Math.cos(rotor) * 126, -50);
+    g.moveTo(Math.sin(rotor) * -126, -50);
+    g.lineTo(Math.sin(rotor) * 126, -50);
+    g.stroke();
+    rect(g, -5, -49, 10, 20, "#4c565d", 3);
+
+    g.fillStyle = "#222c31";
+    g.beginPath();
+    g.moveTo(-77, 9);
+    g.quadraticCurveTo(-69, -31, -23, -34);
+    g.lineTo(45, -29);
+    g.quadraticCurveTo(77, -21, 82, 8);
+    g.quadraticCurveTo(65, 32, 18, 34);
+    g.lineTo(-47, 31);
+    g.quadraticCurveTo(-73, 28, -77, 9);
+    g.closePath();
+    g.fill();
+    rect(g, 66, -13, 92, 14, "#222c31", 5);
+    g.fillStyle = "#222c31";
+    g.beginPath();
+    g.moveTo(133, -11);
+    g.lineTo(152, -35);
+    g.lineTo(159, -34);
+    g.lineTo(157, 13);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = "#a9b5b6";
+    g.lineWidth = 2;
+    g.beginPath();
+    g.arc(156, -11, 22, 0, Math.PI * 2);
+    g.moveTo(140, -27);
+    g.lineTo(172, 5);
+    g.moveTo(172, -27);
+    g.lineTo(140, 5);
+    g.stroke();
+
+    g.fillStyle = "#74cfe5";
+    g.beginPath();
+    g.moveTo(-66, 3);
+    g.quadraticCurveTo(-56, -24, -25, -25);
+    g.lineTo(-13, 3);
+    g.closePath();
+    g.fill();
+    rect(g, -7, -23, 23, 27, "#14252e", 4);
+    rect(g, 21, -22, 22, 26, "#14252e", 4);
+
+    g.fillStyle = "#303a40";
+    g.beginPath();
+    g.moveTo(-18, 8);
+    g.lineTo(70, 19);
+    g.lineTo(62, 28);
+    g.lineTo(-28, 21);
+    g.closePath();
+    g.fill();
+    rect(g, -50, 25, 38, 11, "#811f20", 5);
+    rect(g, 26, 25, 38, 11, "#811f20", 5);
+    for (const podX of [-43, 33]) {
+      for (let missile = 0; missile < 3; missile++)
+        ellipse(g, podX + missile * 11, 39, 4, 7, missile === 2 ? "#f6e75a" : "#c4c9c9");
+    }
+    if (air.fireFlash > w.t) {
+      const pulse = 1 - (air.fireFlash - w.t) / 0.2;
+      g.globalAlpha = 0.9 - pulse * 0.4;
+      ellipse(g, 78 + pulse * 18, 36, 18 + pulse * 22, 9 + pulse * 10, "#fff3a0");
+      ellipse(g, 88 + pulse * 30, 36, 12 + pulse * 18, 6 + pulse * 8, "#ff5728");
+      g.globalAlpha = 1;
+    }
+    rect(g, -55, 31, 5, 23, "#687278", 2);
+    rect(g, 48, 31, 5, 23, "#687278", 2);
+    g.strokeStyle = "#687278";
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(-65, 55);
+    g.lineTo(-35, 55);
+    g.moveTo(38, 55);
+    g.lineTo(67, 55);
+    g.stroke();
+    label(g, "TOMAHAWK", 22, 17, 11, "#f6e75a");
+    label(g, "PY-01", 112, -1, 8, "#f6e75a");
     g.restore();
   }
   ellipse(g, px, floor + 5, 35, 7, "#11101860");
@@ -503,7 +587,10 @@ export function render(
     rect(g, 7, 3, 7, 10, "#232633", 1);
     rect(g, 3, -5, 8, 2, "#8996a0");
     g.restore();
-  } else if (!["pablito", "marito"].includes(w.hero) && (w.weapon === "bat" || w.weapon === "knife")) {
+  } else if (
+    !["pablito", "marito"].includes(w.hero) &&
+    (w.weapon === "bat" || w.weapon === "knife")
+  ) {
     g.save();
     g.translate(px + p.face * 30, py - 70);
     g.rotate(p.face * (p.attackPose > w.t ? 1.3 : 0.3));
@@ -533,9 +620,21 @@ export function render(
       g.save();
       g.translate(x, y);
       g.rotate(Math.atan2(-s.vy, s.vx));
-      g.scale(Math.sign(s.vx), 1);
+      g.scale(s.vx >= 0 ? 1 : -1, 1);
+      for (let smoke = 1; smoke <= 5; smoke++) {
+        g.globalAlpha = 0.2 - smoke * 0.025;
+        ellipse(
+          g,
+          -24 - smoke * 12,
+          Math.sin(s.age * 24 + smoke) * 4,
+          10 + smoke * 3,
+          6 + smoke * 2,
+          smoke % 2 ? "#d7d1c7" : "#756f6d",
+        );
+      }
+      g.globalAlpha = 1;
       g.shadowColor = "#ff6b2c";
-      g.shadowBlur = 13;
+      g.shadowBlur = 20;
       g.fillStyle = "#ff6b2c";
       g.beginPath();
       g.moveTo(-21, 0);
@@ -689,7 +788,15 @@ export function render(
           cloud % 2 ? "#ff792f" : "#ffe96e",
         );
       }
-      rect(g, x - 28 - phase * 22, y - 65 - phase * 90, 56 + phase * 44, 190 + phase * 130, "#ff9c35aa", 30);
+      rect(
+        g,
+        x - 28 - phase * 22,
+        y - 65 - phase * 90,
+        56 + phase * 44,
+        190 + phase * 130,
+        "#ff9c35aa",
+        30,
+      );
       g.globalAlpha = Math.max(0, 1 - phase * 1.25);
       g.fillStyle = `rgba(255,255,255,${flash})`;
       g.fillRect(0, 0, view, logicalHeight);

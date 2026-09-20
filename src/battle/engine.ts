@@ -118,6 +118,17 @@ export interface Platform {
   w: number;
   y: number;
 }
+export interface AirSupport {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  face: 1 | -1;
+  bank: number;
+  fireReady: number;
+  fireFlash: number;
+  targetId: number | null;
+}
 export type GameEvent =
   | { type: "sfx"; name: SfxName }
   | { type: "talk"; npc: FighterId }
@@ -156,6 +167,7 @@ export interface World {
   rng: number;
   seed: number;
   telegraphs: { x: number; w: number; until: number; fired: boolean }[];
+  airSupport: AirSupport | null;
 }
 export interface Snapshot {
   hp: number;
@@ -296,6 +308,20 @@ export function createWorld(
     rng: seed || 1,
     seed,
     telegraphs: [],
+    airSupport:
+      hero === "marito"
+        ? {
+            x: 430,
+            y: 290,
+            vx: -220,
+            vy: 0,
+            face: 1,
+            bank: -0.12,
+            fireReady: 0.85,
+            fireFlash: 0,
+            targetId: null,
+          }
+        : null,
   };
   spawnStage(w);
   return w;
@@ -470,27 +496,76 @@ function hurt(w: World, amount: number, from: number) {
 function shoot(w: World, s: Omit<Shot, "age" | "origin" | "hitIds">) {
   if (w.shots.length < 80) w.shots.push({ ...s, age: 0, origin: s.x, hitIds: new Set() });
 }
+function fireTomahawkMissile(w: World, offset = 0, damage = 132) {
+  const air = w.airSupport;
+  if (!air) return;
+  const target = w.enemies
+    .filter((enemy) => enemy.hp > 0)
+    .sort(
+      (a, b) =>
+        Math.hypot(a.x - air.x, a.y + 55 - air.y) - Math.hypot(b.x - air.x, b.y + 55 - air.y),
+    )[0];
+  const face: 1 | -1 = target ? (target.x >= air.x ? 1 : -1) : air.face;
+  air.face = face;
+  air.targetId = target?.id ?? null;
+  air.fireFlash = w.t + 0.2;
+  const targetDx = target ? target.x - air.x : face * 220;
+  shoot(w, {
+    x: air.x,
+    y: air.y - 32 + offset * 15,
+    vx: clamp(targetDx * 2.4, -520, 520) + offset * 12,
+    vy: target ? clamp((target.y + 55 - air.y) * 2.2 + offset * 35, -520, -120) : -180,
+    life: 2.4,
+    damage,
+    enemy: false,
+    kind: "missile",
+    color: "#ff7426",
+    radius: 24,
+  });
+  effect(w, air.x + face * 82, air.y - 32 + offset * 15, "ring", "#ffd85a", 32, 0.18);
+}
+function stepAirSupport(w: World, dt: number) {
+  const air = w.airSupport;
+  if (!air) return;
+  const p = w.player;
+  const target = w.enemies
+    .filter((enemy) => enemy.hp > 0)
+    .sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+  const patrol = Math.sin(w.t * 1.15) * 125;
+  const targetBias = target ? clamp(target.x - p.x, -190, 190) * 0.42 : 0;
+  const desiredX = clamp(
+    p.x + patrol + targetBias,
+    w.stage * STAGE_WIDTH + 70,
+    Math.min(WORLD_WIDTH - 80, (w.stage + 1) * STAGE_WIDTH - 70),
+  );
+  const desiredY = 245 + Math.sin(w.t * 2.1) * 20 + (target?.kind === "boss" ? 26 : 0);
+  const oldX = air.x,
+    oldY = air.y;
+  air.x += (desiredX - air.x) * Math.min(1, dt * 3.1);
+  air.y += (desiredY - air.y) * Math.min(1, dt * 4.2);
+  air.vx = (air.x - oldX) / Math.max(dt, 0.001);
+  air.vy = (air.y - oldY) / Math.max(dt, 0.001);
+  air.bank += (clamp(air.vx / 850, -0.2, 0.2) - air.bank) * Math.min(1, dt * 5);
+  if (target) {
+    air.face = target.x >= air.x ? 1 : -1;
+    air.targetId = target.id;
+  } else air.targetId = null;
+  if (target && w.t >= air.fireReady) {
+    fireTomahawkMissile(w, -0.45, target.kind === "boss" ? 118 : 145);
+    fireTomahawkMissile(w, 0.45, target.kind === "boss" ? 118 : 145);
+    air.fireReady = w.t + (target.kind === "boss" ? 0.82 : 1.12);
+    w.shake = Math.max(w.shake, 0.12);
+    event(w, "grenade");
+  }
+}
 function attack(w: World) {
   const p = w.player;
   if (w.t < p.attackReady) return;
   if (w.hero === "marito") {
-    p.attackReady = w.t + 0.42;
+    p.attackReady = w.t + 0.38;
     p.attackPose = w.t + 0.28;
-    const target = w.enemies
-      .filter((enemy) => enemy.hp > 0)
-      .sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
-    shoot(w, {
-      x: p.x + p.face * 38,
-      y: p.y + (w.t < 10 ? 145 : 72),
-      vx: p.face * 540,
-      vy: target ? clamp((target.y + 45 - (p.y + 72)) * 2.2, -180, 180) : -20,
-      life: 1.55,
-      damage: 118,
-      enemy: false,
-      kind: "missile",
-      color: "#ff9c35",
-      radius: 18,
-    });
+    fireTomahawkMissile(w, Math.sin(w.t * 17) * 0.5, 150);
+    if (w.airSupport) w.airSupport.fireReady = Math.max(w.airSupport.fireReady, w.t + 0.22);
     event(w, "grenade");
     return;
   }
@@ -747,19 +822,13 @@ export function activatePower(w: World) {
       break;
     case "marito":
       p.inv = Number.POSITIVE_INFINITY;
-      for (let i = 0; i < 5; i++)
-        shoot(w, {
-          x: p.x + (i - 2) * 22,
-          y: p.y + 150,
-          vx: p.face * (470 + i * 35),
-          vy: -160 + i * 70,
-          life: 1.65,
-          damage: 145,
-          enemy: false,
-          kind: "missile",
-          color: "#ff9c35",
-          radius: 18,
-        });
+      for (let i = 0; i < 7; i++) fireTomahawkMissile(w, i - 3, 175);
+      if (w.airSupport) {
+        w.airSupport.fireReady = w.t + 0.7;
+        w.airSupport.fireFlash = w.t + 0.5;
+      }
+      w.shake = Math.max(w.shake, 0.48);
+      w.events.push({ type: "toast", text: "TOMAHAWK PY-01 · LLUVIA DE MISILES" });
       event(w, "grenade");
       break;
   }
@@ -1138,6 +1207,7 @@ export function step(w: World, input: Input, dt: number) {
     p.y = 0;
     p.vy = 0;
   }
+  stepAirSupport(w, dt);
   if (input.attack) attack(w);
   for (const e of w.enemies) enemyStep(w, e, dt);
   for (const s of w.shots) {
@@ -1154,11 +1224,15 @@ export function step(w: World, input: Input, dt: number) {
     }
     if (s.kind === "missile" && !s.enemy) {
       const target = w.enemies
-        .filter((enemy) => enemy.hp > 0 && Math.sign(enemy.x - s.x) === Math.sign(s.vx))
-        .sort((a, b) => Math.abs(a.x - s.x) - Math.abs(b.x - s.x))[0];
+        .filter((enemy) => enemy.hp > 0)
+        .sort(
+          (a, b) => Math.hypot(a.x - s.x, a.y + 55 - s.y) - Math.hypot(b.x - s.x, b.y + 55 - s.y),
+        )[0];
       if (target) {
-        const desired = clamp((target.y + 55 - s.y) * 3.2, -300, 300);
-        s.vy += clamp(desired - s.vy, -540 * dt, 540 * dt);
+        const desiredX = clamp((target.x - s.x) * 3.5, -620, 620);
+        const desired = clamp((target.y + 55 - s.y) * 4.1, -580, 580);
+        s.vx += clamp(desiredX - s.vx, -1050 * dt, 1050 * dt);
+        s.vy += clamp(desired - s.vy, -960 * dt, 960 * dt);
       }
       if (Math.floor(s.age * 30) % 2 === 0)
         effect(w, s.x - Math.sign(s.vx) * 18, s.y, "spark", "#ff6b2c", 6, 0.24);
@@ -1174,7 +1248,8 @@ export function step(w: World, input: Input, dt: number) {
       event(w, "explode");
     }
     if (s.kind === "missile" && s.life <= 0) {
-      blast(w, s.x, Math.max(25, s.y), 235, s.damage, s.color);
+      blast(w, s.x, Math.max(25, s.y), 290, s.damage, s.color);
+      w.shake = Math.max(w.shake, 0.36);
       event(w, "explode");
     }
     if (s.life <= 0) continue;
@@ -1194,7 +1269,8 @@ export function step(w: World, input: Input, dt: number) {
           Math.abs(s.y - (e.y + 50)) < s.radius + (e.kind === "boss" ? 100 : 47)
         ) {
           if (s.kind === "missile") {
-            blast(w, s.x, s.y, 235, s.damage, s.color);
+            blast(w, s.x, s.y, 290, s.damage, s.color);
+            w.shake = Math.max(w.shake, 0.36);
             event(w, "explode");
             s.life = 0;
             break;
