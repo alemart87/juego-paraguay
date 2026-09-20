@@ -14,6 +14,9 @@ import {
   Save,
   Video,
   Zap,
+  MessageCircle,
+  EyeOff,
+  RotateCcw,
 } from "lucide-react";
 import { EPISODES, FIGHTERS, fighter, type EpisodeId, type FighterId } from "@/battle/content";
 import { SHOP_ITEMS, type ShopSku } from "@/battle/shop-catalog";
@@ -421,6 +424,7 @@ function AdminPage() {
             {quickMessage && <strong>{quickMessage}</strong>}
           </form>
         </section>
+        <AdminChat />
         <section className="admin-grants">
           <div className="admin-grants-copy">
             <span>PREMIOS SIN LÍMITE</span>
@@ -506,5 +510,216 @@ function AdminPage() {
         </section>
       </section>
     </main>
+  );
+}
+
+type ChatTelemetry = {
+  enabled: boolean;
+  summary: {
+    total: number;
+    visible: number;
+    hidden: number;
+    today: number;
+    last_hour: number;
+    people: number;
+    people_today: number;
+    people_live: number;
+    avg_length: number;
+  };
+  days: { label: string; messages: number; people: number }[];
+  hours: { label: string; messages: number }[];
+  senders: { tag: string; messages: number; last: string }[];
+  latest: { id: number; body: string; tag: string; hidden: boolean; at: string }[];
+};
+type ChatAction =
+  | { action: "toggle"; enabled: boolean }
+  | { action: "hide" | "restore"; id: number }
+  | { action: "hide_all" };
+
+/** Chismes en vivo: cantidades, ritmo y moderación del chat público anónimo. */
+function AdminChat() {
+  const [data, setData] = useState<ChatTelemetry | null>(null),
+    [message, setMessage] = useState(""),
+    [busy, setBusy] = useState(false);
+  const load = async () => {
+    const response = await fetch("/api/admin/chat", { cache: "no-store" });
+    if (response.ok) setData((await response.json()) as ChatTelemetry);
+  };
+  useEffect(() => {
+    void load();
+    const timer = window.setInterval(() => void load(), 10_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const act = async (action: ChatAction, done: string) => {
+    setBusy(true);
+    setMessage("Guardando…");
+    try {
+      const response = await fetch("/api/admin/chat", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(action),
+      });
+      const result = (await response.json()) as { message?: string; statusMessage?: string };
+      if (!response.ok) throw new Error(result.message || result.statusMessage || "No se pudo");
+      setMessage(done);
+      await load();
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : "No se pudo");
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!data) return null;
+  const cards = [
+    ["EN VIVO (5 MIN)", data.summary.people_live],
+    ["CHISMES HOY", data.summary.today],
+    ["ÚLTIMA HORA", data.summary.last_hour],
+    ["PERSONAS HOY", data.summary.people_today],
+    ["TOTAL", data.summary.total],
+    ["PERSONAS TOTAL", data.summary.people],
+    ["OCULTOS", data.summary.hidden],
+    ["LARGO PROMEDIO", `${data.summary.avg_length} car.`],
+  ] as const;
+  const maxDay = Math.max(1, ...data.days.map((x) => x.messages)),
+    maxHour = Math.max(1, ...data.hours.map((x) => x.messages));
+  return (
+    <section className="admin-chat">
+      <div className="admin-chat-head">
+        <div>
+          <span>CHAT PÚBLICO ANÓNIMO</span>
+          <h2>
+            <MessageCircle /> CHISMES EN VIVO
+          </h2>
+          <p>
+            Nadie se loguea ni ve nombres: cada navegador queda como un código anónimo. Acá ves
+            cuánta gente escribe, a qué ritmo, y podés pausar el chat u ocultar mensajes.
+          </p>
+        </div>
+        <div className="admin-chat-controls">
+          <label className="admin-switch">
+            <input
+              type="checkbox"
+              checked={data.enabled}
+              disabled={busy}
+              onChange={(event) =>
+                void act(
+                  { action: "toggle", enabled: event.target.checked },
+                  event.target.checked ? "Chat activo." : "Chat pausado: nadie puede escribir.",
+                )
+              }
+            />
+            CHAT ABIERTO
+          </label>
+          <button
+            type="button"
+            disabled={busy || !data.summary.visible}
+            onClick={() => {
+              if (
+                window.confirm(
+                  "¿Ocultar todos los chismes visibles? Se pueden restaurar uno por uno.",
+                )
+              )
+                void act({ action: "hide_all" }, "Todos los chismes quedaron ocultos.");
+            }}
+          >
+            <EyeOff /> OCULTAR TODO
+          </button>
+          {message && <strong>{message}</strong>}
+        </div>
+      </div>
+      <div className="admin-chat-cards">
+        {cards.map(([label, value]) => (
+          <article key={label}>
+            <small>{label}</small>
+            <strong>{value}</strong>
+          </article>
+        ))}
+      </div>
+      <div className="admin-grids admin-chat-grids">
+        <section>
+          <h2>
+            <BarChart3 /> Chismes por día (7 días)
+          </h2>
+          {data.days.length ? (
+            data.days.map((x) => (
+              <div className="admin-bar pink" key={x.label}>
+                <span>{x.label}</span>
+                <i style={{ width: `${(x.messages / maxDay) * 100}%` }} />
+                <b>
+                  {x.messages} <small>/ {x.people} pers.</small>
+                </b>
+              </div>
+            ))
+          ) : (
+            <p className="admin-empty">Todavía no hay chismes.</p>
+          )}
+        </section>
+        <section>
+          <h2>
+            <Activity /> Ritmo por hora (24 h)
+          </h2>
+          {data.hours.length ? (
+            data.hours.map((x) => (
+              <div className="admin-bar" key={x.label}>
+                <span>{x.label}</span>
+                <i style={{ width: `${(x.messages / maxHour) * 100}%` }} />
+                <b>{x.messages}</b>
+              </div>
+            ))
+          ) : (
+            <p className="admin-empty">Sin actividad en las últimas 24 horas.</p>
+          )}
+        </section>
+        <section>
+          <h2>
+            <Users /> Quiénes más escriben
+          </h2>
+          {data.senders.length ? (
+            data.senders.map((x) => (
+              <div className="admin-day" key={x.tag}>
+                <code>#{x.tag}</code>
+                <span>{x.messages} chismes</span>
+                <b>{x.last}</b>
+              </div>
+            ))
+          ) : (
+            <p className="admin-empty">Nadie escribió todavía.</p>
+          )}
+        </section>
+        <section className="admin-chat-latest">
+          <h2>
+            <Eye /> Últimos chismes
+          </h2>
+          {data.latest.length ? (
+            data.latest.map((x) => (
+              <div className={`admin-chat-row ${x.hidden ? "hidden" : ""}`} key={x.id}>
+                <div>
+                  <small>
+                    #{x.tag} · {x.at}
+                    {x.hidden ? " · OCULTO" : ""}
+                  </small>
+                  <p>{x.body}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    void act(
+                      { action: x.hidden ? "restore" : "hide", id: x.id },
+                      x.hidden ? "Chisme restaurado." : "Chisme oculto.",
+                    )
+                  }
+                >
+                  {x.hidden ? <RotateCcw /> : <EyeOff />}
+                  {x.hidden ? "Restaurar" : "Ocultar"}
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="admin-empty">Todavía no hay chismes.</p>
+          )}
+        </section>
+      </div>
+    </section>
   );
 }

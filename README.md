@@ -126,6 +126,8 @@ migrations/                     ranking, episodio 4 y compras Whop
 server/routes/health.ts        health check de Render
 server/routes/api/webhooks/    receptor firmado de eventos Whop
 server/routes/media/           imágenes desde /persistent
+server/routes/api/chat*        chismes en vivo: chat publico anonimo (polling, rate limit,
+                               sin nombres); admin/chat* telemetria y moderacion
 server/routes/api/quick-start* inicio directo: el superadmin elige episodio y personaje
                                y el link entra a jugar sin chisme, intro ni menús (?menu=1 los muestra)
 public/battle/                 recursos fuente empaquetados

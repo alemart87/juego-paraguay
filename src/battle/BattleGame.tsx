@@ -42,6 +42,7 @@ import { Scene } from "./Scene";
 import { challengeUrl, downloadCard, resultCard, type ShareResult } from "./share";
 import { Intro } from "./Intro";
 import { WeeklyChisme } from "./WeeklyChisme";
+import { LiveChat } from "./LiveChat";
 import { Leaderboard } from "./LeaderboardPanel";
 import { loadLeaderboardProfile } from "./leaderboard-profile";
 import { getPlayerBenefits, submitLeaderboardScore } from "./leaderboard";
@@ -63,7 +64,16 @@ import "./battle.css";
 import { trackGame } from "./analytics";
 
 type Screen = "home" | "fighters" | "episodes" | "brief" | "play" | "result";
-type Dialog = "settings" | "help" | "pause" | "talk" | "share" | "ranking" | "shop" | null;
+type Dialog =
+  | "settings"
+  | "help"
+  | "pause"
+  | "talk"
+  | "share"
+  | "ranking"
+  | "shop"
+  | "chat"
+  | null;
 const formatTime = (time: number) =>
   `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, "0")}`;
 const statStyle = (color: string) => ({ "--fighter-color": color }) as CSSProperties;
@@ -268,6 +278,11 @@ export function BattleGame() {
     setDialog("shop");
   };
   const closeDialog = () => {
+    // El chat se abre desde la pausa en plena batalla: al cerrarlo, volvé a la pausa.
+    if (dialog === "chat" && screen === "play" && world && !world.ended) {
+      setDialog("pause");
+      return;
+    }
     if (dialog === "shop" && trialExpired) {
       setDialog(null);
       setWorld(null);
@@ -452,6 +467,16 @@ export function BattleGame() {
               }}
             >
               <ShoppingBag size={17} /> Tienda
+            </button>
+            <button
+              className="header-chat"
+              onClick={() => {
+                sfx("ui");
+                setDialog("chat");
+              }}
+              aria-label="Chismes en vivo, chat anónimo"
+            >
+              <i className="live-dot" /> <MessageCircle size={16} /> <span>Chismes en vivo</span>
             </button>
             <button
               className="header-ranking"
@@ -938,7 +963,7 @@ export function BattleGame() {
             />
           ) : (
             <section
-              className={`ib-modal ${dialog === "share" ? "share-modal" : ""} ${dialog === "ranking" ? "ranking-modal" : ""} ${dialog === "shop" ? "shop-modal" : ""}`}
+              className={`ib-modal ${dialog === "share" ? "share-modal" : ""} ${dialog === "ranking" ? "ranking-modal" : ""} ${dialog === "shop" ? "shop-modal" : ""} ${dialog === "chat" ? "chat-modal" : ""}`}
               role="dialog"
               aria-modal="true"
               aria-label={
@@ -952,7 +977,9 @@ export function BattleGame() {
                         ? "Ranking de jugadores"
                         : dialog === "shop"
                           ? "Tienda PY-STAR"
-                          : "Pausa"
+                          : dialog === "chat"
+                            ? "Chismes en vivo"
+                            : "Pausa"
               }
             >
               <button
@@ -983,6 +1010,9 @@ export function BattleGame() {
                     }}
                   >
                     <MapPin size={18} /> Elegir escenario
+                  </button>
+                  <button className="secondary" onClick={() => setDialog("chat")}>
+                    <MessageCircle size={18} /> Chismes en vivo
                   </button>
                   <p className="muted">El episodio en curso se reinicia al salir.</p>
                 </>
@@ -1156,6 +1186,7 @@ export function BattleGame() {
                   }}
                 />
               )}
+              {dialog === "chat" && <LiveChat />}
               {dialog === "shop" && (
                 <ShopPanel
                   inBattle={screen === "play" && Boolean(world)}
