@@ -140,8 +140,13 @@ function AdminPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url: chismeUrl, enabled: chismeEnabled }),
       });
-      const result = (await response.json()) as { statusMessage?: string; url?: string };
-      if (!response.ok) throw new Error(result.statusMessage || "No se pudo guardar el video");
+      const result = (await response.json()) as {
+        statusMessage?: string;
+        message?: string;
+        url?: string;
+      };
+      if (!response.ok)
+        throw new Error(result.message || result.statusMessage || "No se pudo guardar el video");
       if (result.url) setChismeUrl(result.url);
       setChismeMessage(
         chismeEnabled
@@ -295,15 +300,16 @@ function AdminPage() {
               <Video /> CHISME DE LA SEMANA
             </h2>
             <p>
-              Pegá el enlace completo de un video público de TikTok. Se reproduce al abrir el juego
-              y desaparece automáticamente a los 10 segundos.
+              Pegá el enlace que copiás desde Compartir en TikTok, incluso si empieza con vm. o vt.
+              Se reproduce al abrir el juego y desaparece automáticamente a los 10 segundos.
             </p>
           </div>
           <form onSubmit={saveChisme}>
             <label>
               LINK DE TIKTOK
               <input
-                type="url"
+                type="text"
+                inputMode="url"
                 value={chismeUrl}
                 onChange={(event) => setChismeUrl(event.target.value)}
                 placeholder="https://www.tiktok.com/@usuario/video/123…"

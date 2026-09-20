@@ -1,17 +1,18 @@
 import { createError, defineEventHandler, readBody } from "h3";
 import { isAdmin } from "../../../utils/admin-auth";
-import { parseTikTokVideo } from "../../../utils/tiktok";
+import { resolveTikTokVideo } from "../../../utils/tiktok";
 
 export default defineEventHandler(async (event) => {
   if (!isAdmin(event)) throw createError({ statusCode: 401, statusMessage: "Iniciá sesión" });
   const body = await readBody<{ url?: string; enabled?: boolean }>(event);
   const enabled = Boolean(body?.enabled);
   const rawUrl = typeof body?.url === "string" ? body.url.trim() : "";
-  const parsed = parseTikTokVideo(rawUrl);
+  const parsed = await resolveTikTokVideo(rawUrl);
   if (enabled && !parsed)
     throw createError({
       statusCode: 400,
-      statusMessage: "Pegá el enlace completo del video de TikTok (debe incluir /video/ID).",
+      statusMessage:
+        "No pude identificar ese video. Pegá el enlace de TikTok que copiás desde Compartir.",
     });
   if (rawUrl && !parsed)
     throw createError({ statusCode: 400, statusMessage: "El enlace de TikTok no es válido." });

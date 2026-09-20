@@ -268,7 +268,7 @@
   font-weight: 1000;
   letter-spacing: 0.14em;
 }
-.admin-chisme input[type="url"] {
+.admin-chisme input[type="text"] {
   width: 100%;
   box-sizing: border-box;
   padding: 15px;
