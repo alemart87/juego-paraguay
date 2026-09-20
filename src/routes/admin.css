@@ -277,6 +277,29 @@
   color: white;
   font-size: 15px;
 }
+.admin-chisme select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 15px;
+  border: 1px solid #ffffff35;
+  background: #050408;
+  color: white;
+  font-size: 15px;
+}
+.admin-quick-start {
+  border-color: #f6e75a66;
+  border-top-color: #f6e75a;
+  background: linear-gradient(135deg, #f6e75a12, transparent 45%), #111018;
+}
+.admin-quick-start > div > span {
+  color: #f6e75a;
+}
+.admin-quick-start button {
+  background: #f6e75a;
+}
+.admin-quick-start code {
+  color: #f6e75a;
+}
 .admin-chisme .admin-switch {
   display: flex;
   align-items: center;

@@ -13,8 +13,9 @@ import {
   LoaderCircle,
   Save,
   Video,
+  Zap,
 } from "lucide-react";
-import { fighter } from "@/battle/content";
+import { EPISODES, FIGHTERS, fighter, type EpisodeId, type FighterId } from "@/battle/content";
 import { SHOP_ITEMS, type ShopSku } from "@/battle/shop-catalog";
 import "./admin.css";
 
@@ -67,12 +68,17 @@ function AdminPage() {
     [grantMessage, setGrantMessage] = useState(""),
     [chismeUrl, setChismeUrl] = useState(""),
     [chismeEnabled, setChismeEnabled] = useState(false),
-    [chismeMessage, setChismeMessage] = useState("");
+    [chismeMessage, setChismeMessage] = useState(""),
+    [quickEnabled, setQuickEnabled] = useState(false),
+    [quickLevel, setQuickLevel] = useState<EpisodeId>(1),
+    [quickFighter, setQuickFighter] = useState(""),
+    [quickMessage, setQuickMessage] = useState("");
   const load = async () => {
     setLoading(true);
-    const [r, chisme] = await Promise.all([
+    const [r, chisme, quick] = await Promise.all([
       fetch("/api/admin/stats"),
       fetch("/api/weekly-chisme", { cache: "no-store" }),
+      fetch("/api/quick-start", { cache: "no-store" }),
     ]);
     if (r.ok) setStats(await r.json());
     else setStats(null);
@@ -80,6 +86,12 @@ function AdminPage() {
       const data = (await chisme.json()) as { url?: string; enabled?: boolean };
       setChismeUrl(data.url ?? "");
       setChismeEnabled(Boolean(data.enabled));
+    }
+    if (quick.ok) {
+      const data = (await quick.json()) as { enabled?: boolean; level?: number; fighter?: string };
+      setQuickEnabled(Boolean(data.enabled));
+      setQuickLevel(([1, 2, 3, 4, 5].includes(Number(data.level)) ? data.level : 1) as EpisodeId);
+      setQuickFighter(data.fighter ?? "");
     }
     setLoading(false);
   };
@@ -155,6 +167,32 @@ function AdminPage() {
       );
     } catch (cause) {
       setChismeMessage(cause instanceof Error ? cause.message : "No se pudo guardar el video");
+    }
+  };
+  const saveQuickStart = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setQuickMessage("Guardando…");
+    try {
+      const response = await fetch("/api/admin/quick-start", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ level: quickLevel, fighter: quickFighter, enabled: quickEnabled }),
+      });
+      const result = (await response.json()) as { statusMessage?: string; message?: string };
+      if (!response.ok)
+        throw new Error(
+          result.message || result.statusMessage || "No se pudo guardar el inicio directo",
+        );
+      const who = quickFighter ? fighter(quickFighter as FighterId).name : "el personaje guardado";
+      setQuickMessage(
+        quickEnabled
+          ? `Inicio directo activo: al entrar al link se juega ${EPISODES[quickLevel - 1].title} con ${who}, sin chisme ni intro.`
+          : "Inicio directo apagado: el juego arranca con chisme, intro y portada.",
+      );
+    } catch (cause) {
+      setQuickMessage(
+        cause instanceof Error ? cause.message : "No se pudo guardar el inicio directo",
+      );
     }
   };
   if (loading)
@@ -327,6 +365,60 @@ function AdminPage() {
               <Save /> GUARDAR CHISME
             </button>
             {chismeMessage && <strong>{chismeMessage}</strong>}
+          </form>
+        </section>
+        <section className="admin-chisme admin-quick-start">
+          <div>
+            <span>ENTRADA CONTROLADA POR SUPERADMIN</span>
+            <h2>
+              <Zap /> OMITIR INTROS Y SELECCIONAR JUEGO
+            </h2>
+            <p>
+              Con esto activado, quien abra el link entra directo a jugar el episodio que elijas:
+              sin chisme, sin intro y sin pasar por la portada ni los menús. Los links de desafío
+              (?battle=) siguen funcionando igual y <code>?menu=1</code> muestra la portada.
+            </p>
+          </div>
+          <form onSubmit={saveQuickStart}>
+            <label>
+              EPISODIO QUE SE JUEGA
+              <select
+                value={quickLevel}
+                onChange={(event) => setQuickLevel(Number(event.target.value) as EpisodeId)}
+              >
+                {EPISODES.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    0{item.id} · {item.title} — {item.location}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              PERSONAJE
+              <select
+                value={quickFighter}
+                onChange={(event) => setQuickFighter(event.target.value)}
+              >
+                <option value="">El que tenga guardado el jugador</option>
+                {FIGHTERS.filter((item) => !item.premium).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="admin-switch">
+              <input
+                type="checkbox"
+                checked={quickEnabled}
+                onChange={(event) => setQuickEnabled(event.target.checked)}
+              />
+              OMITIR INTROS E IR DIRECTO AL JUEGO
+            </label>
+            <button>
+              <Save /> GUARDAR INICIO DIRECTO
+            </button>
+            {quickMessage && <strong>{quickMessage}</strong>}
           </form>
         </section>
         <section className="admin-grants">

@@ -84,6 +84,8 @@ export function BattleGame() {
   const [shareError, setShareError] = useState("");
   const [intro, setIntro] = useState(true);
   const [weeklyChismeDone, setWeeklyChismeDone] = useState(false);
+  /** "Omitir intros y seleccionar juego" del superadmin: episodio y personaje a lanzar. */
+  const [autoStart, setAutoStart] = useState<{ level: EpisodeId; hero: FighterId } | null>(null);
   const [rankingName, setRankingName] = useState("");
   const [rankingSync, setRankingSync] = useState<"idle" | "uploading" | "success" | "error">(
     "idle",
@@ -121,7 +123,8 @@ export function BattleGame() {
     const id = Number(params.get("battle"));
     const selected = params.get("fighter");
     const challengeSeed = Number(params.get("seed"));
-    if ([1, 2, 3, 4, 5].includes(id) && FIGHTERS.some((f) => f.id === selected)) {
+    const deepLink = [1, 2, 3, 4, 5].includes(id) && FIGHTERS.some((f) => f.id === selected);
+    if (deepLink) {
       setLevel(id as EpisodeId);
       setSave({ ...local, hero: selected as FighterId });
       setSeed(
@@ -132,8 +135,30 @@ export function BattleGame() {
       setChallenge(true);
       setScreen("brief");
     }
+    // Inicio directo configurado por el superadmin: salta chisme, intro y menús.
+    // ?menu=1 permite ver la portada igual (útil para el admin).
+    const controller = new AbortController();
+    const deadline = window.setTimeout(() => controller.abort(), 3000);
+    if (!deepLink && !params.has("menu")) {
+      fetch("/api/quick-start", { cache: "no-store", signal: controller.signal })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data: { enabled?: boolean; level?: number; fighter?: string } | null) => {
+          if (!data?.enabled || ![1, 2, 3, 4, 5].includes(Number(data.level))) return;
+          const pick = FIGHTERS.find((f) => f.id === data.fighter && !f.premium);
+          const savedHero = fighter(local.hero);
+          const hero = pick?.id ?? (savedHero.premium ? defaultSave().hero : local.hero);
+          setLevel(data.level as EpisodeId);
+          setSave({ ...local, hero });
+          setWeeklyChismeDone(true);
+          setIntro(false);
+          setAutoStart({ level: data.level as EpisodeId, hero });
+        })
+        .catch(() => undefined);
+    }
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
+      window.clearTimeout(deadline);
+      controller.abort();
     };
   }, []);
   useEffect(() => {
@@ -183,9 +208,11 @@ export function BattleGame() {
   };
   const hero = fighter(save.hero);
   const completed = Object.keys(save.records).length;
-  const play = () => {
+  const play = (overrides?: { level?: EpisodeId; hero?: FighterId }) => {
     unlockAudio();
-    const selected = fighter(save.hero);
+    const activeLevel = overrides?.level ?? level;
+    const heroId = overrides?.hero ?? save.hero;
+    const selected = fighter(heroId);
     if (selected.premium && !ownedSkus.includes(selected.premium.sku)) {
       const key = `ib-premium-trial-${selected.id}`;
       if (localStorage.getItem(key)) {
@@ -194,7 +221,7 @@ export function BattleGame() {
         return;
       }
       localStorage.setItem(key, "used");
-      trackGame("premium_trial", level, save.hero);
+      trackGame("premium_trial", activeLevel, heroId);
       const ends = Date.now() + selected.premium.trialSeconds * 1000;
       setTrialEndsAt(ends);
       setTrialSeconds(selected.premium.trialSeconds);
@@ -206,8 +233,8 @@ export function BattleGame() {
     }
     const nextRunId = crypto.randomUUID();
     setRunId(nextRunId);
-    trackGame("game_start", level, save.hero);
-    const next = createWorld(save.hero, level, save.difficulty, seed);
+    trackGame("game_start", activeLevel, heroId);
+    const next = createWorld(heroId, activeLevel, save.difficulty, seed);
     setWorld(next);
     setDialog(null);
     setUsedOwnedSkus([]);
@@ -217,6 +244,13 @@ export function BattleGame() {
     autoRankSubmitted.current = false;
     sfx("ui");
   };
+  useEffect(() => {
+    if (!autoStart) return;
+    setAutoStart(null);
+    if (screen !== "home" || world) return;
+    play(autoStart);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart]);
   const pause = () => {
     if (world && !world.ended) {
       world.paused = true;
@@ -770,7 +804,7 @@ export function BattleGame() {
                 Derrotá a {boss(level).name}
               </div>
             </div>
-            <button className="primary" onClick={play}>
+            <button className="primary" onClick={() => play()}>
               <Play size={20} fill="currentColor" /> Jugar con {hero.name} <ArrowRight size={20} />
             </button>
             <small>Podés pausar cuando quieras. La historia no necesita conexión.</small>
@@ -937,7 +971,7 @@ export function BattleGame() {
                   <button className="primary" onClick={resume}>
                     <Play size={18} /> Seguir jugando
                   </button>
-                  <button className="secondary" onClick={play}>
+                  <button className="secondary" onClick={() => play()}>
                     <RotateCcw size={18} /> Reiniciar episodio
                   </button>
                   <button
