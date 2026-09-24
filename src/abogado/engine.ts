@@ -90,6 +90,13 @@ const TAUNTS = [
   "¡Soy doctor en derecho!",
   "¡Mi título es original!",
 ];
+/** Signature lines, each with the arm gesture that sells it (see render armAngle). */
+const SIGNATURE: { text: string; gesture: number }[] = [
+  { text: "¡Cartes es mi amigo!", gesture: 0 },
+  { text: "¡Santi me puso acá, callate!", gesture: 2 },
+  { text: "¡La Sudamericana es la mejor!", gesture: 1 },
+  { text: "¡Kattya es mala!", gesture: 3 },
+];
 const HURT = ["¡Ay!", "¡Mi título!", "¡Protesto!", "¡No vale!", "¡Auch!", "¡Mi traje!"];
 const BLOCK = ["¡Objeción!", "¡No ha lugar!"];
 const GETUP = ["¡Apelo!", "¡Recurso de amparo!", "¡Nulidad!", "¡A la Corte!"];
@@ -168,6 +175,9 @@ export type World = {
   trial: Weapon | null;
   trialsLeft: Partial<Record<Weapon, number>>;
   owned: Weapon[];
+  /** Arm gesture while taunting: 0 wave, 1 fist pump, 2 finger wag, 3 arm up. */
+  gesture: number;
+  signatureIndex: number;
   wet: number;
   score: number;
   combo: number;
@@ -239,6 +249,8 @@ export function createWorld(opts: {
       PAID_WEAPONS.filter((id) => !owned.includes(id)).map((id) => [id, 1]),
     ),
     owned,
+    gesture: 0,
+    signatureIndex: 0,
     wet: 0,
     score: 0,
     combo: 0,
@@ -723,8 +735,17 @@ function ai(w: World) {
       dur: Math.max(1.15, 1.9 - w.round * 0.12),
     });
   } else if (r < 0.45 || w.demo) {
-    setMood(w, "taunt", 1.7);
-    say(w, pick(TAUNTS), 1.7);
+    setMood(w, "taunt", 2.1);
+    // Cycle through the signature lines so every match hears all of them.
+    if (Math.random() < 0.6) {
+      const line = SIGNATURE[w.signatureIndex % SIGNATURE.length];
+      w.signatureIndex++;
+      w.gesture = line.gesture;
+      say(w, line.text, 2.1);
+    } else {
+      w.gesture = Math.floor(Math.random() * 4);
+      say(w, pick(TAUNTS), 2);
+    }
   } else {
     setMood(w, "block", 1 + Math.random() * 0.7);
     if (Math.random() < 0.4) say(w, pick(BLOCK), 1);
@@ -787,7 +808,9 @@ export function step(w: World, dt: number) {
   } else if (w.mood !== "ko" && w.mood !== "idle" && w.t >= w.moodUntil) {
     w.mood = "idle";
   }
-  if (w.mood === "idle" || w.mood === "taunt") w.leanTarget = Math.sin(w.t * 1.4) * 3;
+  // He never stands still: a slow roam across the ring, a little dance while he talks.
+  if (w.mood === "idle") w.leanTarget = Math.sin(w.t * 0.8) * 9 + Math.sin(w.t * 2.1) * 2;
+  if (w.mood === "taunt") w.leanTarget = Math.sin(w.t * 0.8) * 9 + Math.sin(w.t * 6) * 4;
   if (w.mood === "hurt" || w.mood === "dizzy" || w.mood === "block") w.leanTarget = 0;
   if (w.mood === "dizzy") w.leanTarget = Math.sin(w.t * 5) * 6;
   if (!w.ended) ai(w);

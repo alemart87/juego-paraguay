@@ -24,13 +24,13 @@ type Pt = { x: number; y: number };
 export const PHOTO = {
   k: 0.4,
   hc: { x: 322, y: 140 },
-  head: { src: "/abogado/rivas/head.png", x: 268, y: 72, w: 117, h: 128 },
+  head: { src: "/abogado/rivas/head.png", x: 268, y: 72, w: 122, h: 128 },
   body: { src: "/abogado/rivas/body.png", x: 236, y: 176, w: 244, h: 280 },
-  arm: { src: "/abogado/rivas/arm.png", x: 40, y: 190, w: 238, h: 110 },
+  arm: { src: "/abogado/rivas/arm.png", x: 0, y: 180, w: 278, h: 120 },
   neck: { x: 325, y: 194 },
   shoulder: { x: 262, y: 228 },
-  eyeL: { x: 295, y: 136 },
-  eyeR: { x: 321, y: 131 },
+  eyeL: { x: 296, y: 139 },
+  eyeR: { x: 322, y: 135 },
   mouth: { x: 301, y: 167 },
   cheek: { x: 330, y: 158 },
   forehead: { x: 332, y: 100 },
@@ -318,7 +318,16 @@ function armAngle(w: World, mood: Mood) {
   const t = w.t;
   switch (mood) {
     case "taunt":
-      return 0.42 + Math.sin(t * 10) * 0.14;
+      switch (w.gesture) {
+        case 1: // fist pump
+          return 0.95 + Math.abs(Math.sin(t * 9)) * 0.35;
+        case 2: // wagging "callate"
+          return 0.12 + Math.sin(t * 14) * 0.22;
+        case 3: // arm straight up
+          return 1.45 + Math.sin(t * 5) * 0.08;
+        default: // friendly wave
+          return 0.42 + Math.sin(t * 10) * 0.18;
+      }
     case "block":
       return 1.25;
     case "throw":
@@ -570,10 +579,20 @@ function drawCharacter(w: World, c: Ctx, art: Art) {
   const breathe = Math.sin(t * 2.3) * 0.012;
   const sq = w.squash.v;
 
+  const talking = mood === "taunt";
+  const bounce = talking ? -Math.abs(Math.sin(t * 6)) * 2.2 : 0;
+  const sway = Math.sin(t * 1.1) * 0.025 + (talking ? Math.sin(t * 6) * 0.03 : 0);
+  const shrug = talking && w.gesture === 2 ? Math.abs(Math.sin(t * 7)) * 0.03 : 0;
+  // Idle head life: slow nod and tilt on top of the hit springs.
+  const nod = Math.sin(t * 2.6) * 1.6 + (talking ? Math.sin(t * 12) * 1.4 : 0);
+  const tilt = Math.sin(t * 1.3) * 0.05 + (talking ? Math.sin(t * 5) * 0.06 : 0);
+
   c.save();
-  c.translate(L.cx, L.headY);
+  c.translate(L.cx, L.headY + 70 + bounce);
+  c.rotate(sway);
+  c.translate(0, -70);
   if (L.fall) c.rotate(-L.fall * 0.32);
-  c.scale(k * (1 + sq * 0.012), k * (1 + breathe - sq * 0.012));
+  c.scale(k * (1 + sq * 0.012), k * (1 + breathe + shrug - sq * 0.012));
   c.translate(-hc.x, -hc.y);
 
   // Oath arm (behind the torso), pivoting at the shoulder
@@ -584,13 +603,28 @@ function drawCharacter(w: World, c: Ctx, art: Art) {
   c.drawImage(art.arm, arm.x, arm.y, arm.w, arm.h);
   c.restore();
 
+  // Neck that stretches between the collar and the (moving) head
+  const hx = w.headX.v / k;
+  const hy = w.headY.v / k + nod;
+  const neckGrad = c.createLinearGradient(300, 0, 350, 0);
+  neckGrad.addColorStop(0, "#c98f74");
+  neckGrad.addColorStop(1, "#9c6450");
+  c.fillStyle = neckGrad;
+  c.beginPath();
+  c.moveTo(302, 196);
+  c.lineTo(348, 196);
+  c.lineTo(348 + hx, 168 + hy);
+  c.lineTo(302 + hx, 168 + hy);
+  c.closePath();
+  c.fill();
+
   c.drawImage(art.body, body.x, body.y, body.w, body.h);
 
   // Head on a spring, pivoting at the neck
   c.save();
-  c.translate(w.headX.v / k, w.headY.v / k);
+  c.translate(hx, hy);
   c.translate(neck.x, neck.y);
-  c.rotate(w.headR.v * 0.07 + (mood === "ko" ? L.fall * 0.35 : 0));
+  c.rotate(w.headR.v * 0.07 + tilt + (mood === "ko" ? L.fall * 0.35 : 0));
   const sqH = w.squash.v * 0.03;
   c.scale(1 + sqH * 0.7, 1 - sqH);
   c.transform(1, 0, Math.max(-0.35, Math.min(0.35, w.headX.vel * 0.0006)), 1, 0, 0);
