@@ -22,6 +22,8 @@ La tienda usa el SDK oficial `@whop/sdk` exclusivamente en el servidor. Al prime
 | Título Hernán Rivas Abogado  | USD 3.99 | `rivas-titulo`      | `WHOP_CHECKOUT_RIVAS_TITULO` |
 | Mazo de la Justicia          | USD 1.99 | `rivas-mazo`        | `WHOP_CHECKOUT_RIVAS_MAZO`   |
 | Guantes de boxeo pro         | USD 0.99 | `rivas-guantes`     | `WHOP_CHECKOUT_RIVAS_GUANTES`|
+| Hacha inflable               | USD 3.99 | `rivas-hacha`       | `WHOP_CHECKOUT_RIVAS_HACHA`  |
+| Magnum de Tereré             | USD 3.99 | `rivas-magnum`      | `WHOP_CHECKOUT_RIVAS_MAGNUM` |
 
 Estos productos no aparecen en la tienda de Influencers Battle. Whop devuelve al jugador a
 `/hernan-rivas-abogado?compra=<sku>`, que sincroniza el beneficio con el mismo perfil y

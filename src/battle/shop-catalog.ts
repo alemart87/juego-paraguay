@@ -137,6 +137,30 @@ export const SHOP_ITEMS = [
     game: "abogado",
     path: "/hernan-rivas-abogado",
   },
+  {
+    sku: "rivas-hacha",
+    name: "Hacha inflable",
+    icon: "🪓",
+    image: "/abogado/shop/hacha.png",
+    description: "Hacha de goma gigante: cada golpe hace ¡PIIIP! y lo deja rebotando como resorte.",
+    price: 3.99,
+    badge: "¡PIIIP!",
+    category: "ARMA",
+    game: "abogado",
+    path: "/hernan-rivas-abogado",
+  },
+  {
+    sku: "rivas-magnum",
+    name: "Magnum de Tereré",
+    icon: "🔫",
+    image: "/abogado/shop/magnum.png",
+    description: "Pistola de agua gigante cargada de tereré: tiros rápidos que lo dejan empapado.",
+    price: 3.99,
+    badge: "¡SPLASH!",
+    category: "ARMA",
+    game: "abogado",
+    path: "/hernan-rivas-abogado",
+  },
 ] as const;
 
 export type ShopItem = (typeof SHOP_ITEMS)[number];

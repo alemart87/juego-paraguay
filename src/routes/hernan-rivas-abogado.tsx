@@ -5,7 +5,7 @@ import { SITE_URL } from "@/seo/content";
 const URL = `${SITE_URL}/hernan-rivas-abogado`;
 const TITLE = "Hernán Rivas ES ABOGADO · Pegale al abogado";
 const DESCRIPTION =
-  "Juego arcade en pixel art: tenés 60 segundos para boxear al abogado más discutido del Paraguay. Combos, K.O., mazo, guantes y capturas para compartir.";
+  "Juego arcade: tenés 60 segundos para boxear al abogado más discutido del Paraguay. Combos, K.O., mazo, guantes y capturas para compartir.";
 const IMAGE = `${SITE_URL}/abogado/og.png`;
 
 export const Route = createFileRoute("/hernan-rivas-abogado")({
@@ -19,19 +19,13 @@ export const Route = createFileRoute("/hernan-rivas-abogado")({
       { property: "og:image", content: IMAGE },
       { property: "og:image:secure_url", content: IMAGE },
       { property: "og:image:type", content: "image/png" },
-      { property: "og:image:alt", content: "Hernán Rivas ES ABOGADO, juego pixel art de boxeo" },
+      { property: "og:image:alt", content: "Hernán Rivas ES ABOGADO, juego de boxeo" },
       { name: "twitter:title", content: TITLE },
       { name: "twitter:description", content: DESCRIPTION },
       { name: "twitter:image", content: IMAGE },
       { name: "twitter:url", content: URL },
     ],
-    links: [
-      { rel: "canonical", href: URL },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap",
-      },
-    ],
+    links: [{ rel: "canonical", href: URL }],
   }),
   component: AbogadoGame,
 });

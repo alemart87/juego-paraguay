@@ -1036,11 +1036,15 @@ export function applyShopPowerup(w: World, sku: ShopSku) {
     "rivas-titulo": "Disponible en Hernán Rivas ES ABOGADO",
     "rivas-mazo": "Disponible en Hernán Rivas ES ABOGADO",
     "rivas-guantes": "Disponible en Hernán Rivas ES ABOGADO",
+    "rivas-hacha": "Disponible en Hernán Rivas ES ABOGADO",
+    "rivas-magnum": "Disponible en Hernán Rivas ES ABOGADO",
   };
   switch (sku) {
     case "rivas-titulo":
     case "rivas-mazo":
     case "rivas-guantes":
+    case "rivas-hacha":
+    case "rivas-magnum":
       return { ok: false as const, message: messages[sku] };
     case "pablito":
     case "marito":

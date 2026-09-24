@@ -14,7 +14,9 @@ import { configureAudio, installMobileAudioUnlock, sfx, unlockAudio } from "@/ga
 import { ABOGADO_SHOP_ITEMS, type AbogadoSku } from "@/battle/shop-catalog";
 import { AbogadoScene } from "./AbogadoScene";
 import type { RunResult, Weapon } from "./engine";
-import { drawIcon } from "./render";
+import type { IconKind } from "./render";
+import { GameIcon } from "./GameIcon";
+import { ShareSheet } from "./ShareSheet";
 import {
   checkout,
   createProfile,
@@ -26,43 +28,26 @@ import {
   syncOwned,
   type Best,
 } from "./commerce";
-import { certificate, downloadBlob, resultCard, shareBlob } from "./share";
+import { certificate, downloadBlob, resultCard } from "./share";
 import "./abogado.css";
 
 type Screen = "title" | "play" | "result";
 
-const WEAPONS: {
-  id: Weapon;
-  label: string;
-  icon: "punos" | "guantes" | "mazo";
-  sku?: AbogadoSku;
-  hint: string;
-}[] = [
-  { id: "punos", label: "Puños", icon: "punos", hint: "Rápidos y gratis" },
-  { id: "guantes", label: "Guantes", icon: "guantes", sku: "rivas-guantes", hint: "+50% daño" },
-  { id: "mazo", label: "Mazo", icon: "mazo", sku: "rivas-mazo", hint: "Daño ×3" },
+const WEAPONS: { id: Weapon; label: string; sku?: AbogadoSku; hint: string }[] = [
+  { id: "punos", label: "Puños", hint: "Gratis" },
+  { id: "guantes", label: "Guantes", sku: "rivas-guantes", hint: "+50% daño" },
+  { id: "mazo", label: "Mazo", sku: "rivas-mazo", hint: "Daño ×3" },
+  { id: "hacha", label: "Hacha", sku: "rivas-hacha", hint: "¡PIIIP!" },
+  { id: "magnum", label: "Magnum", sku: "rivas-magnum", hint: "¡SPLASH!" },
 ];
 
-const ICON_FOR: Record<AbogadoSku, "titulo" | "mazo" | "guantes"> = {
+const ICON_FOR: Record<AbogadoSku, IconKind> = {
   "rivas-titulo": "titulo",
   "rivas-mazo": "mazo",
   "rivas-guantes": "guantes",
+  "rivas-hacha": "hacha",
+  "rivas-magnum": "magnum",
 };
-
-function PixelIcon({
-  kind,
-  size = 56,
-}: {
-  kind: "titulo" | "mazo" | "guantes" | "punos";
-  size?: number;
-}) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const c = ref.current?.getContext("2d");
-    if (c) drawIcon(c, kind, size);
-  }, [kind, size]);
-  return <canvas ref={ref} width={size} height={size} className="ab-icon" aria-hidden />;
-}
 
 export function AbogadoGame() {
   const [screen, setScreen] = useState<Screen>("title");
@@ -77,6 +62,7 @@ export function AbogadoGame() {
   const [runKey, setRunKey] = useState(0);
   const [notice, setNotice] = useState("");
   const [shopOpen, setShopOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     installMobileAudioUnlock();
@@ -147,16 +133,14 @@ export function AbogadoGame() {
     });
   };
 
-  const shareCard = async () => {
-    if (!cardBlob.current || !run) return;
-    await shareBlob(
-      cardBlob.current,
-      "hernan-rivas-es-abogado.png",
-      `Le metí ${run.score.toLocaleString("es-PY")} puntos y ${run.kos} K.O. a Hernán Rivas 🥊⚖️ ¿Me superás?`,
-    );
-  };
-
   const goldTitle = owned.includes("rivas-titulo");
+  const ownedWeapons = WEAPONS.filter((w) => ownsWeapon(w.id)).map((w) => w.id);
+  const prices = Object.fromEntries(
+    WEAPONS.flatMap((w) => {
+      const item = ABOGADO_SHOP_ITEMS.find((i) => i.sku === w.sku);
+      return item ? [[w.id, item.price]] : [];
+    }),
+  ) as Partial<Record<Weapon, number>>;
 
   return (
     <main className={`ab-root ab-screen-${screen}`}>
@@ -177,7 +161,8 @@ export function AbogadoGame() {
               <em>ES ABOGADO</em>
             </h1>
             <p className="ab-tag">
-              Tenés 60 segundos. Pegale a full, cortá las demandas y noqueálo.
+              Tenés 60 segundos. Pegale a full, cortá las demandas y noqueálo. Cada arma paga trae 1
+              golpe gratis por partida.
             </p>
             <div className="ab-weapons" role="radiogroup" aria-label="Elegí tu arma">
               {WEAPONS.map((w) => {
@@ -195,14 +180,15 @@ export function AbogadoGame() {
                       else setShopOpen(true);
                     }}
                   >
-                    <PixelIcon kind={w.icon} size={40} />
+                    {!has && <i className="ab-free-tag">1 GRATIS</i>}
+                    <GameIcon kind={w.id} size={36} />
                     <b>{w.label}</b>
                     <small>
                       {has ? (
                         w.hint
                       ) : (
                         <>
-                          <Lock size={10} /> USD {item?.price.toFixed(2)}
+                          <Lock size={10} /> {item?.price.toFixed(2)}
                         </>
                       )}
                     </small>
@@ -240,6 +226,8 @@ export function AbogadoGame() {
           mode="play"
           weapon={ownsWeapon(weapon) ? weapon : "punos"}
           goldTitle={goldTitle}
+          owned={ownedWeapons}
+          prices={prices}
           soundOn={soundOn}
           onToggleSound={() => setSoundOn((s) => !s)}
           onEnd={finish}
@@ -286,8 +274,12 @@ export function AbogadoGame() {
             <button className="ab-btn ab-btn-primary" onClick={start}>
               <RotateCcw size={16} /> REVANCHA
             </button>
-            <button className="ab-btn" disabled={!cardUrl} onClick={() => void shareCard()}>
-              <Share2 size={16} /> COMPARTIR
+            <button
+              className="ab-btn ab-btn-share"
+              disabled={!cardUrl}
+              onClick={() => setSharing(true)}
+            >
+              <Share2 size={16} /> COMPARTIR FOTO
             </button>
             <button
               className="ab-btn"
@@ -304,6 +296,16 @@ export function AbogadoGame() {
             <ArrowLeft size={13} /> VOLVER AL INICIO
           </button>
         </section>
+      )}
+
+      {sharing && run && cardBlob.current && (
+        <ShareSheet
+          blob={cardBlob.current}
+          filename="hernan-rivas-es-abogado.png"
+          message={`Le metí ${run.score.toLocaleString("es-PY")} puntos y ${run.kos} K.O. a Hernán Rivas 🥊⚖️ ¿Me superás?`}
+          title="Compartí tu resultado"
+          onClose={() => setSharing(false)}
+        />
       )}
 
       {shopOpen && screen !== "result" && (
@@ -459,11 +461,14 @@ function AbogadoShop({
             const has = owned.includes(item.sku);
             return (
               <article key={item.sku} className={`ab-item ${has ? "owned" : ""}`}>
-                <PixelIcon kind={ICON_FOR[item.sku]} size={56} />
+                <GameIcon kind={ICON_FOR[item.sku]} size={64} />
                 <div>
                   <small>{item.badge}</small>
                   <h4>{item.name}</h4>
                   <p>{item.description}</p>
+                  {item.sku !== "rivas-titulo" && !has && (
+                    <span className="ab-try">🎁 Probala gratis: 1 golpe por partida</span>
+                  )}
                 </div>
                 {has ? (
                   item.sku === "rivas-titulo" ? (

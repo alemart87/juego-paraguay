@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Camera, Lock, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { sfx, vibrate } from "@/game/audio";
 import {
   createWorld,
@@ -10,16 +10,21 @@ import {
   snapshot,
   step,
   tapAt,
+  selectWeapon,
   throwPunch,
+  WEAPON_IDS,
   WEAPON_STATS,
+  weaponSide,
   activeWeapon,
   type RunResult,
   type Snapshot,
   type Weapon,
   type World,
 } from "./engine";
-import { buildArt, drawScene, type Art } from "./render";
-import { captureFrame, shareBlob } from "./share";
+import { drawScene, loadArt, type Art } from "./render";
+import { captureFrame } from "./share";
+import { ShareSheet } from "./ShareSheet";
+import { GameIcon } from "./GameIcon";
 
 let lastSpeak = 0;
 function speak(text: string) {
@@ -46,6 +51,8 @@ export function AbogadoScene({
   mode,
   weapon,
   goldTitle,
+  owned = ["punos"],
+  prices = {},
   soundOn,
   onToggleSound,
   onEnd,
@@ -53,6 +60,8 @@ export function AbogadoScene({
   mode: "demo" | "play";
   weapon: Weapon;
   goldTitle: boolean;
+  owned?: Weapon[];
+  prices?: Partial<Record<Weapon, number>>;
   soundOn: boolean;
   onToggleSound?: () => void;
   onEnd?: (run: RunResult, shot: HTMLCanvasElement | null) => void;
@@ -68,6 +77,17 @@ export function AbogadoScene({
   const [hud, setHud] = useState<Snapshot | null>(null);
   const [paused, setPaused] = useState(false);
   const [toast, setToast] = useState("");
+  const [share, setShare] = useState<{ blob: Blob; score: number; resume: boolean } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ownedKey = owned.join(",");
+  const pricesRef = useRef(prices);
+  pricesRef.current = prices;
+
+  const flash = (msg: string, ms = 1900) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), ms);
+  };
 
   soundRef.current = soundOn;
   onEndRef.current = onEnd;
@@ -76,22 +96,35 @@ export function AbogadoScene({
     const canvas = canvasRef.current!;
     const wrap = wrapRef.current!;
     const ctx = canvas.getContext("2d", { alpha: false })!;
-    const w = createWorld({ weapon, goldTitle, demo: mode === "demo" });
+    const w = createWorld({
+      weapon,
+      goldTitle,
+      demo: mode === "demo",
+      owned: ownedKey.split(",") as Weapon[],
+    });
     worldRef.current = w;
-    artRef.current = buildArt();
+    let alive = true;
+    void loadArt()
+      .then((art) => {
+        if (alive) artRef.current = art;
+      })
+      .catch(() => undefined);
     const pointers = new Map<number, { x: number; y: number; at: number; side: -1 | 1 }>();
 
+    // Logical units keep the engine resolution-independent; the backing store is
+    // sized in device pixels so the photo and vectors stay sharp.
+    let unit = 1;
     const fit = () => {
       const cw = wrap.clientWidth || 360;
       const ch = wrap.clientHeight || 640;
-      const P = Math.max(2, Math.floor(Math.min(cw / 96, ch / 128)));
-      const W = Math.ceil(cw / P);
-      const H = Math.ceil(ch / P);
-      canvas.width = W;
-      canvas.height = H;
-      canvas.style.width = `${W * P}px`;
-      canvas.style.height = `${H * P}px`;
-      resize(w, W, H);
+      const P = Math.min(cw / 96, ch / 128);
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.round(cw * dpr);
+      canvas.height = Math.round(ch * dpr);
+      canvas.style.width = `${cw}px`;
+      canvas.style.height = `${ch}px`;
+      unit = P * dpr;
+      resize(w, cw / P, ch / P);
     };
     fit();
     const ro = new ResizeObserver(fit);
@@ -109,7 +142,7 @@ export function AbogadoScene({
       if (pausedRef.current) return;
       const p = toLogical(e);
       tapAt(w, p.x, p.y);
-      const side: -1 | 1 = activeWeapon(w) === "mazo" ? 1 : p.x < w.W / 2 ? -1 : 1;
+      const side = weaponSide(activeWeapon(w), p.x < w.W / 2 ? -1 : 1);
       pointers.set(e.pointerId, { ...p, at: w.t, side });
       w.charging = { side, start: w.t };
     };
@@ -200,14 +233,23 @@ export function AbogadoScene({
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       if (!pausedRef.current) step(w, dt);
-      drawScene(w, ctx, artRef.current!);
+      ctx.setTransform(unit, 0, 0, unit, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      drawScene(w, ctx, artRef.current);
       for (const ev of drainEvents(w)) {
         if (ev.type === "sfx") {
           if (soundRef.current) sfx(ev.name);
         } else if (ev.type === "say") {
           if (soundRef.current && mode === "play") speak(ev.text);
         } else if (ev.type === "vibrate") vibrate(ev.ms);
-        else if (ev.type === "snap") {
+        else if (ev.type === "trial") {
+          const price = pricesRef.current[ev.weapon];
+          flash(
+            `¿Te gustó ${WEAPON_STATS[ev.weapon].label}? ${price ? `Es tuya por USD ${price.toFixed(2)}` : "Desbloqueala"} al final`,
+            2600,
+          );
+        } else if (ev.type === "snap") {
           // Wait for the KO flash to fade so the share card gets a clean action frame.
           if (!ev.fallback || !shotRef.current) snapAt = now + (ev.fallback ? 0 : 320);
         } else if (ev.type === "end") onEndRef.current?.(result(w), shotRef.current);
@@ -218,7 +260,6 @@ export function AbogadoScene({
         shot.width = canvas.width;
         shot.height = canvas.height;
         const sc = shot.getContext("2d")!;
-        sc.imageSmoothingEnabled = false;
         sc.drawImage(canvas, 0, 0);
         shotRef.current = shot;
       }
@@ -230,6 +271,7 @@ export function AbogadoScene({
     raf = requestAnimationFrame(frame);
 
     return () => {
+      alive = false;
       cancelAnimationFrame(raf);
       ro.disconnect();
       canvas.removeEventListener("pointerdown", down);
@@ -241,7 +283,7 @@ export function AbogadoScene({
       delete (window as QaWindow).__abogado;
       if (typeof window !== "undefined" && "speechSynthesis" in window) speechSynthesis.cancel();
     };
-  }, [mode, weapon, goldTitle]);
+  }, [mode, weapon, goldTitle, ownedKey]);
 
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
@@ -253,20 +295,33 @@ export function AbogadoScene({
     const w = worldRef.current;
     if (!canvas || !w) return;
     if (soundRef.current) sfx("ui");
+    const wasPaused = pausedRef.current;
+    pausedRef.current = true;
     try {
       const blob = await captureFrame(canvas, w.score);
-      const how = await shareBlob(
-        blob,
-        `hernan-rivas-abogado-${Date.now()}.png`,
-        `Le estoy pegando a Hernán Rivas: ${w.score.toLocaleString("es-PY")} puntos 🥊`,
-      );
-      setToast(
-        how === "downloaded" ? "📸 Captura guardada" : how === "shared" ? "📸 ¡Compartida!" : "",
-      );
+      setShare({ blob, score: w.score, resume: !wasPaused });
     } catch {
-      setToast("No se pudo capturar");
+      pausedRef.current = wasPaused;
+      flash("No se pudo sacar la foto");
     }
-    setTimeout(() => setToast(""), 1800);
+  };
+
+  const closeShare = () => {
+    if (share?.resume) pausedRef.current = false;
+    setShare(null);
+  };
+
+  const pickWeapon = (id: Weapon) => {
+    const w = worldRef.current;
+    if (!w) return;
+    const res = selectWeapon(w, id);
+    if (soundRef.current) sfx(res === "locked" ? "empty" : "swap");
+    if (res === "trial") flash(`🎁 ${WEAPON_STATS[id].label}: 1 golpe gratis. ¡Usalo!`);
+    else if (res === "locked") {
+      const price = prices[id];
+      flash(`🔒 Ya usaste tu prueba. ${price ? `USD ${price.toFixed(2)} al final` : ""}`);
+    }
+    setHud(snapshot(w));
   };
 
   const hpPct = hud ? Math.max(0, Math.min(100, (hud.hp / hud.maxHp) * 100)) : 100;
@@ -314,12 +369,40 @@ export function AbogadoScene({
               COMBO <b>×{hud.combo}</b>
             </div>
           )}
+          <div className="ab-weapon-bar" role="toolbar" aria-label="Armas">
+            {WEAPON_IDS.map((id) => {
+              const has = owned.includes(id);
+              const free = !has && (hud.trialsLeft[id] ?? 0) > 0;
+              const on = hud.weapon === id;
+              return (
+                <button
+                  key={id}
+                  className={`ab-wbtn ${on ? "on" : ""} ${has ? "" : free ? "free" : "locked"}`}
+                  aria-label={`${WEAPON_STATS[id].label}${has ? "" : free ? ", 1 golpe gratis" : ", bloqueada"}`}
+                  aria-pressed={on}
+                  onClick={() => pickWeapon(id)}
+                >
+                  <GameIcon kind={id} size={30} />
+                  {!has && (free ? <em>GRATIS</em> : <Lock size={12} className="ab-wlock" />)}
+                </button>
+              );
+            })}
+          </div>
           {hud.bonusMazo > 0 && (
             <div className="ab-bonus">🔨 MAZO DORADO {hud.bonusMazo.toFixed(1)}s</div>
           )}
         </div>
       )}
       {toast && <div className="ab-toast">{toast}</div>}
+      {share && (
+        <ShareSheet
+          blob={share.blob}
+          filename={`hernan-rivas-abogado-${Date.now()}.png`}
+          message={`Le estoy pegando a Hernán Rivas: ${share.score.toLocaleString("es-PY")} puntos 🥊 ¿Me superás?`}
+          title="¡Foto del ring!"
+          onClose={closeShare}
+        />
+      )}
       {paused && mode === "play" && (
         <div className="ab-pause">
           <strong>PAUSA</strong>

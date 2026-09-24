@@ -29,6 +29,8 @@ export const getWhopCheckout = createServerFn({ method: "POST" })
       "rivas-titulo": process.env.WHOP_CHECKOUT_RIVAS_TITULO,
       "rivas-mazo": process.env.WHOP_CHECKOUT_RIVAS_MAZO,
       "rivas-guantes": process.env.WHOP_CHECKOUT_RIVAS_GUANTES,
+      "rivas-hacha": process.env.WHOP_CHECKOUT_RIVAS_HACHA,
+      "rivas-magnum": process.env.WHOP_CHECKOUT_RIVAS_MAGNUM,
     };
     const url = env[data.sku]?.trim() || DEFAULT_CHECKOUTS[data.sku];
     if (url) {

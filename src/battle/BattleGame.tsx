@@ -64,16 +64,7 @@ import "./battle.css";
 import { trackGame } from "./analytics";
 
 type Screen = "home" | "fighters" | "episodes" | "brief" | "play" | "result";
-type Dialog =
-  | "settings"
-  | "help"
-  | "pause"
-  | "talk"
-  | "share"
-  | "ranking"
-  | "shop"
-  | "chat"
-  | null;
+type Dialog = "settings" | "help" | "pause" | "talk" | "share" | "ranking" | "shop" | "chat" | null;
 const CHAT_FOCUS_KEY = "ib-chat-focus-v1";
 const CHAT_FOCUS_DELAY_MS = 3000;
 const CHAT_FOCUS_AUTO_HIDE_MS = 9000;
@@ -101,7 +92,10 @@ function measureFocus(rect: DOMRect): ChatFocusRect {
   let cardRight = viewport - centerX - CHAT_FOCUS_CARD_WIDTH / 2;
   cardRight = Math.max(margin, Math.min(cardRight, viewport - CHAT_FOCUS_CARD_WIDTH - margin));
   const cardRightEdge = viewport - cardRight;
-  const arrowRight = Math.max(18, Math.min(cardRightEdge - centerX - 9, CHAT_FOCUS_CARD_WIDTH - 30));
+  const arrowRight = Math.max(
+    18,
+    Math.min(cardRightEdge - centerX - 9, CHAT_FOCUS_CARD_WIDTH - 30),
+  );
   return { left, top, width, height, cardTop: top + height + 14, cardRight, arrowRight };
 }
 const formatTime = (time: number) =>
@@ -661,7 +655,8 @@ export function BattleGame() {
                 <small>ROSE + MASIVO · JUGAR ESTRENO</small>
               </button>
               <a className="rose-launch abogado-launch" href="/hernan-rivas-abogado">
-                <span>NUEVO JUEGO · PIXEL ART</span>
+                <img src="/abogado/rivas/head.png" alt="" />
+                <span>NUEVO NIVEL · 06</span>
                 <strong>HERNÁN RIVAS ES ABOGADO</strong>
                 <small>PEGALE A FULL · 60 SEGUNDOS · GRATIS</small>
               </a>
@@ -902,6 +897,23 @@ export function BattleGame() {
                 </div>
               </button>
             ))}
+            <a className="episode-card episode-card-bonus" href="/hernan-rivas-abogado">
+              <img src="/abogado/cover.jpg" alt="Hernán Rivas en el ring del abogado" />
+              <div className="episode-number">06</div>
+              <div className="episode-copy">
+                <span>
+                  <MapPin size={14} />
+                  Ring del Abogado
+                </span>
+                <h2>Hernán Rivas ES ABOGADO</h2>
+                <p>Nivel bonus: 60 segundos para boxearlo a full, con guantes o con mazo.</p>
+                <span className="episode-boss">JEFE · Hernán Rivas</span>
+                <div className="episode-bottom">
+                  <span>Jugar nivel bonus</span>
+                  <ArrowRight size={21} />
+                </div>
+              </div>
+            </a>
           </div>
           <p className="episode-note">
             Podés empezar por cualquier episodio. Jugá en orden para descubrir la historia completa.

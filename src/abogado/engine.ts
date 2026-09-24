@@ -6,7 +6,10 @@ import type { SfxName } from "@/game/audio";
  * neighbour so it stays crisp pixel art.
  */
 
-export type Weapon = "punos" | "guantes" | "mazo";
+export type Weapon = "punos" | "guantes" | "mazo" | "hacha" | "magnum";
+export const WEAPON_IDS: Weapon[] = ["punos", "guantes", "mazo", "hacha", "magnum"];
+/** Weapons the player must buy (each gets one free try per match). */
+export const PAID_WEAPONS: Weapon[] = ["guantes", "mazo", "hacha", "magnum"];
 export type Mood =
   "idle" | "taunt" | "block" | "hurt" | "dizzy" | "dodge" | "throw" | "ko" | "getup";
 export type Zone = "head" | "body";
@@ -56,6 +59,26 @@ export const WEAPON_STATS: Record<
     charge: 0.45,
     sfx: "hammer",
   },
+  hacha: {
+    label: "Hacha inflable",
+    cooldown: 0.26,
+    travel: 0.16,
+    dmg: 2.6,
+    pts: 2.3,
+    comboWindow: 1.6,
+    charge: 0.4,
+    sfx: "squeak",
+  },
+  magnum: {
+    label: "Magnum de Tereré",
+    cooldown: 0.16,
+    travel: 0.06,
+    dmg: 1.7,
+    pts: 2.2,
+    comboWindow: 1.5,
+    charge: 0.35,
+    sfx: "squirt",
+  },
 };
 
 const TAUNTS = [
@@ -73,6 +96,9 @@ const GETUP = ["¡Apelo!", "¡Recurso de amparo!", "¡Nulidad!", "¡A la Corte!"
 const THROW = ["¡Demanda!", "¡Citación!"];
 const HEAD_WORDS = ["POW", "PAF", "BAM", "CRACK", "TUC"];
 const HAMMER_WORDS = ["BONK", "TOC TOC", "CATAPLUM"];
+const AXE_WORDS = ["¡PIIIP!", "BOING", "¡PUIC!"];
+const WATER_WORDS = ["¡SPLASH!", "¡CHAPUZÓN!", "¡SPLISH!"];
+const WET = ["¡Mi peinado!", "¡Está frío!", "¡Mi traje nuevo!", "¡Tereré no!"];
 const MILESTONES: Record<number, string> = {
   10: "¡UPEI!",
   25: "¡IMPARABLE!",
@@ -89,7 +115,7 @@ export type Particle = {
   max: number;
   color: string;
   size: number;
-  kind: "dot" | "star" | "tooth" | "paper" | "sweat";
+  kind: "dot" | "star" | "tooth" | "paper" | "sweat" | "confetti" | "water";
 };
 export type FloatText = {
   x: number;
@@ -100,6 +126,8 @@ export type FloatText = {
   color: string;
   scale: number;
   vy: number;
+  /** Running total for merged "+points" popups. */
+  sum?: number;
 };
 export type Burst = { x: number; y: number; life: number; text: string; color: string };
 export type Fist = {
@@ -120,6 +148,7 @@ export type GameEvent =
   | { type: "say"; text: string }
   | { type: "vibrate"; ms: number }
   | { type: "snap"; fallback?: boolean }
+  | { type: "trial"; weapon: Weapon }
   | { type: "end" };
 
 export type World = {
@@ -135,6 +164,11 @@ export type World = {
   goldTitle: boolean;
   bonusMazoUntil: number;
   bonusMazoGiven: boolean;
+  /** One-shot free try of a weapon the player doesn't own. */
+  trial: Weapon | null;
+  trialsLeft: Partial<Record<Weapon, number>>;
+  owned: Weapon[];
+  wet: number;
   score: number;
   combo: number;
   maxCombo: number;
@@ -180,7 +214,13 @@ export type World = {
 const spring = (): Spring => ({ v: 0, vel: 0 });
 const pick = <T>(list: readonly T[]) => list[Math.floor(Math.random() * list.length)];
 
-export function createWorld(opts: { weapon: Weapon; goldTitle: boolean; demo?: boolean }): World {
+export function createWorld(opts: {
+  weapon: Weapon;
+  goldTitle: boolean;
+  demo?: boolean;
+  owned?: Weapon[];
+}): World {
+  const owned = opts.owned ?? ["punos"];
   return {
     W: 160,
     H: 160,
@@ -194,6 +234,12 @@ export function createWorld(opts: { weapon: Weapon; goldTitle: boolean; demo?: b
     goldTitle: opts.goldTitle,
     bonusMazoUntil: 0,
     bonusMazoGiven: false,
+    trial: null,
+    trialsLeft: Object.fromEntries(
+      PAID_WEAPONS.filter((id) => !owned.includes(id)).map((id) => [id, 1]),
+    ),
+    owned,
+    wet: 0,
     score: 0,
     combo: 0,
     maxCombo: 0,
@@ -245,20 +291,21 @@ export function resize(w: World, W: number, H: number) {
 /** Where the character stands this frame (logical px). */
 /** Resting head height: lower in play, higher on the title screen (menu covers the bottom). */
 export function baseHeadY(w: World) {
-  return Math.round(Math.min(w.H - 86, w.H * (w.demo ? 0.3 : 0.56)));
+  return Math.min(w.H - 88, w.H * (w.demo ? 0.33 : 0.55));
 }
 
 export function layout(w: World) {
   const baseHead = baseHeadY(w);
   const fall = fallAmount(w);
-  const cx = Math.round(w.W / 2 + w.lean.v);
-  const headY = Math.round(baseHead + w.bodyDip.v + fall * Math.min(60, w.H * 0.34));
+  // The photo's torso sits to the right of his face (3/4 pose), so shift the anchor left.
+  const cx = w.W / 2 - 8 + w.lean.v;
+  const headY = baseHead + w.bodyDip.v + fall * Math.min(60, w.H * 0.34);
   return {
     cx,
     headY,
-    headCx: Math.round(cx + w.headX.v),
-    headCy: Math.round(headY + w.headY.v),
-    neckY: headY + 14,
+    headCx: cx + w.headX.v,
+    headCy: headY + w.headY.v,
+    neckY: headY + 21,
     fall,
   };
 }
@@ -273,15 +320,37 @@ export function fallAmount(w: World) {
 }
 
 export function activeWeapon(w: World): Weapon {
-  return w.bonusMazoUntil > w.t ? "mazo" : w.weapon;
+  if (w.bonusMazoUntil > w.t) return "mazo";
+  return w.trial ?? w.weapon;
+}
+
+/** Switch to an owned weapon, or arm a one-shot free try of a locked one. */
+export function selectWeapon(w: World, id: Weapon) {
+  if (w.owned.includes(id)) {
+    w.weapon = id;
+    w.trial = null;
+    return "owned" as const;
+  }
+  if ((w.trialsLeft[id] ?? 0) > 0) {
+    w.trial = id;
+    return "trial" as const;
+  }
+  return "locked" as const;
+}
+
+/** Which hand / side the weapon comes from. */
+export function weaponSide(weapon: Weapon, side: -1 | 1): -1 | 1 {
+  if (weapon === "mazo" || weapon === "magnum") return 1;
+  if (weapon === "hacha") return -1;
+  return side;
 }
 
 function hitZone(w: World, x: number, y: number): Zone | null {
   const L = layout(w);
-  const dx = (x - L.headCx) / 14;
-  const dy = (y - L.headCy) / 17;
+  const dx = (x - L.headCx - 3) / 18;
+  const dy = (y - L.headCy + 1) / 23;
   if (dx * dx + dy * dy <= 1) return "head";
-  if (Math.abs(x - L.cx) <= 32 && y >= L.neckY + 2 && y <= w.H) return "body";
+  if (x >= L.cx - 30 && x <= L.cx + 56 && y >= L.neckY + 2 && y <= w.H) return "body";
   return null;
 }
 
@@ -324,7 +393,7 @@ function spray(
       kind,
     });
   }
-  if (w.particles.length > 220) w.particles.splice(0, w.particles.length - 220);
+  if (w.particles.length > 260) w.particles.splice(0, w.particles.length - 260);
 }
 
 function canPunch(w: World) {
@@ -359,7 +428,12 @@ export function throwPunch(w: World, x: number, y: number, side: -1 | 1, charged
   if (w.t - w.lastThrowAt < stats.cooldown && !charged) return;
   w.lastThrowAt = w.t;
   w.throws++;
-  const useSide: -1 | 1 = weapon === "mazo" ? 1 : side;
+  const useSide = weaponSide(weapon, side);
+  if (w.trial && weapon === w.trial) {
+    w.trialsLeft[weapon] = Math.max(0, (w.trialsLeft[weapon] ?? 1) - 1);
+    w.trial = null;
+    w.events.push({ type: "trial", weapon });
+  }
   w.fists = w.fists.filter((f) => f.side !== useSide || !f.resolved || w.t - f.t0 < f.travel);
   w.fists.push({
     side: useSide,
@@ -437,11 +511,15 @@ function resolveFist(w: World, f: Fist) {
   w.damage = Math.min(1, w.damage + dmg / 950);
 
   const push = -f.side;
-  const heavy = f.charged || f.weapon === "mazo";
+  const heavy = f.charged || f.weapon === "mazo" || f.weapon === "hacha";
   if (zone === "head") {
     w.headX.vel += push * (heavy ? 330 : 190);
     w.headR.vel += push * (heavy ? 9 : 5.5);
     w.headY.vel += f.ty < layout(w).headCy - 4 ? -60 : 70;
+    if (f.weapon === "hacha") {
+      w.squash.vel += 12;
+      w.headR.vel += push * 6;
+    }
     if (f.weapon === "mazo") {
       w.squash.vel -= 16;
       w.headY.vel += 160;
@@ -460,7 +538,19 @@ function resolveFist(w: World, f: Fist) {
     float(w, w.W / 2, Math.max(8, layout(w).headCy - 36), "¡MAREADO!", "#ffe066");
   }
 
-  const words = f.weapon === "mazo" ? HAMMER_WORDS : HEAD_WORDS;
+  const words =
+    f.weapon === "mazo"
+      ? HAMMER_WORDS
+      : f.weapon === "hacha"
+        ? AXE_WORDS
+        : f.weapon === "magnum"
+          ? WATER_WORDS
+          : HEAD_WORDS;
+  if (f.weapon === "magnum") {
+    w.wet = Math.min(1, w.wet + 0.14);
+    spray(w, f.tx, f.ty, 14, "water", "#8fe3ff", 90);
+    if (Math.random() < 0.18) say(w, pick(WET), 0.9);
+  }
   // Keep the face readable: words only on big hits, numbers pushed off to the side.
   w.bursts.push({
     x: f.tx - push * 10,
@@ -471,14 +561,29 @@ function resolveFist(w: World, f: Fist) {
   });
   if (w.bursts.length > 3) w.bursts.shift();
   const L = layout(w);
-  const sideX = L.headCx + push * 26;
-  float(
-    w,
-    sideX + Math.round((Math.random() - 0.5) * 10),
-    L.headCy - 10,
-    `+${pts}`,
-    mult > 1 ? "#ffe066" : "#ffffff",
-  );
+  const sideX = L.headCx + push * 30;
+  // Rapid hits merge into one growing "+points" popup instead of a pile of numbers.
+  const running = w.texts.find((t) => t.sum !== undefined && t.max - t.life < 0.45);
+  if (running?.sum !== undefined) {
+    running.sum += pts;
+    running.text = `+${running.sum}`;
+    running.life = running.max;
+    running.x = sideX;
+    running.y = L.headCy - 12;
+    running.scale = Math.min(2, 1 + running.sum / 3000);
+  } else {
+    w.texts.push({
+      x: sideX,
+      y: L.headCy - 12,
+      text: `+${pts}`,
+      color: mult > 1 ? "#ffe066" : "#ffffff",
+      scale: 1,
+      life: 0.9,
+      max: 0.9,
+      vy: -20,
+      sum: pts,
+    });
+  }
   tags.slice(0, 1).forEach((tag) => float(w, w.W / 2, Math.max(8, L.headCy - 44), tag, "#7ee0ff"));
   const small = w.texts.filter((t) => t.scale === 1);
   if (small.length > 5) w.texts.splice(w.texts.indexOf(small[0]), 1);
@@ -487,6 +592,7 @@ function resolveFist(w: World, f: Fist) {
   if (zone === "head" && w.damage > 0.45 && Math.random() < (heavy ? 0.5 : 0.08))
     spray(w, f.tx, f.ty + 6, 1, "tooth", "#fffbe8", 80);
   w.shake = Math.max(w.shake, f.weapon === "mazo" ? 7 : heavy ? 5 : 2.2);
+  if (f.weapon === "hacha") w.events.push({ type: "sfx", name: "glove" });
   w.hitStop = heavy ? 0.075 : 0.03;
   w.events.push({ type: "sfx", name: stats.sfx });
   if (heavy) w.events.push({ type: "sfx", name: "boom" });
@@ -537,6 +643,21 @@ function knockout(w: World) {
   if (!w.demo) w.score += bonus;
   w.flash = 1;
   w.shake = 9;
+  const colors = ["#d52b1e", "#ffffff", "#0038a8", "#ffd23f", "#ff4fd8"];
+  for (let i = 0; i < 70; i++) {
+    const life = 1.4 + Math.random() * 1.2;
+    w.particles.push({
+      x: Math.random() * w.W,
+      y: -5 - Math.random() * 30,
+      vx: (Math.random() - 0.5) * 40,
+      vy: 10 + Math.random() * 30,
+      life,
+      max: life,
+      color: colors[i % colors.length],
+      size: 2 + Math.random() * 2,
+      kind: "confetti",
+    });
+  }
   w.hitStop = 0.14;
   w.texts.push(
     {
@@ -594,14 +715,14 @@ function ai(w: World) {
     const tx = w.W * (0.2 + Math.random() * 0.6);
     const ty = w.H * (0.45 + Math.random() * 0.35);
     w.papers.push({
-      x0: L.cx - 24,
-      y0: L.neckY + 4,
+      x0: L.cx - 62,
+      y0: L.neckY + 12,
       tx,
       ty,
       t0: w.t + 0.2,
       dur: Math.max(1.15, 1.9 - w.round * 0.12),
     });
-  } else if (r < 0.45) {
+  } else if (r < 0.45 || w.demo) {
     setMood(w, "taunt", 1.7);
     say(w, pick(TAUNTS), 1.7);
   } else {
@@ -703,7 +824,8 @@ export function step(w: World, dt: number) {
   // Particles & text
   for (const p of w.particles) {
     p.life -= dt;
-    p.vy += 160 * dt;
+    p.vy += (p.kind === "confetti" ? 25 : 160) * dt;
+    if (p.kind === "confetti") p.vx += Math.sin((w.t + p.max) * 6) * 20 * dt;
     p.x += p.vx * dt;
     p.y += p.vy * dt;
   }
@@ -726,6 +848,7 @@ export function step(w: World, dt: number) {
 
   w.shake = Math.max(0, w.shake - dt * 30);
   w.flash = Math.max(0, w.flash - dt * 3);
+  w.wet = Math.max(0, w.wet - dt * 0.03);
 }
 
 export function drainEvents(w: World) {
@@ -745,6 +868,8 @@ export type Snapshot = {
   weapon: Weapon;
   bonusMazo: number;
   sued: boolean;
+  trial: Weapon | null;
+  trialsLeft: Partial<Record<Weapon, number>>;
 };
 
 export function snapshot(w: World): Snapshot {
@@ -759,6 +884,8 @@ export function snapshot(w: World): Snapshot {
     weapon: activeWeapon(w),
     bonusMazo: Math.max(0, w.bonusMazoUntil - w.t),
     sued: w.suedUntil > w.t,
+    trial: w.trial,
+    trialsLeft: { ...w.trialsLeft },
   };
 }
 

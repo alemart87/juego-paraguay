@@ -45,7 +45,9 @@ export type SfxName =
   | "swat"
   | "stamp"
   | "crowd"
-  | "whiff";
+  | "whiff"
+  | "squeak"
+  | "squirt";
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -428,6 +430,14 @@ function playSfx(name: SfxName) {
       break;
     case "whiff":
       noise(0.13, { gain: 0.22, from: 3200, to: 500, q: 1.2 });
+      break;
+    case "squeak":
+      tone(1400, 0.16, { type: "square", gain: 0.12, slide: 2400 });
+      tone(900, 0.2, { type: "triangle", gain: 0.2, slide: 1500, delay: 0.05 });
+      break;
+    case "squirt":
+      noise(0.22, { gain: 0.4, from: 7000, to: 1200, q: 2 });
+      noise(0.3, { gain: 0.25, from: 1200, to: 300, q: 0.7, delay: 0.06 });
       break;
   }
 }

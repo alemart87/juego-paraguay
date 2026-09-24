@@ -4880,16 +4880,41 @@
 }
 
 .abogado-launch {
+  position: relative;
   text-decoration: none;
   margin-top: 10px;
+  padding-right: 92px;
+  overflow: hidden;
   border-color: #d52b1e !important;
   border-left: 6px solid #d52b1e !important;
-  background: linear-gradient(90deg, #0038a840, transparent 65%), #08070d;
+  background:
+    radial-gradient(circle at 88% 50%, #ffd23f55, transparent 45%),
+    linear-gradient(90deg, #0038a855, transparent 70%),
+    #08070d;
   box-shadow: 8px 8px 0 #d52b1e33;
+}
+.abogado-launch img {
+  position: absolute;
+  right: -4px;
+  bottom: -10px;
+  width: 96px;
+  transform: rotate(8deg);
+  transition: transform 0.2s;
+}
+.abogado-launch:hover img {
+  transform: rotate(-6deg) scale(1.08);
 }
 .abogado-launch span {
   color: #ffffff;
 }
 .abogado-launch strong {
   color: #ffe066;
+}
+.episode-card-bonus {
+  text-decoration: none;
+  outline: 3px solid #ffd23f;
+  outline-offset: -3px;
+}
+.episode-card-bonus .episode-number {
+  color: #ffd23f;
 }
