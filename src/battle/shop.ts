@@ -26,6 +26,9 @@ export const getWhopCheckout = createServerFn({ method: "POST" })
       armadura: process.env.WHOP_CHECKOUT_ARMADURA,
       luison: process.env.WHOP_CHECKOUT_LUISON,
       avance: process.env.WHOP_CHECKOUT_AVANCE,
+      "rivas-titulo": process.env.WHOP_CHECKOUT_RIVAS_TITULO,
+      "rivas-mazo": process.env.WHOP_CHECKOUT_RIVAS_MAZO,
+      "rivas-guantes": process.env.WHOP_CHECKOUT_RIVAS_GUANTES,
     };
     const url = env[data.sku]?.trim() || DEFAULT_CHECKOUTS[data.sku];
     if (url) {

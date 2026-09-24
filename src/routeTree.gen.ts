@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ComoJugarRouteImport } from './routes/como-jugar'
+import { Route as HernanRivasAbogadoRouteImport } from './routes/hernan-rivas-abogado'
 import { Route as PoliticaDeComprasRouteImport } from './routes/politica-de-compras'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as PersonajesIndexRouteImport } from './routes/personajes.index'
@@ -30,6 +31,11 @@ const AdminRoute = AdminRouteImport.update({
 const ComoJugarRoute = ComoJugarRouteImport.update({
   id: '/como-jugar',
   path: '/como-jugar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HernanRivasAbogadoRoute = HernanRivasAbogadoRouteImport.update({
+  id: '/hernan-rivas-abogado',
+  path: '/hernan-rivas-abogado',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoliticaDeComprasRoute = PoliticaDeComprasRouteImport.update({
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/como-jugar': typeof ComoJugarRoute
+  '/hernan-rivas-abogado': typeof HernanRivasAbogadoRoute
   '/politica-de-compras': typeof PoliticaDeComprasRoute
   '/privacidad': typeof PrivacidadRoute
   '/personajes/$slug': typeof PersonajesSlugRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/como-jugar': typeof ComoJugarRoute
+  '/hernan-rivas-abogado': typeof HernanRivasAbogadoRoute
   '/politica-de-compras': typeof PoliticaDeComprasRoute
   '/privacidad': typeof PrivacidadRoute
   '/personajes/$slug': typeof PersonajesSlugRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/como-jugar': typeof ComoJugarRoute
+  '/hernan-rivas-abogado': typeof HernanRivasAbogadoRoute
   '/politica-de-compras': typeof PoliticaDeComprasRoute
   '/privacidad': typeof PrivacidadRoute
   '/personajes/$slug': typeof PersonajesSlugRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/como-jugar'
+    | '/hernan-rivas-abogado'
     | '/politica-de-compras'
     | '/privacidad'
     | '/personajes/$slug'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/como-jugar'
+    | '/hernan-rivas-abogado'
     | '/politica-de-compras'
     | '/privacidad'
     | '/personajes/$slug'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/como-jugar'
+    | '/hernan-rivas-abogado'
     | '/politica-de-compras'
     | '/privacidad'
     | '/personajes/$slug'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   ComoJugarRoute: typeof ComoJugarRoute
+  HernanRivasAbogadoRoute: typeof HernanRivasAbogadoRoute
   PoliticaDeComprasRoute: typeof PoliticaDeComprasRoute
   PrivacidadRoute: typeof PrivacidadRoute
   PersonajesSlugRoute: typeof PersonajesSlugRoute
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/como-jugar'
       fullPath: '/como-jugar'
       preLoaderRoute: typeof ComoJugarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hernan-rivas-abogado': {
+      id: '/hernan-rivas-abogado'
+      path: '/hernan-rivas-abogado'
+      fullPath: '/hernan-rivas-abogado'
+      preLoaderRoute: typeof HernanRivasAbogadoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/politica-de-compras': {
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   ComoJugarRoute: ComoJugarRoute,
+  HernanRivasAbogadoRoute: HernanRivasAbogadoRoute,
   PoliticaDeComprasRoute: PoliticaDeComprasRoute,
   PrivacidadRoute: PrivacidadRoute,
   PersonajesSlugRoute: PersonajesSlugRoute,

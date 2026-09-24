@@ -4878,3 +4878,18 @@
     display: none;
   }
 }
+
+.abogado-launch {
+  text-decoration: none;
+  margin-top: 10px;
+  border-color: #d52b1e !important;
+  border-left: 6px solid #d52b1e !important;
+  background: linear-gradient(90deg, #0038a840, transparent 65%), #08070d;
+  box-shadow: 8px 8px 0 #d52b1e33;
+}
+.abogado-launch span {
+  color: #ffffff;
+}
+.abogado-launch strong {
+  color: #ffe066;
+}

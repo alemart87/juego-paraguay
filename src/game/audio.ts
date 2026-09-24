@@ -38,7 +38,14 @@ export type SfxName =
   | "ally"
   | "rocket"
   | "flame"
-  | "railgun";
+  | "railgun"
+  | "bell"
+  | "glove"
+  | "hammer"
+  | "swat"
+  | "stamp"
+  | "crowd"
+  | "whiff";
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -245,6 +252,9 @@ const MIN_GAP: Partial<Record<SfxName, number>> = {
   blip: 30,
   alert: 800,
   hurt: 120,
+  glove: 50,
+  crowd: 900,
+  whiff: 60,
 };
 
 function playSfx(name: SfxName) {
@@ -388,6 +398,36 @@ function playSfx(name: SfxName) {
       [440, 415, 392, 330].forEach((f, i) =>
         tone(f, 0.3, { type: "sawtooth", gain: 0.16, delay: i * 0.2 }),
       );
+      break;
+    case "bell":
+      [0, 0.28, 0.56].forEach((delay) => {
+        tone(1320, 0.9, { type: "sine", gain: 0.24, delay });
+        tone(1985, 0.6, { type: "sine", gain: 0.08, delay });
+      });
+      break;
+    case "glove":
+      noise(0.12, { gain: 0.5, from: 900, to: 120 });
+      tone(92, 0.13, { type: "sine", gain: 0.42, slide: 45 });
+      break;
+    case "hammer":
+      noise(0.24, { gain: 0.65, from: 2600, to: 70 });
+      tone(62, 0.32, { type: "sine", gain: 0.55, slide: 28 });
+      tone(560, 0.14, { type: "triangle", gain: 0.22, slide: 170, delay: 0.02 });
+      break;
+    case "swat":
+      noise(0.12, { gain: 0.38, from: 9000, to: 1800, q: 1.4 });
+      tone(700, 0.06, { type: "square", gain: 0.08, slide: 1200 });
+      break;
+    case "stamp":
+      noise(0.2, { gain: 0.55, from: 1400, to: 90 });
+      tone(110, 0.22, { type: "square", gain: 0.2, slide: 55 });
+      break;
+    case "crowd":
+      noise(1.3, { gain: 0.2, from: 2200, to: 700, q: 0.4 });
+      noise(0.9, { gain: 0.12, from: 3200, to: 1200, q: 0.6, delay: 0.15 });
+      break;
+    case "whiff":
+      noise(0.13, { gain: 0.22, from: 3200, to: 500, q: 1.2 });
       break;
   }
 }

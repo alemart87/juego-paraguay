@@ -1,0 +1,646 @@
+.ab-root {
+  --ab-bg: #0d0a14;
+  --ab-ink: #f7f3ea;
+  --ab-dim: #a59fb8;
+  --ab-red: #d52b1e;
+  --ab-blue: #0038a8;
+  --ab-yellow: #ffe066;
+  --ab-panel: #171226;
+  --ab-edge: #120c10;
+  --ab-font: "Pixelify Sans", ui-monospace, monospace;
+  position: fixed;
+  inset: 0;
+  background: var(--ab-bg);
+  color: var(--ab-ink);
+  font-family: var(--ab-font);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.ab-root :is(h1, h2, h3, h4, button, input, a) {
+  font-family: var(--ab-font);
+}
+.ab-root :is(h1, h2, h3, h4, b, strong, .ab-btn) {
+  font-weight: 700;
+}
+.ab-root.ab-screen-result {
+  overflow-y: auto;
+  user-select: text;
+}
+
+/* Pixel frame: stepped corners with no blur */
+.ab-pixel,
+.ab-btn,
+.ab-weapon,
+.ab-item,
+.ab-title-panel,
+.ab-modal-body,
+.ab-profile input {
+  box-shadow:
+    0 -4px 0 0 var(--ab-edge),
+    0 4px 0 0 var(--ab-edge),
+    -4px 0 0 0 var(--ab-edge),
+    4px 0 0 0 var(--ab-edge);
+}
+
+.ab-scene {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  touch-action: none;
+}
+.ab-canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* ─── HUD ─── */
+.ab-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  padding: max(10px, env(safe-area-inset-top)) 12px 12px;
+}
+.ab-hud-top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 8px;
+}
+.ab-hud-score small {
+  display: block;
+  font-size: 11px;
+  color: var(--ab-yellow);
+  margin-bottom: 6px;
+}
+.ab-hud-score strong {
+  font-size: clamp(14px, 4vw, 22px);
+  text-shadow: 3px 3px 0 var(--ab-edge);
+}
+.ab-hud-time {
+  font-size: clamp(22px, 7vw, 38px);
+  text-shadow:
+    3px 3px 0 var(--ab-red),
+    6px 6px 0 var(--ab-edge);
+  min-width: 2.2em;
+  text-align: center;
+}
+.ab-hud-time.urgent {
+  color: var(--ab-yellow);
+  animation: ab-pulse 0.5s steps(2) infinite;
+}
+.ab-hud-actions {
+  justify-self: end;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+.ab-hud-actions button {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: rgba(18, 12, 16, 0.75);
+  color: var(--ab-ink);
+  border: 3px solid var(--ab-ink);
+}
+.ab-hud-actions button:active {
+  transform: translateY(2px);
+}
+.ab-hud-bar {
+  margin-top: 10px;
+  max-width: 420px;
+}
+.ab-hud-bar span {
+  font-size: 11px;
+  color: var(--ab-dim);
+}
+.ab-hp {
+  margin-top: 6px;
+  height: 12px;
+  background: #3a0d12;
+  border: 3px solid var(--ab-edge);
+  outline: 2px solid var(--ab-ink);
+}
+.ab-hp i {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, #ff4b3e 0 6px, #d52b1e 6px 8px);
+  transition: width 0.12s steps(4);
+}
+.ab-combo {
+  position: absolute;
+  left: 12px;
+  top: 42%;
+  font-size: 14px;
+  color: var(--ab-yellow);
+  text-shadow: 3px 3px 0 var(--ab-edge);
+  animation: ab-pop 0.18s steps(3);
+}
+.ab-combo b {
+  display: block;
+  font-size: clamp(22px, 6vw, 34px);
+  color: var(--ab-ink);
+  margin-top: 6px;
+}
+.ab-bonus {
+  position: absolute;
+  right: 12px;
+  top: 42%;
+  font-size: 12px;
+  color: #ffcc33;
+  text-shadow: 2px 2px 0 var(--ab-edge);
+  animation: ab-pulse 0.4s steps(2) infinite;
+}
+.ab-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  padding: 10px 14px;
+  background: var(--ab-edge);
+  border: 3px solid var(--ab-yellow);
+  font-size: 13px;
+  white-space: nowrap;
+  z-index: 3;
+}
+.ab-pause {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 10, 20, 0.78);
+  display: grid;
+  place-content: center;
+  gap: 22px;
+  text-align: center;
+  z-index: 4;
+}
+.ab-pause strong {
+  font-size: 28px;
+  text-shadow: 4px 4px 0 var(--ab-red);
+}
+
+/* ─── Buttons ─── */
+.ab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ab-ink);
+  background: #2a2140;
+  border: 0;
+  margin: 4px;
+}
+.ab-btn:active:not(:disabled) {
+  transform: translateY(3px);
+}
+.ab-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ab-btn-primary {
+  background: var(--ab-red);
+  color: #fff;
+  text-shadow: 2px 2px 0 #7a0f08;
+}
+.ab-btn-primary:hover:not(:disabled) {
+  background: #ee3a2c;
+}
+.ab-btn-gold {
+  background: #f2b72b;
+  color: #2a1d12;
+}
+.ab-link {
+  background: none;
+  border: 0;
+  color: var(--ab-dim);
+  font: inherit;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+}
+.ab-link:hover {
+  color: var(--ab-ink);
+}
+
+/* ─── Title ─── */
+.ab-screen-title .ab-scene {
+  bottom: 0;
+}
+.ab-title-panel {
+  position: absolute;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 24px));
+  background: rgba(23, 18, 38, 0.94);
+  padding: 16px 16px 12px;
+  text-align: center;
+  z-index: 2;
+}
+.ab-back {
+  position: absolute;
+  top: -34px;
+  left: 0;
+  font-size: 12px;
+  color: var(--ab-ink);
+  text-decoration: none;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  background: rgba(13, 10, 20, 0.8);
+  padding: 6px 8px;
+}
+.ab-logo {
+  margin: 0;
+  line-height: 1.25;
+}
+.ab-logo span {
+  display: block;
+  font-size: clamp(18px, 5.4vw, 30px);
+  text-shadow:
+    3px 3px 0 var(--ab-blue),
+    6px 6px 0 var(--ab-edge);
+}
+.ab-logo em {
+  display: inline-block;
+  margin-top: 8px;
+  font-style: normal;
+  font-size: clamp(14px, 4.2vw, 22px);
+  color: var(--ab-yellow);
+  background: var(--ab-red);
+  padding: 6px 10px 4px;
+  transform: rotate(-2deg);
+  text-shadow: 2px 2px 0 #7a0f08;
+  animation: ab-wobble 1.6s steps(4) infinite;
+}
+.ab-tag {
+  margin: 12px 0 10px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ab-dim);
+}
+.ab-weapons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 8px 4px 12px;
+}
+.ab-weapon {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  background: #211a33;
+  color: var(--ab-ink);
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.ab-weapon b {
+  font-size: 12px;
+}
+.ab-weapon small {
+  font-size: 10px;
+  color: var(--ab-dim);
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.ab-weapon.on {
+  background: var(--ab-blue);
+  outline: 3px solid var(--ab-yellow);
+}
+.ab-weapon.locked {
+  opacity: 0.8;
+}
+.ab-weapon.locked small {
+  color: var(--ab-yellow);
+}
+.ab-icon {
+  image-rendering: pixelated;
+  width: 48px;
+  height: 48px;
+}
+.ab-play {
+  width: calc(100% - 8px);
+  min-height: 54px;
+  font-size: 19px;
+  animation: ab-pulse-bg 1s steps(2) infinite;
+}
+.ab-title-meta {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ab-yellow);
+}
+.ab-controls,
+.ab-legal {
+  margin: 6px 0 0;
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--ab-dim);
+}
+.ab-legal {
+  opacity: 0.7;
+}
+@media (pointer: coarse) {
+  .ab-kbd {
+    display: none;
+  }
+}
+
+/* ─── Result ─── */
+.ab-result {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) 16px 40px;
+  text-align: center;
+}
+.ab-kicker {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--ab-yellow);
+}
+.ab-result h2 {
+  margin: 12px 0 6px;
+  font-size: clamp(30px, 10vw, 54px);
+  text-shadow:
+    4px 4px 0 var(--ab-red),
+    8px 8px 0 var(--ab-edge);
+}
+.ab-result h2 small {
+  font-size: 18px;
+}
+.ab-newbest {
+  font-size: 13px;
+  color: var(--ab-yellow);
+  animation: ab-pulse 0.5s steps(2) infinite;
+}
+.ab-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 18px 0;
+}
+.ab-stats div {
+  background: var(--ab-panel);
+  padding: 10px 4px;
+  border: 3px solid var(--ab-edge);
+}
+.ab-stats b {
+  display: block;
+  font-size: 19px;
+  color: var(--ab-yellow);
+}
+.ab-stats small {
+  font-size: 10px;
+  color: var(--ab-dim);
+}
+.ab-card-preview {
+  width: min(260px, 70vw);
+  aspect-ratio: 9 / 16;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  background: var(--ab-panel);
+  border: 4px solid var(--ab-ink);
+  box-shadow: 8px 8px 0 var(--ab-red);
+}
+.ab-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+.ab-result-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 22px;
+}
+.ab-home {
+  margin-top: 18px;
+}
+
+/* ─── Shop ─── */
+.ab-shop {
+  text-align: left;
+  background: var(--ab-panel);
+  border: 4px solid var(--ab-edge);
+  outline: 3px solid #2e2548;
+  padding: 16px;
+}
+.ab-shop h3 {
+  margin: 10px 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ab-shop-grid {
+  display: grid;
+  gap: 14px;
+}
+.ab-item {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: #211a33;
+  padding: 10px;
+}
+.ab-item.owned {
+  background: #1c2f25;
+}
+.ab-item .ab-icon {
+  width: 56px;
+  height: 56px;
+}
+.ab-item small {
+  font-size: 10px;
+  color: var(--ab-yellow);
+}
+.ab-item h4 {
+  margin: 4px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.ab-item p {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ab-dim);
+}
+.ab-item .ab-btn {
+  font-size: 12px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+.ab-owned {
+  font-size: 12px;
+  color: #7ee0a0;
+}
+.ab-notice {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ab-yellow);
+  background: #2a2140;
+  padding: 10px;
+  margin: 0 0 12px;
+}
+.ab-shop-foot {
+  margin-top: 14px;
+  display: grid;
+  gap: 6px;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--ab-dim);
+}
+.ab-profile {
+  display: grid;
+  gap: 12px;
+}
+.ab-profile p {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ab-dim);
+}
+.ab-profile input[type="email"],
+.ab-profile input:not([type]) {
+  font: inherit;
+  font-size: 12px;
+  padding: 12px;
+  background: #0d0a14;
+  color: var(--ab-ink);
+  border: 0;
+  margin: 4px;
+}
+.ab-check {
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--ab-dim);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ab-check a {
+  color: var(--ab-yellow);
+}
+.ab-row {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 420px) {
+  .ab-item {
+    grid-template-columns: 48px 1fr;
+  }
+  .ab-item .ab-icon {
+    width: 48px;
+    height: 48px;
+  }
+  .ab-item > :last-child {
+    grid-column: 1 / -1;
+  }
+  .ab-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ─── Modal ─── */
+.ab-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 6, 12, 0.8);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 10;
+  overflow-y: auto;
+}
+.ab-modal-body {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  background: var(--ab-panel);
+}
+.ab-modal-body .ab-shop {
+  border: 0;
+  outline: 0;
+}
+.ab-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  font: inherit;
+  font-size: 19px;
+  color: var(--ab-ink);
+  background: var(--ab-red);
+  border: 0;
+  z-index: 1;
+}
+
+.ab-spin {
+  animation: ab-spin 0.8s steps(8) infinite;
+}
+
+@keyframes ab-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes ab-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes ab-pulse-bg {
+  50% {
+    background: #ee3a2c;
+  }
+}
+@keyframes ab-pop {
+  from {
+    transform: scale(1.6);
+  }
+}
+@keyframes ab-wobble {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg) scale(1.04);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ab-logo em,
+  .ab-play,
+  .ab-hud-time.urgent,
+  .ab-bonus {
+    animation: none;
+  }
+}

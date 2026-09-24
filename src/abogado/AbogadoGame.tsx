@@ -1,0 +1,500 @@
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  ArrowLeft,
+  Download,
+  LoaderCircle,
+  Lock,
+  RefreshCw,
+  RotateCcw,
+  Share2,
+  ShoppingBag,
+  Swords,
+} from "lucide-react";
+import { configureAudio, installMobileAudioUnlock, sfx, unlockAudio } from "@/game/audio";
+import { ABOGADO_SHOP_ITEMS, type AbogadoSku } from "@/battle/shop-catalog";
+import { AbogadoScene } from "./AbogadoScene";
+import type { RunResult, Weapon } from "./engine";
+import { drawIcon } from "./render";
+import {
+  checkout,
+  createProfile,
+  isAbogadoSku,
+  loadBest,
+  loadOwned,
+  profile,
+  saveBest,
+  syncOwned,
+  type Best,
+} from "./commerce";
+import { certificate, downloadBlob, resultCard, shareBlob } from "./share";
+import "./abogado.css";
+
+type Screen = "title" | "play" | "result";
+
+const WEAPONS: {
+  id: Weapon;
+  label: string;
+  icon: "punos" | "guantes" | "mazo";
+  sku?: AbogadoSku;
+  hint: string;
+}[] = [
+  { id: "punos", label: "Puños", icon: "punos", hint: "Rápidos y gratis" },
+  { id: "guantes", label: "Guantes", icon: "guantes", sku: "rivas-guantes", hint: "+50% daño" },
+  { id: "mazo", label: "Mazo", icon: "mazo", sku: "rivas-mazo", hint: "Daño ×3" },
+];
+
+const ICON_FOR: Record<AbogadoSku, "titulo" | "mazo" | "guantes"> = {
+  "rivas-titulo": "titulo",
+  "rivas-mazo": "mazo",
+  "rivas-guantes": "guantes",
+};
+
+function PixelIcon({
+  kind,
+  size = 56,
+}: {
+  kind: "titulo" | "mazo" | "guantes" | "punos";
+  size?: number;
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = ref.current?.getContext("2d");
+    if (c) drawIcon(c, kind, size);
+  }, [kind, size]);
+  return <canvas ref={ref} width={size} height={size} className="ab-icon" aria-hidden />;
+}
+
+export function AbogadoGame() {
+  const [screen, setScreen] = useState<Screen>("title");
+  const [weapon, setWeapon] = useState<Weapon>("punos");
+  const [owned, setOwned] = useState<AbogadoSku[]>([]);
+  const [best, setBest] = useState<Best>({ score: 0, kos: 0, combo: 0 });
+  const [run, setRun] = useState<RunResult | null>(null);
+  const [newBest, setNewBest] = useState(false);
+  const [cardUrl, setCardUrl] = useState<string | null>(null);
+  const cardBlob = useRef<Blob | null>(null);
+  const [soundOn, setSoundOn] = useState(true);
+  const [runKey, setRunKey] = useState(0);
+  const [notice, setNotice] = useState("");
+  const [shopOpen, setShopOpen] = useState(false);
+
+  useEffect(() => {
+    installMobileAudioUnlock();
+    setOwned(loadOwned());
+    setBest(loadBest());
+    void syncOwned().then((r) => r.ok && setOwned(r.skus));
+    const params = new URLSearchParams(window.location.search);
+    const bought = params.get("compra");
+    if (isAbogadoSku(bought)) {
+      setNotice("¡Gracias por tu compra! Verificando con Whop…");
+      setShopOpen(true);
+      let tries = 0;
+      const poll = async () => {
+        tries++;
+        const r = await syncOwned();
+        if (r.skus.includes(bought)) {
+          setOwned(r.skus);
+          setNotice("✅ ¡Compra activada! Ya la podés usar.");
+          window.history.replaceState(null, "", window.location.pathname);
+        } else if (tries < 8) setTimeout(() => void poll(), 4000);
+        else
+          setNotice(
+            "El pago todavía se está procesando. Tocá «Sincronizar» en unos minutos con el mismo correo.",
+          );
+      };
+      void poll();
+    }
+  }, []);
+
+  useEffect(() => configureAudio(soundOn, 0.85), [soundOn]);
+
+  useEffect(
+    () => () => {
+      if (cardUrl) URL.revokeObjectURL(cardUrl);
+    },
+    [cardUrl],
+  );
+
+  const ownsWeapon = (id: Weapon) => {
+    const sku = WEAPONS.find((w) => w.id === id)?.sku;
+    return !sku || owned.includes(sku);
+  };
+
+  const start = () => {
+    void unlockAudio();
+    if (soundOn) sfx("bell");
+    setRun(null);
+    setRunKey((k) => k + 1);
+    setScreen("play");
+  };
+
+  const finish = (r: RunResult, shot: HTMLCanvasElement | null) => {
+    const prev = loadBest();
+    const next: Best = {
+      score: Math.max(prev.score, r.score),
+      kos: Math.max(prev.kos, r.kos),
+      combo: Math.max(prev.combo, r.maxCombo),
+    };
+    saveBest(next);
+    setBest(next);
+    setNewBest(r.score > prev.score && r.score > 0);
+    setRun(r);
+    setScreen("result");
+    if (soundOn) sfx(r.kos > 0 ? "win" : "ko");
+    void resultCard(shot, r, profile()?.name).then((blob) => {
+      cardBlob.current = blob;
+      setCardUrl(URL.createObjectURL(blob));
+    });
+  };
+
+  const shareCard = async () => {
+    if (!cardBlob.current || !run) return;
+    await shareBlob(
+      cardBlob.current,
+      "hernan-rivas-es-abogado.png",
+      `Le metí ${run.score.toLocaleString("es-PY")} puntos y ${run.kos} K.O. a Hernán Rivas 🥊⚖️ ¿Me superás?`,
+    );
+  };
+
+  const goldTitle = owned.includes("rivas-titulo");
+
+  return (
+    <main className={`ab-root ab-screen-${screen}`}>
+      {screen === "title" && (
+        <>
+          <AbogadoScene
+            mode="demo"
+            weapon={ownsWeapon(weapon) ? weapon : "punos"}
+            goldTitle={goldTitle}
+            soundOn={soundOn}
+          />
+          <section className="ab-title-panel">
+            <a className="ab-back" href="/">
+              <ArrowLeft size={14} /> PY-STAR GAMES
+            </a>
+            <h1 className="ab-logo">
+              <span>HERNÁN RIVAS</span>
+              <em>ES ABOGADO</em>
+            </h1>
+            <p className="ab-tag">
+              Tenés 60 segundos. Pegale a full, cortá las demandas y noqueálo.
+            </p>
+            <div className="ab-weapons" role="radiogroup" aria-label="Elegí tu arma">
+              {WEAPONS.map((w) => {
+                const has = ownsWeapon(w.id);
+                const item = ABOGADO_SHOP_ITEMS.find((i) => i.sku === w.sku);
+                return (
+                  <button
+                    key={w.id}
+                    role="radio"
+                    aria-checked={weapon === w.id}
+                    className={`ab-weapon ${weapon === w.id && has ? "on" : ""} ${has ? "" : "locked"}`}
+                    onClick={() => {
+                      if (soundOn) sfx("ui");
+                      if (has) setWeapon(w.id);
+                      else setShopOpen(true);
+                    }}
+                  >
+                    <PixelIcon kind={w.icon} size={40} />
+                    <b>{w.label}</b>
+                    <small>
+                      {has ? (
+                        w.hint
+                      ) : (
+                        <>
+                          <Lock size={10} /> USD {item?.price.toFixed(2)}
+                        </>
+                      )}
+                    </small>
+                  </button>
+                );
+              })}
+            </div>
+            <button className="ab-btn ab-btn-primary ab-play" onClick={start}>
+              <Swords size={18} /> ¡PEGALE!
+            </button>
+            <div className="ab-title-meta">
+              <span>RÉCORD {best.score.toLocaleString("es-PY")}</span>
+              <button className="ab-link" onClick={() => setShopOpen(true)}>
+                <ShoppingBag size={13} /> TIENDA
+              </button>
+              <button className="ab-link" onClick={() => setSoundOn((s) => !s)}>
+                SONIDO {soundOn ? "ON" : "OFF"}
+              </button>
+            </div>
+            <p className="ab-controls">
+              Tocá la cara o la panza · mantené apretado para cargar · tocá las demandas que te tira
+              <span className="ab-kbd"> · PC: A/D cara, S panza, W/Espacio uppercut</span>
+            </p>
+            <p className="ab-legal">
+              Sátira y parodia humorística con un personaje caricaturizado. Ninguna persona real
+              sale lastimada.
+            </p>
+          </section>
+        </>
+      )}
+
+      {screen === "play" && (
+        <AbogadoScene
+          key={runKey}
+          mode="play"
+          weapon={ownsWeapon(weapon) ? weapon : "punos"}
+          goldTitle={goldTitle}
+          soundOn={soundOn}
+          onToggleSound={() => setSoundOn((s) => !s)}
+          onEnd={finish}
+        />
+      )}
+
+      {screen === "result" && run && (
+        <section className="ab-result">
+          <header>
+            <span className="ab-kicker">
+              {run.kos > 0 ? "¡LO NOQUEASTE!" : "¡SE TERMINÓ EL TIEMPO!"}
+            </span>
+            <h2>
+              {run.score.toLocaleString("es-PY")} <small>PTS</small>
+            </h2>
+            {newBest && <span className="ab-newbest">★ NUEVO RÉCORD ★</span>}
+          </header>
+          <div className="ab-stats">
+            <div>
+              <b>{run.kos}</b>
+              <small>K.O.</small>
+            </div>
+            <div>
+              <b>{run.maxCombo}</b>
+              <small>COMBO</small>
+            </div>
+            <div>
+              <b>{run.accuracy}%</b>
+              <small>PUNTERÍA</small>
+            </div>
+            <div>
+              <b>{run.swats}</b>
+              <small>DEMANDAS</small>
+            </div>
+          </div>
+          <div className="ab-card-preview">
+            {cardUrl ? (
+              <img src={cardUrl} alt="Tarjeta con tu puntaje para compartir" />
+            ) : (
+              <LoaderCircle className="ab-spin" />
+            )}
+          </div>
+          <div className="ab-result-actions">
+            <button className="ab-btn ab-btn-primary" onClick={start}>
+              <RotateCcw size={16} /> REVANCHA
+            </button>
+            <button className="ab-btn" disabled={!cardUrl} onClick={() => void shareCard()}>
+              <Share2 size={16} /> COMPARTIR
+            </button>
+            <button
+              className="ab-btn"
+              disabled={!cardUrl}
+              onClick={() =>
+                cardBlob.current && downloadBlob(cardBlob.current, "hernan-rivas-es-abogado.png")
+              }
+            >
+              <Download size={16} /> GUARDAR
+            </button>
+          </div>
+          <AbogadoShop owned={owned} onOwned={setOwned} notice={notice} best={best} />
+          <button className="ab-link ab-home" onClick={() => setScreen("title")}>
+            <ArrowLeft size={13} /> VOLVER AL INICIO
+          </button>
+        </section>
+      )}
+
+      {shopOpen && screen !== "result" && (
+        <div className="ab-modal" role="dialog" aria-modal="true" aria-label="Tienda del abogado">
+          <div className="ab-modal-body">
+            <button
+              className="ab-close"
+              aria-label="Cerrar tienda"
+              onClick={() => setShopOpen(false)}
+            >
+              ×
+            </button>
+            <AbogadoShop owned={owned} onOwned={setOwned} notice={notice} best={best} />
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
+
+function AbogadoShop({
+  owned,
+  onOwned,
+  notice,
+  best,
+}: {
+  owned: AbogadoSku[];
+  onOwned: (skus: AbogadoSku[]) => void;
+  notice: string;
+  best: Best;
+}) {
+  const [busy, setBusy] = useState<AbogadoSku | "sync" | "profile" | null>(null);
+  const [message, setMessage] = useState("");
+  const [pending, setPending] = useState<AbogadoSku | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
+
+  const buy = async (sku: AbogadoSku) => {
+    setMessage("");
+    const p = profile();
+    if (!p?.benefitToken || (p.kind !== "email" && !p.purchaseEmail)) {
+      setPending(sku);
+      setName(p?.name ?? "");
+      return;
+    }
+    setBusy(sku);
+    try {
+      const r = await checkout(sku);
+      if (!r.ok) setMessage(r.message);
+    } catch {
+      setMessage("No pudimos abrir Whop. Probá de nuevo.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const submitProfile = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!pending) return;
+    setBusy("profile");
+    setMessage("");
+    try {
+      const r = await createProfile(name, email);
+      if (!r.ok) {
+        setMessage(r.message);
+        return;
+      }
+      const sku = pending;
+      setPending(null);
+      await buy(sku);
+    } catch {
+      setMessage("Revisá tu nombre (2 a 24 letras) y tu correo.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const sync = async () => {
+    setBusy("sync");
+    const r = await syncOwned();
+    onOwned(r.skus);
+    setMessage(
+      r.ok
+        ? r.skus.length
+          ? `${r.skus.length} compra${r.skus.length === 1 ? "" : "s"} activa${r.skus.length === 1 ? "" : "s"}.`
+          : "Tu perfil está conectado. Las compras nuevas aparecen acá."
+        : (r.message ?? "Comprá algo primero o usá el mismo correo del pago."),
+    );
+    setBusy(null);
+  };
+
+  const downloadTitle = async () => {
+    const p = profile();
+    const blob = await certificate(p?.name ?? "", best.score, best.kos);
+    downloadBlob(blob, "titulo-abogado-honoris-kausa.png");
+  };
+
+  return (
+    <section className="ab-shop" aria-label="Tienda">
+      <header>
+        <span className="ab-kicker">
+          <ShoppingBag size={13} /> TIENDA DEL ABOGADO
+        </span>
+        <h3>Cosas simpáticas para el ring</h3>
+      </header>
+      {(notice || message) && <p className="ab-notice">{message || notice}</p>}
+      {pending ? (
+        <form className="ab-profile" onSubmit={(e) => void submitProfile(e)}>
+          <p>
+            Para asociar la compra a vos, dejá tu nombre y el{" "}
+            <b>mismo correo que vas a usar en Whop</b>.
+          </p>
+          <input
+            required
+            minLength={2}
+            maxLength={24}
+            placeholder="Tu nombre"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            aria-label="Nombre"
+          />
+          <input
+            required
+            type="email"
+            placeholder="tu@correo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-label="Correo"
+          />
+          <label className="ab-check">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+            />
+            Acepto la <a href="/privacidad">privacidad</a> y la{" "}
+            <a href="/politica-de-compras">política de compras</a>.
+          </label>
+          <div className="ab-row">
+            <button type="button" className="ab-btn" onClick={() => setPending(null)}>
+              CANCELAR
+            </button>
+            <button className="ab-btn ab-btn-primary" disabled={!consent || busy === "profile"}>
+              {busy === "profile" ? <LoaderCircle className="ab-spin" size={16} /> : null} IR A
+              PAGAR
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="ab-shop-grid">
+          {ABOGADO_SHOP_ITEMS.map((item) => {
+            const has = owned.includes(item.sku);
+            return (
+              <article key={item.sku} className={`ab-item ${has ? "owned" : ""}`}>
+                <PixelIcon kind={ICON_FOR[item.sku]} size={56} />
+                <div>
+                  <small>{item.badge}</small>
+                  <h4>{item.name}</h4>
+                  <p>{item.description}</p>
+                </div>
+                {has ? (
+                  item.sku === "rivas-titulo" ? (
+                    <button className="ab-btn ab-btn-gold" onClick={() => void downloadTitle()}>
+                      <Download size={14} /> MI TÍTULO
+                    </button>
+                  ) : (
+                    <span className="ab-owned">✔ TUYO</span>
+                  )
+                ) : (
+                  <button
+                    className="ab-btn ab-btn-primary"
+                    disabled={busy !== null}
+                    onClick={() => void buy(item.sku)}
+                    aria-label={`Comprar ${item.name} por ${item.price} dólares`}
+                  >
+                    {busy === item.sku ? <LoaderCircle className="ab-spin" size={14} /> : null}
+                    USD {item.price.toFixed(2)}
+                  </button>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+      <footer className="ab-shop-foot">
+        <button className="ab-link" disabled={busy === "sync"} onClick={() => void sync()}>
+          <RefreshCw size={12} className={busy === "sync" ? "ab-spin" : ""} /> SINCRONIZAR COMPRAS
+        </button>
+        <span>Pago seguro en Whop · el título es un souvenir humorístico sin validez legal.</span>
+      </footer>
+    </section>
+  );
+}

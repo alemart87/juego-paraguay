@@ -1033,8 +1033,15 @@ export function applyShopPowerup(w: World, sku: ShopSku) {
     armadura: "Armadura de acero equipada",
     luison: "El Luizón limpió la zona",
     avance: "Avance relámpago activado",
+    "rivas-titulo": "Disponible en Hernán Rivas ES ABOGADO",
+    "rivas-mazo": "Disponible en Hernán Rivas ES ABOGADO",
+    "rivas-guantes": "Disponible en Hernán Rivas ES ABOGADO",
   };
   switch (sku) {
+    case "rivas-titulo":
+    case "rivas-mazo":
+    case "rivas-guantes":
+      return { ok: false as const, message: messages[sku] };
     case "pablito":
     case "marito":
       return { ok: false as const, message: "Elegí este personaje antes de iniciar la partida." };

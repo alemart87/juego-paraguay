@@ -12,7 +12,8 @@ import {
 import { getPlayerBenefits } from "./leaderboard";
 import type { RewardWallet } from "./rewards";
 import { SCORE_REWARDS, rewardStock } from "./rewards";
-import { SHOP_ITEMS, getWhopCheckout, type ShopSku } from "./shop";
+import { getWhopCheckout, type ShopSku } from "./shop";
+import { BATTLE_SHOP_ITEMS } from "./shop-catalog";
 
 type StoredProfile = {
   kind?: "email" | "phone";
@@ -150,7 +151,7 @@ export function ShopPanel({
       </div>
 
       <div className="shop-grid">
-        {SHOP_ITEMS.map((item) => {
+        {BATTLE_SHOP_ITEMS.map((item) => {
           const free = rewards.stock[item.sku] ?? 0;
           const owned = ownedSkus.includes(item.sku);
           const used = usedOwnedSkus.includes(item.sku);

@@ -100,9 +100,58 @@ export const SHOP_ITEMS = [
     badge: "BOOST",
     category: "PROGRESO",
   },
+  {
+    sku: "rivas-titulo",
+    name: "Título Hernán Rivas Abogado",
+    icon: "🎓",
+    image: "/abogado/shop/titulo.png",
+    description:
+      "Título trucho de souvenir con tu nombre, marco dorado en el ring y sello HONORIS KAUSA. Humor, sin validez legal.",
+    price: 3.99,
+    badge: "EDICIÓN TRUCHA",
+    category: "COLECCIONABLE",
+    game: "abogado",
+    path: "/hernan-rivas-abogado",
+  },
+  {
+    sku: "rivas-mazo",
+    name: "Mazo de la Justicia",
+    icon: "🔨",
+    image: "/abogado/shop/mazo.png",
+    description: "Un mazo gigante: golpes lentos, daño triple y el abogado aplastado como acordeón.",
+    price: 1.99,
+    badge: "ORDEN EN LA SALA",
+    category: "ARMA",
+    game: "abogado",
+    path: "/hernan-rivas-abogado",
+  },
+  {
+    sku: "rivas-guantes",
+    name: "Guantes de boxeo pro",
+    icon: "🥊",
+    image: "/abogado/shop/guantes.png",
+    description: "Guantes rojos de campeón: más daño, combos más largos y golpe cargado más rápido.",
+    price: 0.99,
+    badge: "RING",
+    category: "ARMA",
+    game: "abogado",
+    path: "/hernan-rivas-abogado",
+  },
 ] as const;
 
 export type ShopItem = (typeof SHOP_ITEMS)[number];
 export type ShopSku = ShopItem["sku"];
+
+type WithGame = Extract<ShopItem, { game: string }>;
+/** Items sold inside Influencers Battle (the other games have their own shops). */
+export const BATTLE_SHOP_ITEMS = SHOP_ITEMS.filter(
+  (item): item is Exclude<ShopItem, WithGame> => !("game" in item),
+);
+/** Items sold inside "Hernán Rivas ES ABOGADO". */
+export const ABOGADO_SHOP_ITEMS = SHOP_ITEMS.filter(
+  (item): item is Extract<WithGame, { game: "abogado" }> =>
+    "game" in item && item.game === "abogado",
+);
+export type AbogadoSku = (typeof ABOGADO_SHOP_ITEMS)[number]["sku"];
 
 export const SHOP_SKUS = SHOP_ITEMS.map((item) => item.sku) as [ShopSku, ...ShopSku[]];

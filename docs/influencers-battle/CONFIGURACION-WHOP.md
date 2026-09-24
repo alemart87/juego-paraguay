@@ -15,6 +15,19 @@ La tienda usa el SDK oficial `@whop/sdk` exclusivamente en el servidor. Al prime
 | Poder del Luizón  | USD 6.99 | `luison`            |
 | Avance relámpago  | USD 4.99 | `avance`            |
 
+### Hernán Rivas ES ABOGADO (`/hernan-rivas-abogado`)
+
+| Producto                     |   Precio | Metadata `game_sku` | Override opcional            |
+| ---------------------------- | -------: | ------------------- | ---------------------------- |
+| Título Hernán Rivas Abogado  | USD 3.99 | `rivas-titulo`      | `WHOP_CHECKOUT_RIVAS_TITULO` |
+| Mazo de la Justicia          | USD 1.99 | `rivas-mazo`        | `WHOP_CHECKOUT_RIVAS_MAZO`   |
+| Guantes de boxeo pro         | USD 0.99 | `rivas-guantes`     | `WHOP_CHECKOUT_RIVAS_GUANTES`|
+
+Estos productos no aparecen en la tienda de Influencers Battle. Whop devuelve al jugador a
+`/hernan-rivas-abogado?compra=<sku>`, que sincroniza el beneficio con el mismo perfil y
+webhook que el resto de la tienda. El título es un souvenir humorístico (PNG descargable)
+sin validez legal.
+
 ## Puesta en marcha
 
 1. Entrá a tu negocio en Whop y completá la verificación y el método de cobro directamente allí.

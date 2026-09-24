@@ -57,19 +57,24 @@ async function createCheckout(item: ShopItem): Promise<CheckoutRecord> {
     /\/$/,
     "",
   );
+  const gameName = "game" in item ? "Hernán Rivas ES ABOGADO" : "Influencers Battle";
+  const returnPath = "path" in item ? item.path : "/";
   const productClient = new WhopClient({
     token: apiKey,
     idempotencyKey: () => `influencers-battle-${item.sku}-product-v1`,
   });
   const product = await productClient.products.create({
-    title: `${item.name} · Influencers Battle`,
-    headline: "Ventaja especial para tu próxima batalla",
+    title: `${item.name} · ${gameName}`,
+    headline:
+      "game" in item
+        ? "Extra humorístico para el ring del abogado"
+        : "Ventaja especial para tu próxima batalla",
     description: item.description,
     custom_cta: "purchase",
-    redirect_purchase_url: `${siteUrl}/?compra=${item.sku}`,
+    redirect_purchase_url: `${siteUrl}${returnPath}?compra=${item.sku}`,
     visibility: "hidden",
     metadata: {
-      game: "influencers-battle",
+      game: "game" in item ? item.game : "influencers-battle",
       game_sku: item.sku,
     },
   });

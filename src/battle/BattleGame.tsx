@@ -660,6 +660,11 @@ export function BattleGame() {
                 <strong>ROSE VS SEBASTIÁN</strong>
                 <small>ROSE + MASIVO · JUGAR ESTRENO</small>
               </button>
+              <a className="rose-launch abogado-launch" href="/hernan-rivas-abogado">
+                <span>NUEVO JUEGO · PIXEL ART</span>
+                <strong>HERNÁN RIVAS ES ABOGADO</strong>
+                <small>PEGALE A FULL · 60 SEGUNDOS · GRATIS</small>
+              </a>
               <button
                 className="primary play-cta"
                 onClick={() => {
