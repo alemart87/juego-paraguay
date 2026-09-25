@@ -11,6 +11,7 @@ import {
   step,
   tapAt,
   selectWeapon,
+  sendToJail,
   throwPunch,
   WEAPON_IDS,
   WEAPON_STATS,
@@ -36,8 +37,9 @@ function speak(text: string) {
   const voice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith("es"));
   if (voice) u.voice = voice;
   u.lang = voice?.lang ?? "es-PY";
-  u.pitch = 1.25;
-  u.rate = 1.2;
+  const cackle = /ja/i.test(text);
+  u.pitch = cackle ? 1.8 : 1.25;
+  u.rate = cackle ? 1.4 : 1.2;
   u.volume = 0.9;
   speechSynthesis.cancel();
   speechSynthesis.speak(u);
@@ -311,6 +313,12 @@ export function AbogadoScene({
     setShare(null);
   };
 
+  const jail = () => {
+    const w = worldRef.current;
+    if (!w || pausedRef.current) return;
+    if (sendToJail(w)) setHud(snapshot(w));
+  };
+
   const pickWeapon = (id: Weapon) => {
     const w = worldRef.current;
     if (!w) return;
@@ -369,25 +377,32 @@ export function AbogadoScene({
               COMBO <b>×{hud.combo}</b>
             </div>
           )}
-          <div className="ab-weapon-bar" role="toolbar" aria-label="Armas">
-            {WEAPON_IDS.map((id) => {
-              const has = owned.includes(id);
-              const free = !has && (hud.trialsLeft[id] ?? 0) > 0;
-              const on = hud.weapon === id;
-              return (
-                <button
-                  key={id}
-                  className={`ab-wbtn ${on ? "on" : ""} ${has ? "" : free ? "free" : "locked"}`}
-                  aria-label={`${WEAPON_STATS[id].label}${has ? "" : free ? ", 1 golpe gratis" : ", bloqueada"}`}
-                  aria-pressed={on}
-                  onClick={() => pickWeapon(id)}
-                >
-                  <GameIcon kind={id} size={30} />
-                  {!has && (free ? <em>GRATIS</em> : <Lock size={12} className="ab-wlock" />)}
-                </button>
-              );
-            })}
-          </div>
+          {hud.canJail && (
+            <button className="ab-jail-btn" onClick={jail}>
+              <span>🚔</span> ¡A LA CÁRCEL!
+            </button>
+          )}
+          {!hud.jailed && (
+            <div className="ab-weapon-bar" role="toolbar" aria-label="Armas">
+              {WEAPON_IDS.map((id) => {
+                const has = owned.includes(id);
+                const free = !has && (hud.trialsLeft[id] ?? 0) > 0;
+                const on = hud.weapon === id;
+                return (
+                  <button
+                    key={id}
+                    className={`ab-wbtn ${on ? "on" : ""} ${has ? "" : free ? "free" : "locked"}`}
+                    aria-label={`${WEAPON_STATS[id].label}${has ? "" : free ? ", 1 golpe gratis" : ", bloqueada"}`}
+                    aria-pressed={on}
+                    onClick={() => pickWeapon(id)}
+                  >
+                    <GameIcon kind={id} size={30} />
+                    {!has && (free ? <em>GRATIS</em> : <Lock size={12} className="ab-wlock" />)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {hud.bonusMazo > 0 && (
             <div className="ab-bonus">🔨 MAZO DORADO {hud.bonusMazo.toFixed(1)}s</div>
           )}

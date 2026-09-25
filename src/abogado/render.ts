@@ -342,12 +342,20 @@ function armAngle(w: World, mood: Mood) {
       return 1.35 + Math.sin(t * 20) * 0.05;
     case "getup":
       return 0.5;
+    case "laugh":
+      // Points at you while shaking with laughter
+      return -0.12 + Math.sin(t * 26) * 0.07;
+    case "jailed":
+      // Hands up, clinging to the bars
+      return 1.2 + Math.sin(t * 7) * 0.06;
     default:
       return Math.sin(t * 1.6) * 0.05;
   }
 }
 
 function jawOpen(w: World, mood: Mood) {
+  if (mood === "laugh") return 3 + Math.abs(Math.sin(w.t * 28)) * 5.5;
+  if (mood === "jailed") return 4 + Math.abs(Math.sin(w.t * 9)) * 2.5;
   if (mood === "hurt" || mood === "ko") return 5;
   if (mood === "dizzy") return 3 + Math.sin(w.t * 5);
   if (w.speech) return Math.max(0, Math.sin(w.t * 24)) * 4.5;
@@ -415,6 +423,41 @@ function drawFaceFx(w: World, c: Ctx, art: Art, mood: Mood) {
         c.lineTo(e.x + Math.cos(ang) * rr, e.y + Math.sin(ang) * rr);
       }
       c.stroke();
+    }
+  } else if (mood === "laugh") {
+    for (const [i, e] of [eyeL, eyeR].entries()) {
+      eyeCover(c, art, e, i ? 7 : 6, 4.6);
+      c.strokeStyle = "#140a0a";
+      c.lineWidth = 2.2;
+      c.lineCap = "round";
+      c.beginPath();
+      c.arc(e.x, e.y + 2.2, i ? 5 : 4.2, Math.PI * 1.1, Math.PI * 1.9);
+      c.stroke();
+    }
+    c.fillStyle = "rgba(140,210,255,0.95)";
+    for (let i = 0; i < 4; i++) {
+      const k = (t * 2.4 + i * 0.25) % 1;
+      const dir = i % 2 ? 1 : -1;
+      const e = i % 2 ? eyeR : eyeL;
+      c.beginPath();
+      c.arc(e.x + dir * (6 + k * 22), e.y - 2 - k * 12 + k * k * 30, 1.8, 0, Math.PI * 2);
+      c.fill();
+    }
+  } else if (mood === "jailed") {
+    for (const [i, e] of [eyeL, eyeR].entries()) {
+      eyeCover(c, art, e, i ? 7 : 6, 4.6);
+      c.strokeStyle = "#140a0a";
+      c.lineWidth = 2;
+      c.lineCap = "round";
+      c.beginPath();
+      c.arc(e.x, e.y - 2.5, i ? 5 : 4.2, Math.PI * 0.15, Math.PI * 0.85);
+      c.stroke();
+      // Rivers of tears
+      const g = c.createLinearGradient(0, e.y, 0, e.y + 50);
+      g.addColorStop(0, "rgba(140,210,255,0.95)");
+      g.addColorStop(1, "rgba(140,210,255,0)");
+      c.fillStyle = g;
+      c.fillRect(e.x - 1.6 + i * 1.5, e.y + 1, 3.2, 44 + Math.sin(t * 8 + i) * 4);
     }
   } else if (mood === "hurt") {
     for (const [i, e] of [eyeL, eyeR].entries()) {
@@ -571,6 +614,167 @@ function drawShield(c: Ctx, t: number) {
   c.restore();
 }
 
+function drawPlacard(c: Ctx, t: number) {
+  // Mugshot board held at chest height (image space)
+  c.save();
+  c.translate(330, 300);
+  c.rotate(-0.04 + Math.sin(t * 3) * 0.02);
+  c.fillStyle = "#111";
+  c.strokeStyle = "#e9e9e9";
+  c.lineWidth = 3;
+  roundRect(c, -86, -44, 172, 88, 8);
+  c.fill();
+  c.stroke();
+  text(c, "HERNÁN RIVAS", 0, -22, 22, { color: "#fff", italic: false });
+  text(c, "PRESO Nº 0001", 0, 2, 16, { color: "#ffd23f", italic: false, weight: 800 });
+  text(c, "CONDENA: IR A CLASES", 0, 24, 13, { color: "#ff8a8a", italic: false, weight: 800 });
+  c.restore();
+}
+
+const easeOutBounce = (x: number) => {
+  const n = 7.5625;
+  const d = 2.75;
+  if (x < 1 / d) return n * x * x;
+  if (x < 2 / d) return n * (x -= 1.5 / d) * x + 0.75;
+  if (x < 2.5 / d) return n * (x -= 2.25 / d) * x + 0.9375;
+  return n * (x -= 2.625 / d) * x + 0.984375;
+};
+
+function drawMugshotWall(w: World, c: Ctx, since: number) {
+  const { W, H } = w;
+  const a = Math.min(1, Math.max(0, (since - 0.55) / 0.3));
+  if (a <= 0) return;
+  c.save();
+  c.globalAlpha = a;
+  const g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#5d6f86");
+  g.addColorStop(1, "#2a3446");
+  c.fillStyle = g;
+  c.fillRect(0, 0, W, H);
+  // Height chart
+  for (let i = 0; i < 12; i++) {
+    const y = H * 0.08 + i * 7;
+    c.fillStyle = "rgba(255,255,255,0.55)";
+    c.fillRect(0, y, W, i % 2 ? 0.4 : 0.9);
+    if (i % 2 === 0)
+      text(c, `${(2.1 - i * 0.05).toFixed(2)}`, 7, y - 2, 3.4, {
+        color: "rgba(255,255,255,0.8)",
+        italic: false,
+        weight: 800,
+        align: "left",
+      });
+  }
+  c.restore();
+}
+
+function drawPoliceLights(w: World, c: Ctx, since: number) {
+  const { W, H, t } = w;
+  const fade = Math.max(0, Math.min(1, since / 0.2)) * (since > 3.6 ? 0.5 : 1);
+  const phase = Math.floor(t * 7) % 2;
+  c.save();
+  c.globalCompositeOperation = "lighter";
+  for (const [x, col, on] of [
+    [0, "255,40,60", phase === 0],
+    [W, "40,110,255", phase === 1],
+  ] as const) {
+    const r = c.createRadialGradient(x, 0, 2, x, 0, Math.max(W, H) * 0.9);
+    const a = (on ? 0.55 : 0.12) * fade;
+    r.addColorStop(0, `rgba(${col},${a})`);
+    r.addColorStop(1, `rgba(${col},0)`);
+    c.fillStyle = r;
+    c.fillRect(0, 0, W, H);
+  }
+  // Rotating beacon beams
+  for (const [x, col] of [
+    [W * 0.12, "255,60,80"],
+    [W * 0.88, "60,130,255"],
+  ] as const) {
+    c.save();
+    c.translate(x, 0);
+    c.rotate(Math.sin(t * 5 + x) * 0.6);
+    const beam = c.createLinearGradient(0, 0, 0, H);
+    beam.addColorStop(0, `rgba(${col},${0.35 * fade})`);
+    beam.addColorStop(1, `rgba(${col},0)`);
+    c.fillStyle = beam;
+    c.beginPath();
+    c.moveTo(-3, 0);
+    c.lineTo(3, 0);
+    c.lineTo(22, H);
+    c.lineTo(-22, H);
+    c.closePath();
+    c.fill();
+    c.restore();
+  }
+  c.restore();
+}
+
+function drawBars(w: World, c: Ctx, since: number) {
+  const { W, H } = w;
+  const k = Math.min(1, Math.max(0, (since - 0.22) / 0.4));
+  if (k <= 0) return;
+  const drop = (1 - easeOutBounce(k)) * -H;
+  c.save();
+  c.translate(0, drop);
+  const n = Math.max(6, Math.round(W / 16));
+  const gap = W / n;
+  const barW = Math.max(2.6, gap * 0.2);
+  const metal = (x: number) => {
+    const g = c.createLinearGradient(x - barW / 2, 0, x + barW / 2, 0);
+    g.addColorStop(0, "#2b2f36");
+    g.addColorStop(0.35, "#c9d1dc");
+    g.addColorStop(0.5, "#ffffff");
+    g.addColorStop(0.7, "#8a939f");
+    g.addColorStop(1, "#23262c");
+    return g;
+  };
+  for (let i = 0; i <= n; i++) {
+    const x = i * gap;
+    c.fillStyle = "rgba(0,0,0,0.35)";
+    c.fillRect(x - barW / 2 + 1.2, -4, barW, H + 8);
+    c.fillStyle = metal(x);
+    c.fillRect(x - barW / 2, -4, barW, H + 8);
+  }
+  for (const y of [H * 0.18, H * 0.7]) {
+    const g = c.createLinearGradient(0, y - 2.5, 0, y + 2.5);
+    g.addColorStop(0, "#23262c");
+    g.addColorStop(0.45, "#e8edf3");
+    g.addColorStop(1, "#2b2f36");
+    c.fillStyle = "rgba(0,0,0,0.35)";
+    c.fillRect(0, y - 1.5, W, 5);
+    c.fillStyle = g;
+    c.fillRect(0, y - 2.5, W, 5);
+    for (let i = 0; i <= n; i++) {
+      c.fillStyle = "#5b6470";
+      c.beginPath();
+      c.arc(i * gap, y, 1.1, 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+  c.restore();
+}
+
+function drawJailStamp(w: World, c: Ctx, since: number) {
+  if (since < 1.25) return;
+  const k = Math.min(1, (since - 1.25) / 0.18);
+  const s = 1.8 - k * 1.05;
+  const size = Math.min(26, w.W / 4.4);
+  c.save();
+  c.translate(w.W / 2 + 6, layout(w).neckY + 12);
+  c.rotate(-0.18);
+  c.scale(s, s);
+  c.globalAlpha = Math.min(1, k * 1.5);
+  c.strokeStyle = "#e8332a";
+  c.lineWidth = 3;
+  c.font = `italic 900 ${size}px ${FONT}`;
+  const tw = c.measureText("¡PRESO!").width + 16;
+  c.fillStyle = "rgba(255,250,240,0.92)";
+  roundRect(c, -tw / 2, -size * 0.75, tw, size * 1.5, 5);
+  c.fill();
+  c.stroke();
+  text(c, "¡PRESO!", 0, 1, size, { color: "#e8332a" });
+  c.restore();
+}
+
 function drawCharacter(w: World, c: Ctx, art: Art) {
   const L = layout(w);
   const mood = w.mood;
@@ -580,12 +784,21 @@ function drawCharacter(w: World, c: Ctx, art: Art) {
   const sq = w.squash.v;
 
   const talking = mood === "taunt";
-  const bounce = talking ? -Math.abs(Math.sin(t * 6)) * 2.2 : 0;
+  const laughing = mood === "laugh";
+  const bounce = talking
+    ? -Math.abs(Math.sin(t * 6)) * 2.2
+    : laughing
+      ? -Math.abs(Math.sin(t * 14)) * 3
+      : 0;
   const sway = Math.sin(t * 1.1) * 0.025 + (talking ? Math.sin(t * 6) * 0.03 : 0);
   const shrug = talking && w.gesture === 2 ? Math.abs(Math.sin(t * 7)) * 0.03 : 0;
   // Idle head life: slow nod and tilt on top of the hit springs.
   const nod = Math.sin(t * 2.6) * 1.6 + (talking ? Math.sin(t * 12) * 1.4 : 0);
-  const tilt = Math.sin(t * 1.3) * 0.05 + (talking ? Math.sin(t * 5) * 0.06 : 0);
+  const tilt =
+    Math.sin(t * 1.3) * 0.05 +
+    (talking ? Math.sin(t * 5) * 0.06 : 0) +
+    (laughing ? -0.2 + Math.sin(t * 20) * 0.06 : 0) +
+    (mood === "jailed" ? Math.sin(t * 3) * 0.08 : 0);
 
   c.save();
   c.translate(L.cx, L.headY + 70 + bounce);
@@ -632,6 +845,7 @@ function drawCharacter(w: World, c: Ctx, art: Art) {
   drawHead(w, c, art, mood === "getup" ? "hurt" : mood);
   if (mood === "block") drawShield(c, t);
   c.restore();
+  if (mood === "jailed") drawPlacard(c, t);
 
   c.restore();
 }
@@ -1170,6 +1384,9 @@ export function drawScene(w: World, c: Ctx, art: Art | null) {
   if (w.shake > 0) c.translate((Math.random() - 0.5) * w.shake, (Math.random() - 0.5) * w.shake);
   const L = layout(w);
   drawBackground(w, c, L.cx - w.lean.v, baseHeadY(w));
+  const jailed = w.mood === "jailed";
+  const since = jailed ? t - w.jailAt : 0;
+  if (jailed) drawMugshotWall(w, c, since);
 
   if (art) drawCharacter(w, c, art);
   else text(c, "Cargando al abogado…", W / 2, H / 2, 8, { color: "#fff" });
@@ -1193,7 +1410,11 @@ export function drawScene(w: World, c: Ctx, art: Art | null) {
 
   if (w.speech && w.mood !== "ko") drawBubble(w, c, w.speech.text, L.headCx, L.headCy);
 
-  drawHands(w, c);
+  if (jailed) {
+    drawBars(w, c, since);
+    drawPoliceLights(w, c, since);
+    drawJailStamp(w, c, since);
+  } else drawHands(w, c);
 
   for (const tx of w.texts) {
     const a = Math.min(1, tx.life / (tx.max * 0.35));

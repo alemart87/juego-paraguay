@@ -71,6 +71,22 @@ export function AbogadoGame() {
     void syncOwned().then((r) => r.ok && setOwned(r.skus));
     const params = new URLSearchParams(window.location.search);
     const bought = params.get("compra");
+    // Superadmin "omitir intros": nivel 06 entra directo a la partida.
+    const quickStart = () => {
+      setRunKey((k) => k + 1);
+      setScreen("play");
+    };
+    if (params.get("quick") === "1" && !bought) {
+      quickStart();
+      window.history.replaceState(null, "", window.location.pathname);
+    } else if (!bought && !params.has("menu")) {
+      fetch("/api/quick-start", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { enabled?: boolean; level?: number } | null) => {
+          if (data?.enabled && Number(data.level) === 6) quickStart();
+        })
+        .catch(() => undefined);
+    }
     if (isAbogadoSku(bought)) {
       setNotice("¡Gracias por tu compra! Verificando con Whop…");
       setShopOpen(true);
@@ -238,7 +254,11 @@ export function AbogadoGame() {
         <section className="ab-result">
           <header>
             <span className="ab-kicker">
-              {run.kos > 0 ? "¡LO NOQUEASTE!" : "¡SE TERMINÓ EL TIEMPO!"}
+              {run.jailed
+                ? "🚔 ¡LO METISTE PRESO!"
+                : run.kos > 0
+                  ? "¡LO NOQUEASTE!"
+                  : "¡SE TERMINÓ EL TIEMPO!"}
             </span>
             <h2>
               {run.score.toLocaleString("es-PY")} <small>PTS</small>

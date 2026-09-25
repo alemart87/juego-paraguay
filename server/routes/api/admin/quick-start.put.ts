@@ -2,7 +2,7 @@ import { createError, defineEventHandler, readBody } from "h3";
 import { isAdmin } from "../../../utils/admin-auth";
 import {
   QUICK_START_KEY,
-  isEpisodeId,
+  isQuickStartLevel,
   isQuickStartFighter,
   type QuickStart,
 } from "../../../utils/quick-start";
@@ -13,8 +13,8 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<{ level?: unknown; fighter?: unknown; enabled?: unknown }>(event);
   const enabled = Boolean(body?.enabled);
   const level = Number(body?.level);
-  if (!isEpisodeId(level))
-    throw createError({ statusCode: 400, statusMessage: "Elegí un episodio válido (1 a 5)." });
+  if (!isQuickStartLevel(level))
+    throw createError({ statusCode: 400, statusMessage: "Elegí un nivel válido (1 a 6)." });
   const rawFighter = typeof body?.fighter === "string" ? body.fighter.trim() : "";
   if (rawFighter && !isQuickStartFighter(rawFighter))
     throw createError({

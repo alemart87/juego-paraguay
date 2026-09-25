@@ -180,6 +180,11 @@ export function BattleGame() {
       fetch("/api/quick-start", { cache: "no-store", signal: controller.signal })
         .then((response) => (response.ok ? response.json() : null))
         .then((data: { enabled?: boolean; level?: number; fighter?: string } | null) => {
+          // Nivel 06 es el juego de Hernán Rivas: se entra directo a la partida.
+          if (data?.enabled && Number(data.level) === 6) {
+            window.location.replace("/hernan-rivas-abogado?quick=1");
+            return;
+          }
           if (!data?.enabled || ![1, 2, 3, 4, 5].includes(Number(data.level))) return;
           const pick = FIGHTERS.find((f) => f.id === data.fighter && !f.premium);
           const savedHero = fighter(local.hero);

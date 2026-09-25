@@ -47,7 +47,10 @@ export type SfxName =
   | "crowd"
   | "whiff"
   | "squeak"
-  | "squirt";
+  | "squirt"
+  | "laugh"
+  | "siren"
+  | "clang";
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -257,6 +260,7 @@ const MIN_GAP: Partial<Record<SfxName, number>> = {
   glove: 50,
   crowd: 900,
   whiff: 60,
+  laugh: 1200,
 };
 
 function playSfx(name: SfxName) {
@@ -434,6 +438,28 @@ function playSfx(name: SfxName) {
     case "squeak":
       tone(1400, 0.16, { type: "square", gain: 0.12, slide: 2400 });
       tone(900, 0.2, { type: "triangle", gain: 0.2, slide: 1500, delay: 0.05 });
+      break;
+    case "laugh":
+      // Maniacal "HA-HA-HA-HA" with a rising, wobbly pitch
+      for (let i = 0; i < 9; i++) {
+        const f = 330 + i * 22 + (i % 2) * 60;
+        tone(f, 0.11, { type: "sawtooth", gain: 0.14, slide: f * 0.72, delay: i * 0.13 });
+        tone(f * 2.02, 0.08, { type: "square", gain: 0.04, slide: f * 1.4, delay: i * 0.13 });
+        noise(0.07, { gain: 0.12, from: 2600, to: 900, q: 1.5, delay: i * 0.13 });
+      }
+      break;
+    case "siren":
+      for (let i = 0; i < 6; i++) {
+        tone(i % 2 ? 620 : 880, 0.34, { type: "square", gain: 0.1, delay: i * 0.34 });
+        tone(i % 2 ? 930 : 1320, 0.34, { type: "triangle", gain: 0.05, delay: i * 0.34 });
+      }
+      break;
+    case "clang":
+      noise(0.5, { gain: 0.6, from: 6000, to: 800, q: 3 });
+      [523, 1187, 1893, 2654, 3411].forEach((f, i) =>
+        tone(f, 1.4 - i * 0.2, { type: "sine", gain: 0.22 - i * 0.03 }),
+      );
+      tone(70, 0.4, { type: "sine", gain: 0.5, slide: 35 });
       break;
     case "squirt":
       noise(0.22, { gain: 0.4, from: 7000, to: 1200, q: 2 });

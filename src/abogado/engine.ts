@@ -11,7 +11,17 @@ export const WEAPON_IDS: Weapon[] = ["punos", "guantes", "mazo", "hacha", "magnu
 /** Weapons the player must buy (each gets one free try per match). */
 export const PAID_WEAPONS: Weapon[] = ["guantes", "mazo", "hacha", "magnum"];
 export type Mood =
-  "idle" | "taunt" | "block" | "hurt" | "dizzy" | "dodge" | "throw" | "ko" | "getup";
+  | "idle"
+  | "taunt"
+  | "block"
+  | "hurt"
+  | "dizzy"
+  | "dodge"
+  | "throw"
+  | "ko"
+  | "getup"
+  | "laugh"
+  | "jailed";
 export type Zone = "head" | "body";
 
 export const GAME_SECONDS = 60;
@@ -99,6 +109,16 @@ const SIGNATURE: { text: string; gesture: number }[] = [
 ];
 const HURT = ["¡Ay!", "¡Mi título!", "¡Protesto!", "¡No vale!", "¡Auch!", "¡Mi traje!"];
 const BLOCK = ["¡Objeción!", "¡No ha lugar!"];
+const MOCK = [
+  "¡JAJAJA! ¡No me hacés nada!",
+  "¡Pegás como mi abuela! ¡JAJAJA!",
+  "¡Soy intocable! ¡JAJAJA!",
+  "¡JAJAJA, qué flojo!",
+  "¡Ni con título me ganás! ¡JAJA!",
+];
+const LAUGH_WORDS = ["¡JA!", "JAJA", "¡JAJAJA!", "JA JA", "¡JIJI!"];
+/** Seconds of the arrest cinematic before the results screen. */
+export const JAIL_SECONDS = 4.4;
 const GETUP = ["¡Apelo!", "¡Recurso de amparo!", "¡Nulidad!", "¡A la Corte!"];
 const THROW = ["¡Demanda!", "¡Citación!"];
 const HEAD_WORDS = ["POW", "PAF", "BAM", "CRACK", "TUC"];
@@ -178,6 +198,10 @@ export type World = {
   /** Arm gesture while taunting: 0 wave, 1 fist pump, 2 finger wag, 3 arm up. */
   gesture: number;
   signatureIndex: number;
+  missStreak: number;
+  laughs: number;
+  jailAt: number;
+  jailClang: boolean;
   wet: number;
   score: number;
   combo: number;
@@ -251,6 +275,10 @@ export function createWorld(opts: {
     owned,
     gesture: 0,
     signatureIndex: 0,
+    missStreak: 0,
+    laughs: 0,
+    jailAt: 0,
+    jailClang: false,
     wet: 0,
     score: 0,
     combo: 0,
@@ -477,8 +505,11 @@ function resolveFist(w: World, f: Fist) {
     if (w.combo > 0) float(w, f.tx, f.ty, "¡FALLÓ!", "#ff8a8a");
     else if (w.mood === "dodge") float(w, f.tx, f.ty, "¡ESQUIVÓ!", "#ff8a8a");
     w.combo = 0;
+    w.missStreak++;
+    if (w.missStreak >= 3 && w.mood !== "laugh") laugh(w);
     return;
   }
+  w.missStreak = 0;
   if (zone === "head" && w.mood === "block") {
     const pts = 20;
     if (!w.demo) w.score += pts;
@@ -498,6 +529,11 @@ function resolveFist(w: World, f: Fist) {
     base *= 2.2;
     dmg *= 2.2;
     tags.push("¡CARGADO!");
+  }
+  if (w.mood === "laugh") {
+    base *= 2.2;
+    dmg *= 1.4;
+    tags.push("¡CALLALO!");
   }
   if (w.mood === "taunt") {
     base *= 2;
@@ -716,9 +752,72 @@ function stepSpring(s: Spring, target: number, k: number, damp: number, dt: numb
   s.v += s.vel * dt;
 }
 
+/** He cracks up at the player: head back, jaw flapping, tears, "JAJAJA" everywhere. */
+export function laugh(w: World, line = pick(MOCK)) {
+  if (w.mood === "ko" || w.mood === "getup" || w.mood === "jailed") return;
+  setMood(w, "laugh", 2.3);
+  w.laughs++;
+  w.missStreak = 0;
+  say(w, line, 2.3);
+  w.events.push({ type: "sfx", name: "laugh" });
+  const L = layout(w);
+  for (let i = 0; i < 5; i++) {
+    const side = i % 2 ? 1 : -1;
+    w.texts.push({
+      x: L.headCx + side * (18 + Math.random() * 16),
+      y: L.headCy - 10 + (Math.random() - 0.5) * 30,
+      text: pick(LAUGH_WORDS),
+      color: ["#ffd23f", "#ff4fd8", "#7ee0ff", "#ffffff"][i % 4],
+      scale: 1 + (i % 2),
+      life: 1.4 + i * 0.12,
+      max: 1.4 + i * 0.12,
+      vy: -14 - Math.random() * 10,
+    });
+  }
+}
+
+export function canJail(w: World) {
+  return !w.demo && !w.ended && w.mood !== "jailed" && (w.kos >= 1 || w.t >= 20);
+}
+
+/** Finisher: police lights, bars slam down, mugshot, and the match ends with a bonus. */
+export function sendToJail(w: World) {
+  if (!canJail(w)) return false;
+  w.mood = "jailed";
+  w.moodUntil = Number.POSITIVE_INFINITY;
+  w.jailAt = w.t;
+  w.jailClang = false;
+  w.ended = true;
+  w.endAt = w.t + JAIL_SECONDS - 1.6;
+  w.papers = [];
+  w.fists = [];
+  w.charging = null;
+  w.speech = null;
+  w.suedUntil = 0;
+  const bonus = 5000 + Math.round(w.timeLeft) * 200 + w.kos * 1000;
+  w.score += bonus;
+  w.texts.push({
+    x: w.W / 2,
+    y: w.H * 0.3,
+    text: `+${bonus.toLocaleString("es-PY")} BONUS`,
+    color: "#ffd23f",
+    scale: 2,
+    life: 3.4,
+    max: 3.4,
+    vy: -3,
+  });
+  w.events.push({ type: "sfx", name: "siren" });
+  return true;
+}
+
 function ai(w: World) {
   if (w.mood !== "idle" || w.t < w.nextAiAt) return;
   const r = Math.random();
+  if (!w.demo && (r < 0.14 || w.t - w.lastHitAt > 6)) {
+    laugh(w);
+    w.nextAiAt = w.moodUntil + 1 + Math.random();
+    return;
+  }
   const L = layout(w);
   if (!w.demo && w.t > w.nextPaperAt && r > 0.72) {
     setMood(w, "throw", 0.35);
@@ -779,7 +878,29 @@ export function step(w: World, dt: number) {
         vy: 0,
       });
       w.events.push({ type: "sfx", name: "bell" }, { type: "snap", fallback: true });
+      if (w.kos === 0) laugh(w, "¡JAJAJA! ¡Ni un K.O.!");
     }
+  }
+  if (w.mood === "jailed") {
+    const since = w.t - w.jailAt;
+    if (!w.jailClang && since >= 0.62) {
+      w.jailClang = true;
+      w.shake = 12;
+      w.flash = 0.6;
+      w.events.push({ type: "sfx", name: "clang" }, { type: "vibrate", ms: 120 });
+      w.texts.push({
+        x: w.W / 2,
+        y: w.H * 0.16,
+        text: "¡A LA CÁRCEL!",
+        color: "#ff3b3b",
+        scale: 4,
+        life: 3.2,
+        max: 3.2,
+        vy: 0,
+      });
+      say(w, "¡Nooo! ¡Soy abogado! ¡Llamen a Cartes!", 2.6);
+    }
+    if (since >= 1.6 && since - 1.6 < 0.034) w.events.push({ type: "snap" });
   }
   if (w.ended && !w.endSent && w.t - w.endAt > 1.6) {
     w.endSent = true;
@@ -812,6 +933,8 @@ export function step(w: World, dt: number) {
   if (w.mood === "idle") w.leanTarget = Math.sin(w.t * 0.8) * 9 + Math.sin(w.t * 2.1) * 2;
   if (w.mood === "taunt") w.leanTarget = Math.sin(w.t * 0.8) * 9 + Math.sin(w.t * 6) * 4;
   if (w.mood === "hurt" || w.mood === "dizzy" || w.mood === "block") w.leanTarget = 0;
+  if (w.mood === "laugh") w.leanTarget = Math.sin(w.t * 9) * 3;
+  if (w.mood === "jailed") w.leanTarget = 0;
   if (w.mood === "dizzy") w.leanTarget = Math.sin(w.t * 5) * 6;
   if (!w.ended) ai(w);
 
@@ -831,6 +954,7 @@ export function step(w: World, dt: number) {
       w.sued++;
       w.combo = 0;
       w.suedUntil = w.t + 1.2;
+      laugh(w, "¡JAJAJA! ¡Demandado!");
       w.shake = Math.max(w.shake, 6);
       w.events.push({ type: "sfx", name: "stamp" }, { type: "vibrate", ms: 60 });
     }
@@ -891,6 +1015,8 @@ export type Snapshot = {
   weapon: Weapon;
   bonusMazo: number;
   sued: boolean;
+  canJail: boolean;
+  jailed: boolean;
   trial: Weapon | null;
   trialsLeft: Partial<Record<Weapon, number>>;
 };
@@ -907,6 +1033,8 @@ export function snapshot(w: World): Snapshot {
     weapon: activeWeapon(w),
     bonusMazo: Math.max(0, w.bonusMazoUntil - w.t),
     sued: w.suedUntil > w.t,
+    canJail: canJail(w),
+    jailed: w.mood === "jailed",
     trial: w.trial,
     trialsLeft: { ...w.trialsLeft },
   };
@@ -922,6 +1050,8 @@ export type RunResult = {
   sued: number;
   round: number;
   weapon: Weapon;
+  jailed: boolean;
+  laughs: number;
 };
 
 export function result(w: World): RunResult {
@@ -935,5 +1065,7 @@ export function result(w: World): RunResult {
     sued: w.sued,
     round: w.round,
     weapon: w.weapon,
+    jailed: w.mood === "jailed",
+    laughs: w.laughs,
   };
 }

@@ -156,9 +156,11 @@ export async function resultCard(shot: HTMLCanvasElement | null, r: RunResult, n
     text(c, v, x, 1575, 96, { color: YELLOW, stroke: INK, lineWidth: 10 });
     text(c, l, x, 1648, 36, { color: "#fff", italic: false, weight: 800 });
   });
-  const who = name
-    ? `${name.toUpperCase()} LE PEGÓ ${WEAPON_LABEL[r.weapon]}`
-    : `LE PEGUÉ ${WEAPON_LABEL[r.weapon]}`;
+  const who = r.jailed
+    ? `${name ? `${name.toUpperCase()} LO MANDÓ` : "LO MANDÉ"} A LA CÁRCEL 🚔`
+    : name
+      ? `${name.toUpperCase()} LE PEGÓ ${WEAPON_LABEL[r.weapon]}`
+      : `LE PEGUÉ ${WEAPON_LABEL[r.weapon]}`;
   text(c, who, W / 2, 1735, fit(c, who, 960, 52), { color: "#fff" });
   text(c, "¿ME SUPERÁS?", W / 2, 1805, 70, { color: "#7ee0ff", stroke: INK, lineWidth: 8 });
   text(c, SHARE_HOST, W / 2, 1878, 34, {
