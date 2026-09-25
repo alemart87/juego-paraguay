@@ -21,8 +21,9 @@ export type Mood =
   | "ko"
   | "getup"
   | "laugh"
+  | "gut"
   | "jailed";
-export type Zone = "head" | "body";
+export type Zone = "head" | "body" | "arm";
 
 export const GAME_SECONDS = 60;
 
@@ -115,7 +116,21 @@ const MOCK = [
   "¡Soy intocable! ¡JAJAJA!",
   "¡JAJAJA, qué flojo!",
   "¡Ni con título me ganás! ¡JAJA!",
+  "¿Eso es todo? ¡JAJAJA!",
+  "¡Andá a estudiar! ¡JAJA!",
+  "¡Llorá, llorá! ¡JAJAJA!",
+  "¡Pagá la Magnum, pobre! ¡JAJA!",
+  "¡Te gané en la Corte! ¡JAJAJA!",
+  "¡Ni me despeinaste! ¡JIJIJI!",
 ];
+const DODGE_MOCK = [
+  "¡JA! ¡Muy lento!",
+  "¡Ni me tocaste! ¡JAJA!",
+  "¡Olé! ¡JAJAJA!",
+  "¡Por acá no! ¡JIJI!",
+];
+const ARM_LINES = ["¡Mi brazo!", "¡Con ese juro!", "¡Auch, el codo!", "¡Mi mano de jurar!"];
+const GUT_LINES = ["¡Uff, mi panza!", "¡El asado!", "¡Uhhh!", "¡Mi chipa!"];
 const LAUGH_WORDS = ["¡JA!", "JAJA", "¡JAJAJA!", "JA JA", "¡JIJI!"];
 /** Seconds of the arrest cinematic before the results screen. */
 export const JAIL_SECONDS = 4.4;
@@ -142,7 +157,7 @@ export type Particle = {
   max: number;
   color: string;
   size: number;
-  kind: "dot" | "star" | "tooth" | "paper" | "sweat" | "confetti" | "water";
+  kind: "dot" | "star" | "tooth" | "paper" | "sweat" | "confetti" | "water" | "button";
 };
 export type FloatText = {
   x: number;
@@ -202,6 +217,12 @@ export type World = {
   laughs: number;
   jailAt: number;
   jailClang: boolean;
+  armKick: Spring;
+  armDamage: number;
+  bodyDamage: number;
+  zoom: Spring;
+  speedUntil: number;
+  rings: { x: number; y: number; t0: number; heavy: boolean }[];
   wet: number;
   score: number;
   combo: number;
@@ -279,6 +300,12 @@ export function createWorld(opts: {
     laughs: 0,
     jailAt: 0,
     jailClang: false,
+    armKick: spring(),
+    armDamage: 0,
+    bodyDamage: 0,
+    zoom: spring(),
+    speedUntil: 0,
+    rings: [],
     wet: 0,
     score: 0,
     combo: 0,
@@ -385,11 +412,79 @@ export function weaponSide(weapon: Weapon, side: -1 | 1): -1 | 1 {
   return side;
 }
 
+/** Oath-arm angle in radians (+ = raised), shared by hit-testing and drawing. */
+export function armPose(w: World, mood: Mood = w.mood) {
+  const t = w.t;
+  let a: number;
+  switch (mood) {
+    case "taunt":
+      a =
+        w.gesture === 1
+          ? 0.95 + Math.abs(Math.sin(t * 9)) * 0.35
+          : w.gesture === 2
+            ? 0.12 + Math.sin(t * 14) * 0.22
+            : w.gesture === 3
+              ? 1.45 + Math.sin(t * 5) * 0.08
+              : 0.42 + Math.sin(t * 10) * 0.18;
+      break;
+    case "block":
+      a = 1.25;
+      break;
+    case "throw":
+      a = 0.75;
+      break;
+    case "hurt":
+      a = -0.25 + Math.sin(t * 40) * 0.12;
+      break;
+    case "gut":
+      a = -0.9;
+      break;
+    case "dodge":
+      a = 0.2;
+      break;
+    case "dizzy":
+      a = -0.7 + Math.sin(t * 4) * 0.18;
+      break;
+    case "ko":
+      a = 1.35 + Math.sin(t * 20) * 0.05;
+      break;
+    case "getup":
+      a = 0.5;
+      break;
+    case "laugh":
+      a = -0.12 + Math.sin(t * 26) * 0.07;
+      break;
+    case "jailed":
+      a = 1.2 + Math.sin(t * 7) * 0.06;
+      break;
+    default:
+      a = Math.sin(t * 1.6) * 0.05;
+  }
+  // A badly beaten arm hangs lower; the hit spring makes it flail.
+  const droop = mood === "jailed" ? 0 : Math.max(0, w.armDamage - 0.5) * 0.9;
+  return a - droop + w.armKick.v;
+}
+
+/** Shoulder → hand segment of the oath arm in logical px. */
+export function armSegment(w: World) {
+  const L = layout(w);
+  const sx = L.cx - 24;
+  const sy = L.headY + 35;
+  const a = armPose(w);
+  const len = 86;
+  return { sx, sy, ex: sx - Math.cos(a) * len, ey: sy - Math.sin(a) * len };
+}
+
 function hitZone(w: World, x: number, y: number): Zone | null {
   const L = layout(w);
   const dx = (x - L.headCx - 3) / 18;
   const dy = (y - L.headCy + 1) / 23;
   if (dx * dx + dy * dy <= 1) return "head";
+  const A = armSegment(w);
+  const vx = A.ex - A.sx;
+  const vy = A.ey - A.sy;
+  const k = Math.max(0, Math.min(1, ((x - A.sx) * vx + (y - A.sy) * vy) / (vx * vx + vy * vy)));
+  if (k > 0.06 && Math.hypot(x - (A.sx + vx * k), y - (A.sy + vy * k)) < 7.5) return "arm";
   if (x >= L.cx - 30 && x <= L.cx + 56 && y >= L.neckY + 2 && y <= w.H) return "body";
   return null;
 }
@@ -506,7 +601,8 @@ function resolveFist(w: World, f: Fist) {
     else if (w.mood === "dodge") float(w, f.tx, f.ty, "¡ESQUIVÓ!", "#ff8a8a");
     w.combo = 0;
     w.missStreak++;
-    if (w.missStreak >= 3 && w.mood !== "laugh") laugh(w);
+    if (w.mood === "dodge" && Math.random() < 0.5) laugh(w, pick(DODGE_MOCK));
+    else if (w.missStreak >= 2 && w.mood !== "laugh") laugh(w);
     return;
   }
   w.missStreak = 0;
@@ -522,8 +618,8 @@ function resolveFist(w: World, f: Fist) {
     return;
   }
 
-  let base = zone === "head" ? 100 : 60;
-  let dmg = (zone === "head" ? 6 : 4.2) * stats.dmg;
+  let base = zone === "head" ? 100 : zone === "arm" ? 70 : 60;
+  let dmg = (zone === "head" ? 6 : zone === "arm" ? 3.5 : 4.2) * stats.dmg;
   const tags: string[] = [];
   if (f.charged) {
     base *= 2.2;
@@ -547,7 +643,8 @@ function resolveFist(w: World, f: Fist) {
   if (zone === "body" && w.mood === "block") {
     base *= 1.6;
     tags.push("¡AL CUERPO!");
-  }
+  } else if (zone === "body") tags.push("¡A LA PANZA!");
+  else if (zone === "arm") tags.push("¡AL BRAZO!");
   const mult = 1 + Math.min(4, Math.floor(w.combo / 5) * 0.5);
   const pts = Math.round(base * stats.pts * mult);
   if (!w.demo) w.score += pts;
@@ -572,12 +669,45 @@ function resolveFist(w: World, f: Fist) {
       w.squash.vel -= 16;
       w.headY.vel += 160;
     }
+  } else if (zone === "arm") {
+    w.armKick.vel += (heavy ? 16 : 9) * (f.ty < armSegment(w).sy ? 1 : -1);
+    w.armDamage = Math.min(1, w.armDamage + (heavy ? 0.12 : 0.06));
+    w.headX.vel += push * 60;
+    if (Math.random() < 0.35) say(w, pick(ARM_LINES), 0.9);
   } else {
-    w.bodyDip.vel += heavy ? 150 : 90;
-    w.squash.vel += 6;
-    w.headY.vel += 90;
+    // Gut punch: he folds over, eyes pop, a jacket button flies off.
+    w.bodyDip.vel += heavy ? 220 : 130;
+    w.squash.vel += heavy ? 12 : 7;
+    w.headY.vel += heavy ? 200 : 120;
+    w.headR.vel += push * 2;
+    w.bodyDamage = Math.min(1, w.bodyDamage + (heavy ? 0.1 : 0.05));
+    if (Math.random() < (heavy ? 0.7 : 0.25)) {
+      const L0 = layout(w);
+      w.particles.push({
+        x: L0.cx + 4,
+        y: L0.neckY + 28,
+        vx: push * (40 + Math.random() * 50),
+        vy: -90 - Math.random() * 40,
+        life: 1.2,
+        max: 1.2,
+        color: "#1a1a1a",
+        size: 2.4,
+        kind: "button",
+      });
+    }
+    if (Math.random() < 0.35) say(w, pick(GUT_LINES), 0.9);
   }
-  if (w.mood !== "dizzy") setMood(w, "hurt", heavy ? 0.42 : 0.26);
+  if (w.mood !== "dizzy") {
+    if (zone === "body") setMood(w, "gut", heavy ? 0.6 : 0.42);
+    else setMood(w, "hurt", heavy ? 0.42 : 0.26);
+  }
+  // Juice: shockwave ring on every hit, speed lines + camera punch-in on heavy ones.
+  w.rings.push({ x: f.tx, y: f.ty, t0: w.t, heavy });
+  if (w.rings.length > 6) w.rings.shift();
+  if (heavy) {
+    w.zoom.vel += f.weapon === "mazo" ? 60 : 38;
+    w.speedUntil = w.t + 0.28;
+  }
 
   w.recentHits.push(w.t);
   w.recentHits = w.recentHits.filter((t) => w.t - t < 1.3);
@@ -813,7 +943,7 @@ export function sendToJail(w: World) {
 function ai(w: World) {
   if (w.mood !== "idle" || w.t < w.nextAiAt) return;
   const r = Math.random();
-  if (!w.demo && (r < 0.14 || w.t - w.lastHitAt > 6)) {
+  if (!w.demo && (r < 0.3 || w.t - w.lastHitAt > 5)) {
     laugh(w);
     w.nextAiAt = w.moodUntil + 1 + Math.random();
     return;
@@ -967,6 +1097,9 @@ export function step(w: World, dt: number) {
   stepSpring(w.headR, w.mood === "dizzy" ? Math.sin(w.t * 6) * 0.18 : 0, 150, 10, dt);
   stepSpring(w.squash, 0, 260, 13, dt);
   stepSpring(w.bodyDip, 0, 120, 11, dt);
+  stepSpring(w.armKick, 0, 110, 6, dt);
+  stepSpring(w.zoom, 0, 140, 12, dt);
+  w.rings = w.rings.filter((r) => w.t - r.t0 < 0.5);
 
   // Particles & text
   for (const p of w.particles) {

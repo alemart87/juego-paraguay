@@ -17,6 +17,7 @@ import type { RunResult, Weapon } from "./engine";
 import type { IconKind } from "./render";
 import { GameIcon } from "./GameIcon";
 import { ShareSheet } from "./ShareSheet";
+import { QuickBuy } from "./QuickBuy";
 import {
   checkout,
   createProfile,
@@ -63,6 +64,7 @@ export function AbogadoGame() {
   const [notice, setNotice] = useState("");
   const [shopOpen, setShopOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [buying, setBuying] = useState<Weapon | null>(null);
 
   useEffect(() => {
     installMobileAudioUnlock();
@@ -244,6 +246,8 @@ export function AbogadoGame() {
           goldTitle={goldTitle}
           owned={ownedWeapons}
           prices={prices}
+          hold={buying !== null}
+          onLockedWeapon={(id) => setBuying(id)}
           soundOn={soundOn}
           onToggleSound={() => setSoundOn((s) => !s)}
           onEnd={finish}
@@ -316,6 +320,15 @@ export function AbogadoGame() {
             <ArrowLeft size={13} /> VOLVER AL INICIO
           </button>
         </section>
+      )}
+
+      {buying && screen === "play" && WEAPONS.find((w) => w.id === buying)?.sku && (
+        <QuickBuy
+          weapon={buying}
+          sku={WEAPONS.find((w) => w.id === buying)!.sku!}
+          onOwned={setOwned}
+          onClose={() => setBuying(null)}
+        />
       )}
 
       {sharing && run && cardBlob.current && (

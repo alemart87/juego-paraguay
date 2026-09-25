@@ -91,13 +91,15 @@ export async function createProfile(name: string, email: string) {
   return res;
 }
 
-export async function checkout(sku: AbogadoSku) {
+/** Starts a Whop checkout; pass a pre-opened tab to keep the current page (e.g. mid-match). */
+export async function checkout(sku: AbogadoSku, tab?: Window | null) {
   const res = await getWhopCheckout({ data: { sku } });
   if (!res.ok) return res;
   const url = new URL(res.url);
   const p = loadLeaderboardProfile();
   const email = p?.kind === "email" ? p.contact : p?.purchaseEmail;
   if (email) url.searchParams.set("email", email.trim().toLowerCase());
-  window.location.assign(url.toString());
+  if (tab) tab.location.replace(url.toString());
+  else window.location.assign(url.toString());
   return { ok: true as const };
 }

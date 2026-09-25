@@ -58,6 +58,8 @@ export function AbogadoScene({
   soundOn,
   onToggleSound,
   onEnd,
+  onLockedWeapon,
+  hold = false,
 }: {
   mode: "demo" | "play";
   weapon: Weapon;
@@ -67,6 +69,10 @@ export function AbogadoScene({
   soundOn: boolean;
   onToggleSound?: () => void;
   onEnd?: (run: RunResult, shot: HTMLCanvasElement | null) => void;
+  /** Tapped a weapon whose free try is spent: offer the purchase in-game. */
+  onLockedWeapon?: (id: Weapon) => void;
+  /** External pause (e.g. the in-game purchase dialog is open). */
+  hold?: boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -84,6 +90,9 @@ export function AbogadoScene({
   const ownedKey = owned.join(",");
   const pricesRef = useRef(prices);
   pricesRef.current = prices;
+  const [offer, setOffer] = useState<Weapon | null>(null);
+  const offerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialOwned = useRef(owned);
 
   const flash = (msg: string, ms = 1900) => {
     setToast(msg);
@@ -102,7 +111,7 @@ export function AbogadoScene({
       weapon,
       goldTitle,
       demo: mode === "demo",
-      owned: ownedKey.split(",") as Weapon[],
+      owned: [...initialOwned.current],
     });
     worldRef.current = w;
     let alive = true;
@@ -246,11 +255,10 @@ export function AbogadoScene({
           if (soundRef.current && mode === "play") speak(ev.text);
         } else if (ev.type === "vibrate") vibrate(ev.ms);
         else if (ev.type === "trial") {
-          const price = pricesRef.current[ev.weapon];
-          flash(
-            `¿Te gustó ${WEAPON_STATS[ev.weapon].label}? ${price ? `Es tuya por USD ${price.toFixed(2)}` : "Desbloqueala"} al final`,
-            2600,
-          );
+          // Tappable offer right after the free hit
+          setOffer(ev.weapon);
+          if (offerTimer.current) clearTimeout(offerTimer.current);
+          offerTimer.current = setTimeout(() => setOffer(null), 4500);
         } else if (ev.type === "snap") {
           // Wait for the KO flash to fade so the share card gets a clean action frame.
           if (!ev.fallback || !shotRef.current) snapAt = now + (ev.fallback ? 0 : 320);
@@ -285,7 +293,26 @@ export function AbogadoScene({
       delete (window as QaWindow).__abogado;
       if (typeof window !== "undefined" && "speechSynthesis" in window) speechSynthesis.cancel();
     };
-  }, [mode, weapon, goldTitle, ownedKey]);
+    // The world is only rebuilt for a new run; purchases update it in place below.
+  }, [mode, weapon, goldTitle]);
+
+  // A weapon bought mid-match unlocks immediately without restarting the round.
+  useEffect(() => {
+    const w = worldRef.current;
+    if (!w) return;
+    const list = ownedKey.split(",") as Weapon[];
+    const fresh = list.filter((id) => !w.owned.includes(id));
+    w.owned = list;
+    if (fresh.length) {
+      selectWeapon(w, fresh[fresh.length - 1]);
+      setHud(snapshot(w));
+    }
+  }, [ownedKey]);
+
+  useEffect(() => {
+    if (hold) pausedRef.current = true;
+    else if (!paused) pausedRef.current = false;
+  }, [hold, paused]);
 
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
@@ -326,8 +353,8 @@ export function AbogadoScene({
     if (soundRef.current) sfx(res === "locked" ? "empty" : "swap");
     if (res === "trial") flash(`🎁 ${WEAPON_STATS[id].label}: 1 golpe gratis. ¡Usalo!`);
     else if (res === "locked") {
-      const price = prices[id];
-      flash(`🔒 Ya usaste tu prueba. ${price ? `USD ${price.toFixed(2)} al final` : ""}`);
+      if (onLockedWeapon) onLockedWeapon(id);
+      else flash("🔒 Ya usaste tu prueba");
     }
     setHud(snapshot(w));
   };
@@ -409,6 +436,21 @@ export function AbogadoScene({
         </div>
       )}
       {toast && <div className="ab-toast">{toast}</div>}
+      {offer && mode === "play" && (
+        <button
+          className="ab-offer"
+          onClick={() => {
+            setOffer(null);
+            onLockedWeapon?.(offer);
+          }}
+        >
+          <GameIcon kind={offer} size={34} />
+          <span>
+            ¿Te gustó {WEAPON_STATS[offer].label}?
+            <b>COMPRALA YA · USD {(prices[offer] ?? 0).toFixed(2)}</b>
+          </span>
+        </button>
+      )}
       {share && (
         <ShareSheet
           blob={share.blob}

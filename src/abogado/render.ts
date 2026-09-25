@@ -1,5 +1,6 @@
 import {
   activeWeapon,
+  armPose,
   baseHeadY,
   layout,
   paperState,
@@ -315,45 +316,11 @@ function drawBackground(w: World, c: Ctx, cx: number, headY: number) {
 // ───────────────────────── character ─────────────────────────
 
 function armAngle(w: World, mood: Mood) {
-  const t = w.t;
-  switch (mood) {
-    case "taunt":
-      switch (w.gesture) {
-        case 1: // fist pump
-          return 0.95 + Math.abs(Math.sin(t * 9)) * 0.35;
-        case 2: // wagging "callate"
-          return 0.12 + Math.sin(t * 14) * 0.22;
-        case 3: // arm straight up
-          return 1.45 + Math.sin(t * 5) * 0.08;
-        default: // friendly wave
-          return 0.42 + Math.sin(t * 10) * 0.18;
-      }
-    case "block":
-      return 1.25;
-    case "throw":
-      return 0.75;
-    case "hurt":
-      return -0.25 + Math.sin(t * 40) * 0.12;
-    case "dodge":
-      return 0.2;
-    case "dizzy":
-      return -0.7 + Math.sin(t * 4) * 0.18;
-    case "ko":
-      return 1.35 + Math.sin(t * 20) * 0.05;
-    case "getup":
-      return 0.5;
-    case "laugh":
-      // Points at you while shaking with laughter
-      return -0.12 + Math.sin(t * 26) * 0.07;
-    case "jailed":
-      // Hands up, clinging to the bars
-      return 1.2 + Math.sin(t * 7) * 0.06;
-    default:
-      return Math.sin(t * 1.6) * 0.05;
-  }
+  return armPose(w, mood);
 }
 
 function jawOpen(w: World, mood: Mood) {
+  if (mood === "gut") return 6.5;
   if (mood === "laugh") return 3 + Math.abs(Math.sin(w.t * 28)) * 5.5;
   if (mood === "jailed") return 4 + Math.abs(Math.sin(w.t * 9)) * 2.5;
   if (mood === "hurt" || mood === "ko") return 5;
@@ -423,6 +390,21 @@ function drawFaceFx(w: World, c: Ctx, art: Art, mood: Mood) {
         c.lineTo(e.x + Math.cos(ang) * rr, e.y + Math.sin(ang) * rr);
       }
       c.stroke();
+    }
+  } else if (mood === "gut") {
+    for (const [i, e] of [eyeL, eyeR].entries()) {
+      const r = i ? 7.5 : 6.2;
+      c.fillStyle = "#fff";
+      c.strokeStyle = "#140a0a";
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.arc(e.x, e.y - 1, r, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#140a0a";
+      c.beginPath();
+      c.arc(e.x - 0.5, e.y - 1, 1.6, 0, Math.PI * 2);
+      c.fill();
     }
   } else if (mood === "laugh") {
     for (const [i, e] of [eyeL, eyeR].entries()) {
@@ -511,6 +493,21 @@ function drawFaceFx(w: World, c: Ctx, art: Art, mood: Mood) {
       c.quadraticCurveTo(x + 3, y + 1, x, y + 3);
       c.quadraticCurveTo(x - 3, y + 1, x, y - 4);
       c.fill();
+    }
+  }
+  if (d > 0.5) {
+    const n = Math.round(4 + (d - 0.5) * 16);
+    c.strokeStyle = "#1c130e";
+    c.lineCap = "round";
+    for (let i = 0; i < n; i++) {
+      const x = 292 + ((i * 29) % 70);
+      const len = 6 + ((i * 7) % 9) + (d - 0.5) * 10;
+      const lean = (((i * 13) % 7) - 3) * 1.4 + Math.sin(t * 3 + i) * 0.8;
+      c.lineWidth = 2.6 - (i % 3) * 0.5;
+      c.beginPath();
+      c.moveTo(x, 90 + (i % 3) * 2);
+      c.quadraticCurveTo(x + lean * 0.5, 90 - len * 0.6, x + lean, 90 - len);
+      c.stroke();
     }
   }
   if (d > 0.4) {
@@ -775,6 +772,146 @@ function drawJailStamp(w: World, c: Ctx, since: number) {
   c.restore();
 }
 
+function rip(c: Ctx, x: number, y: number, size: number, rot: number) {
+  // Jagged tear in the suit showing the white lining, with loose threads.
+  c.save();
+  c.translate(x, y);
+  c.rotate(rot);
+  c.fillStyle = "#f1eee6";
+  c.strokeStyle = "#0b0d12";
+  c.lineWidth = 1.6;
+  c.beginPath();
+  const pts = 9;
+  for (let i = 0; i < pts; i++) {
+    const a = (i / pts) * Math.PI * 2;
+    const r = size * (i % 2 ? 0.45 : 1) * (0.8 + ((i * 37) % 10) / 25);
+    c.lineTo(Math.cos(a) * r * 1.4, Math.sin(a) * r * 0.7);
+  }
+  c.closePath();
+  c.fill();
+  c.stroke();
+  c.strokeStyle = "rgba(20,20,26,0.7)";
+  c.lineWidth = 0.8;
+  for (let i = 0; i < 3; i++) {
+    c.beginPath();
+    c.moveTo(-size + i * size, size * 0.5);
+    c.quadraticCurveTo(-size + i * size + 2, size * 0.5 + 5, -size + i * size - 1, size * 0.5 + 8);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function smudge(c: Ctx, x: number, y: number, r: number, a: number) {
+  const g = c.createRadialGradient(x, y, 1, x, y, r);
+  g.addColorStop(0, `rgba(205,175,135,${a})`);
+  g.addColorStop(1, "rgba(205,175,135,0)");
+  c.fillStyle = g;
+  c.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+function drawArmDamage(w: World, c: Ctx) {
+  const d = w.armDamage;
+  if (d > 0.2) rip(c, 180, 236, 7 + d * 4, 0.3);
+  if (d > 0.4) rip(c, 120, 230, 6 + d * 3, -0.4);
+  if (d > 0.55) {
+    // Bandage wrapped around the forearm
+    for (let i = 0; i < 4; i++) {
+      c.save();
+      c.translate(96 + i * 9, 232);
+      c.rotate(0.35);
+      c.fillStyle = i % 2 ? "#f7f4ec" : "#e9e4d6";
+      c.strokeStyle = "rgba(0,0,0,0.25)";
+      c.lineWidth = 0.8;
+      roundRect(c, -4, -15, 8, 30, 2);
+      c.fill();
+      c.stroke();
+      c.restore();
+    }
+    c.fillStyle = "#d52b1e";
+    c.beginPath();
+    c.arc(110, 226, 2.6, 0, Math.PI * 2);
+    c.fill();
+  }
+  if (d > 0.85) {
+    // Full cast
+    c.fillStyle = "#fbfbf7";
+    c.strokeStyle = "#b8b4a8";
+    c.lineWidth = 1.5;
+    roundRect(c, 60, 214, 70, 34, 12);
+    c.fill();
+    c.stroke();
+    text(c, "JURO", 95, 231, 12, { color: "#1f5fd6", italic: true, weight: 900 });
+  }
+}
+
+function drawBodyDamage(w: World, c: Ctx) {
+  const d = Math.max(w.bodyDamage, w.damage * 0.6);
+  if (d > 0.12) {
+    smudge(c, 385, 285, 22, 0.45);
+    smudge(c, 280, 330, 18, 0.4);
+    smudge(c, 350, 420, 20, 0.35);
+  }
+  if (d > 0.25) {
+    // Footprint on the jacket
+    c.save();
+    c.translate(410, 360);
+    c.rotate(-0.3);
+    c.fillStyle = "rgba(205,175,135,0.55)";
+    c.beginPath();
+    c.ellipse(0, 0, 9, 16, 0, 0, Math.PI * 2);
+    c.fill();
+    for (let i = 0; i < 4; i++) {
+      c.beginPath();
+      c.arc(-6 + i * 4, -20, 2.4, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.restore();
+  }
+  if (d > 0.3) rip(c, 402, 318, 15, 0.5);
+  if (d > 0.45) {
+    rip(c, 272, 392, 16, -0.3);
+    // Tie pulled loose and crooked
+    c.save();
+    c.translate(318, 214);
+    c.rotate(0.45);
+    c.fillStyle = "#b0101c";
+    c.strokeStyle = "#5a0610";
+    c.lineWidth = 1.2;
+    roundRect(c, -8, -6, 16, 12, 3);
+    c.fill();
+    c.stroke();
+    c.restore();
+  }
+  if (d > 0.6) {
+    // Shirt tail hanging out
+    c.fillStyle = "#f6f6f2";
+    c.strokeStyle = "rgba(0,0,0,0.3)";
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(292, 430);
+    c.quadraticCurveTo(300, 462, 322, 458);
+    c.quadraticCurveTo(334, 448, 336, 432);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    rip(c, 432, 412, 17, 0.2);
+    rip(c, 368, 262, 12, -0.6);
+  }
+  if (d > 0.75) {
+    // Stink lines
+    c.strokeStyle = "rgba(160,220,120,0.7)";
+    c.lineWidth = 1.6;
+    for (let i = 0; i < 3; i++) {
+      const x = 360 + i * 22;
+      const y = 250 - ((w.t * 30 + i * 20) % 60);
+      c.beginPath();
+      c.moveTo(x, y + 20);
+      c.bezierCurveTo(x - 6, y + 12, x + 6, y + 6, x, y);
+      c.stroke();
+    }
+  }
+}
+
 function drawCharacter(w: World, c: Ctx, art: Art) {
   const L = layout(w);
   const mood = w.mood;
@@ -814,6 +951,7 @@ function drawCharacter(w: World, c: Ctx, art: Art) {
   c.rotate(armAngle(w, mood));
   c.translate(-shoulder.x, -shoulder.y);
   c.drawImage(art.arm, arm.x, arm.y, arm.w, arm.h);
+  drawArmDamage(w, c);
   c.restore();
 
   // Neck that stretches between the collar and the (moving) head
@@ -832,6 +970,7 @@ function drawCharacter(w: World, c: Ctx, art: Art) {
   c.fill();
 
   c.drawImage(art.body, body.x, body.y, body.w, body.h);
+  drawBodyDamage(w, c);
 
   // Head on a spring, pivoting at the neck
   c.save();
@@ -1332,6 +1471,26 @@ function drawParticles(w: World, c: Ctx) {
       c.rotate(p.life * 10);
       c.fillRect(-1.5, -1, 3, 2);
       c.restore();
+    } else if (p.kind === "button") {
+      c.save();
+      c.translate(p.x, p.y);
+      c.rotate(p.life * 14);
+      c.fillStyle = "#23201c";
+      c.strokeStyle = "#6d6457";
+      c.lineWidth = 0.4;
+      c.beginPath();
+      c.arc(0, 0, 2.2, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#8d8577";
+      for (const [dx, dy] of [
+        [-0.6, -0.6],
+        [0.6, -0.6],
+        [-0.6, 0.6],
+        [0.6, 0.6],
+      ])
+        c.fillRect(dx - 0.25, dy - 0.25, 0.5, 0.5);
+      c.restore();
     } else if (p.kind === "water") {
       c.fillStyle = "rgba(160,235,255,0.9)";
       c.beginPath();
@@ -1383,6 +1542,12 @@ export function drawScene(w: World, c: Ctx, art: Art | null) {
   c.save();
   if (w.shake > 0) c.translate((Math.random() - 0.5) * w.shake, (Math.random() - 0.5) * w.shake);
   const L = layout(w);
+  const zoom = 1 + Math.max(-0.05, Math.min(0.12, w.zoom.v * 0.004));
+  if (zoom !== 1) {
+    c.translate(L.headCx, L.headCy);
+    c.scale(zoom, zoom);
+    c.translate(-L.headCx, -L.headCy);
+  }
   drawBackground(w, c, L.cx - w.lean.v, baseHeadY(w));
   const jailed = w.mood === "jailed";
   const since = jailed ? t - w.jailAt : 0;
@@ -1397,6 +1562,35 @@ export function drawScene(w: World, c: Ctx, art: Art | null) {
     text(c, `${n}…`, W / 2, H * 0.45, 22, { color: "#fff", stroke: "#1a0f24" });
   }
 
+  for (const r of w.rings) {
+    const k = (t - r.t0) / 0.5;
+    c.strokeStyle = `rgba(255,255,255,${(1 - k) * 0.85})`;
+    c.lineWidth = (r.heavy ? 3 : 1.6) * (1 - k);
+    c.beginPath();
+    c.ellipse(
+      r.x,
+      r.y,
+      (r.heavy ? 34 : 18) * k + 3,
+      (r.heavy ? 24 : 13) * k + 2,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    c.stroke();
+  }
+  if (w.speedUntil > t) {
+    const a = (w.speedUntil - t) / 0.28;
+    c.strokeStyle = `rgba(255,255,255,${0.55 * a})`;
+    c.lineWidth = 1.2;
+    for (let i = 0; i < 26; i++) {
+      const ang = (i / 26) * Math.PI * 2 + (i % 3) * 0.07;
+      const r0 = Math.max(W, H) * (0.42 + ((i * 17) % 10) / 60);
+      c.beginPath();
+      c.moveTo(L.headCx + Math.cos(ang) * r0, L.headCy + Math.sin(ang) * r0);
+      c.lineTo(L.headCx + Math.cos(ang) * (r0 + 60), L.headCy + Math.sin(ang) * (r0 + 60));
+      c.stroke();
+    }
+  }
   drawParticles(w, c);
   for (const b of w.bursts) drawBurst(c, b.x, b.y, b.text, b.color, b.life / 0.36);
 
