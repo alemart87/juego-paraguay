@@ -18,6 +18,8 @@ import {
  * device-pixel transform, so it stays sharp on any screen.
  */
 
+import { SPECIALS, SPECIAL_HIT_AT, SPECIAL_SECONDS } from "./specials";
+
 type Ctx = CanvasRenderingContext2D;
 type Pt = { x: number; y: number };
 
@@ -57,6 +59,8 @@ export type Art = {
   arm: HTMLImageElement;
   headTint: HTMLCanvasElement;
   skin: string;
+  /** Fotos recortadas de las armas especiales (null si alguna no cargó). */
+  specials: (HTMLImageElement | null)[];
 };
 
 function loadImage(src: string) {
@@ -73,11 +77,12 @@ let artPromise: Promise<Art> | null = null;
 
 export function loadArt(): Promise<Art> {
   artPromise ??= (async () => {
-    const [head, body, arm] = await Promise.all([
+    const [head, body, arm, , ...specials] = await Promise.all([
       loadImage(PHOTO.head.src),
       loadImage(PHOTO.body.src),
       loadImage(PHOTO.arm.src),
       document.fonts?.load(`italic 900 20px ${FONT}`).catch(() => undefined),
+      ...SPECIALS.map((card) => loadImage(card.src).catch(() => null)),
     ]);
     // Red "ouch" flash: the head silhouette filled red, drawn over it on hits.
     const headTint = document.createElement("canvas");
@@ -103,7 +108,7 @@ export function loadArt(): Promise<Art> {
     } catch {
       /* keep default */
     }
-    return { head, body, arm, headTint, skin };
+    return { head, body, arm, headTint, skin, specials: specials as (HTMLImageElement | null)[] };
   })();
   return artPromise;
 }
@@ -1491,6 +1496,18 @@ function drawParticles(w: World, c: Ctx) {
       ])
         c.fillRect(dx - 0.25, dy - 0.25, 0.5, 0.5);
       c.restore();
+    } else if (p.kind === "blood") {
+      const speed = Math.hypot(p.vx, p.vy);
+      c.save();
+      c.translate(p.x, p.y);
+      c.rotate(Math.atan2(p.vy, p.vx));
+      c.fillStyle = "#b3101f";
+      c.beginPath();
+      c.ellipse(0, 0, 1.2 + Math.min(1.6, speed / 90), 1.1, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "#ff3b4a";
+      c.fillRect(-0.4, -0.5, 0.7, 0.5);
+      c.restore();
     } else if (p.kind === "water") {
       c.fillStyle = "rgba(160,235,255,0.9)";
       c.beginPath();
@@ -1535,6 +1552,124 @@ function drawPaper(c: Ctx, x: number, y: number, s: number, rot: number) {
   c.arc(4, 6, 2, 0, Math.PI * 2);
   c.fill();
   c.restore();
+}
+
+/** Rayos de fondo del arma especial. */
+function drawRays(c: Ctx, x: number, y: number, color: string, t: number, alpha: number) {
+  const R = 220;
+  c.save();
+  c.globalAlpha = alpha;
+  c.translate(x, y);
+  c.rotate(t * 0.9);
+  for (let i = 0; i < 16; i++) {
+    c.fillStyle = i % 2 ? color : "#ffffff";
+    c.beginPath();
+    c.moveTo(0, 0);
+    const a0 = (i / 16) * Math.PI * 2;
+    const a1 = a0 + Math.PI / 16;
+    c.lineTo(Math.cos(a0) * R, Math.sin(a0) * R);
+    c.lineTo(Math.cos(a1) * R, Math.sin(a1) * R);
+    c.closePath();
+    c.fill();
+  }
+  c.restore();
+}
+
+/** La carta especial: foto recortada tipo sticker sobre una carta, frase gritada debajo. */
+function drawSpecial(w: World, c: Ctx, art: Art | null) {
+  if (!w.specialActive) return;
+  const card = SPECIALS[w.specialActive.index];
+  const since = w.t - w.specialActive.t0;
+  const { W, H } = w;
+  const img = art?.specials[w.specialActive.index] ?? null;
+  // Entra de golpe (0→0.3 s), flota, y se va volando al final.
+  const enter = Math.min(1, since / 0.3);
+  const ease = 1 - Math.pow(1 - enter, 3);
+  const leave = Math.max(0, (since - (SPECIAL_SECONDS - 0.4)) / 0.4);
+  const hitK = Math.max(0, 1 - Math.abs(since - SPECIAL_HIT_AT) / 0.16);
+  const cw = Math.min(W * 0.55, 72);
+  const ch = cw * 1.3;
+  const cx = W / 2 + (1 - ease) * W * 0.9 - leave * leave * W * 1.2;
+  const cy = H * 0.47 + Math.sin(since * 5) * 2 - leave * 20;
+  const scale = (0.6 + ease * 0.4) * (1 + hitK * 0.18) * (1 + (1 - ease) * 1.4);
+  const rot = -0.14 + (1 - ease) * 0.9 + Math.sin(since * 4) * 0.03 + hitK * 0.08;
+
+  if (since < SPECIAL_SECONDS - 0.4)
+    drawRays(c, cx, cy, card.color, w.t, Math.min(0.55, ease * 0.55) * (1 - leave));
+  c.save();
+  c.translate(cx, cy);
+  c.rotate(rot);
+  c.scale(scale, scale);
+  c.globalAlpha = 1 - leave * 0.6;
+  // Cuerpo de la carta
+  const g = c.createLinearGradient(0, -ch / 2, 0, ch / 2);
+  g.addColorStop(0, card.color);
+  g.addColorStop(1, "#1a0f24");
+  c.fillStyle = "#fffdf6";
+  roundRect(c, -cw / 2 - 2.2, -ch / 2 - 2.2, cw + 4.4, ch + 4.4, 6);
+  c.fill();
+  c.fillStyle = g;
+  roundRect(c, -cw / 2, -ch / 2, cw, ch, 5);
+  c.fill();
+  // Foto recortada: sale por arriba de la carta como sticker con borde blanco.
+  const bannerH = ch * 0.3;
+  if (img) {
+    const iw = cw * 1.02;
+    const ih = iw * (img.naturalHeight / img.naturalWidth);
+    const ix = -iw / 2;
+    const iy = ch / 2 - bannerH - ih + 2;
+    c.save();
+    c.beginPath();
+    c.rect(-cw / 2 - 30, -ch / 2 - 40, cw + 60, ch / 2 + 40 + ch / 2 - bannerH);
+    c.clip();
+    c.shadowColor = "#ffffff";
+    c.shadowBlur = 0;
+    for (const [ox, oy] of [
+      [1.4, 0],
+      [-1.4, 0],
+      [0, 1.4],
+      [0, -1.4],
+    ]) {
+      c.shadowOffsetX = ox * scale;
+      c.shadowOffsetY = oy * scale;
+      c.drawImage(img, ix, iy, iw, ih);
+    }
+    c.shadowColor = "transparent";
+    c.drawImage(img, ix, iy, iw, ih);
+    c.restore();
+  } else {
+    text(c, "★", 0, -ch * 0.15, 30, { color: "#fff" });
+  }
+  // Banner con el nombre
+  c.fillStyle = "#1a0f24";
+  c.fillRect(-cw / 2, ch / 2 - bannerH, cw, bannerH);
+  c.fillStyle = card.color;
+  c.fillRect(-cw / 2, ch / 2 - bannerH, cw, 1.6);
+  text(c, "ARMA ESPECIAL", 0, ch / 2 - bannerH + 6, 5, { color: card.color });
+  c.font = `italic 900 8px ${FONT}`;
+  const nameLines = wrap(c, card.name, cw - 8);
+  nameLines.forEach((line, i) =>
+    text(c, line, 0, ch / 2 - bannerH + 14 + i * 8, 8, { color: "#fff" }),
+  );
+  c.restore();
+
+  // La frase, gritada bien grande y tambaleando.
+  if (since > 0.18 && leave < 1) {
+    const pk = Math.min(1, (since - 0.18) / 0.14);
+    const pop = 0.7 + pk * 0.3 + hitK * 0.12;
+    c.save();
+    c.globalAlpha = Math.min(1, pk) * (1 - leave);
+    c.translate(W / 2, cy + ch * 0.5 * scale + 12);
+    c.rotate(Math.sin(since * 6) * 0.03);
+    c.scale(pop, pop);
+    c.font = `italic 900 10px ${FONT}`;
+    const lines = wrap(c, card.phrase, W - 14);
+    lines.forEach((line, i) => {
+      const size = Math.min(10, ((W - 14) / Math.max(1, c.measureText(line).width)) * 10);
+      text(c, line, 0, i * 11, size, { color: "#ffe066", stroke: "#1a0f24" });
+    });
+    c.restore();
+  }
 }
 
 export function drawScene(w: World, c: Ctx, art: Art | null) {
@@ -1609,6 +1744,7 @@ export function drawScene(w: World, c: Ctx, art: Art | null) {
     drawPoliceLights(w, c, since);
     drawJailStamp(w, c, since);
   } else drawHands(w, c);
+  drawSpecial(w, c, art);
 
   for (const tx of w.texts) {
     const a = Math.min(1, tx.life / (tx.max * 0.35));

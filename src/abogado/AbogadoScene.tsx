@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Camera, Lock, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { sfx, vibrate } from "@/game/audio";
 import {
@@ -360,7 +360,8 @@ export function AbogadoScene({
   };
 
   const hpPct = hud ? Math.max(0, Math.min(100, (hud.hp / hud.maxHp) * 100)) : 100;
-  const secs = hud ? Math.ceil(hud.timeLeft) : 60;
+  const secs = hud ? Math.ceil(hud.timeLeft) : 35;
+  const specialPct = hud ? Math.round(hud.special * 100) : 0;
 
   return (
     <div className={`ab-scene ab-scene-${mode}`} ref={wrapRef}>
@@ -390,13 +391,27 @@ export function AbogadoScene({
               </button>
             </div>
           </div>
-          <div className="ab-hud-bar">
+          <div className={`ab-hud-bar ${hud.finalRound ? "final" : ""}`}>
             <span>
-              H. RIVAS · RND {hud.round}
+              H. RIVAS · {hud.finalRound ? "ROUND FINAL" : `RND ${hud.round}/${hud.rounds}`}
               {hud.kos > 0 ? ` · ${hud.kos} K.O.` : ""}
             </span>
             <div className="ab-hp">
               <i style={{ width: `${hpPct}%` }} />
+            </div>
+            <div
+              className={`ab-special ${hud.specialQueue > 0 || hud.specialName ? "ready" : ""}`}
+              style={hud.specialColor ? { "--special": hud.specialColor } as CSSProperties : undefined}
+              aria-label={`Arma especial ${specialPct}%`}
+            >
+              <span>
+                {hud.specialName
+                  ? `⚡ ${hud.specialName}`
+                  : hud.specialQueue > 0
+                    ? "⚡ ¡ARMA ESPECIAL LISTA!"
+                    : `ARMA ESPECIAL · ${specialPct}%`}
+              </span>
+              <i style={{ width: `${hud.specialQueue > 0 ? 100 : specialPct}%` }} />
             </div>
           </div>
           {hud.combo >= 2 && (

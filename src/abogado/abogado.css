@@ -431,7 +431,7 @@
 }
 .ab-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin: 18px 0;
 }
@@ -1062,4 +1062,57 @@
 }
 .ab-qb .ab-profile {
   text-align: left;
+}
+
+/* Medidor de arma especial */
+.ab-special {
+  --special: #ff2d55;
+  position: relative;
+  margin-top: 6px;
+  height: 16px;
+  border-radius: 99px;
+  background: rgba(26, 15, 36, 0.75);
+  border: 2px solid #fff;
+  overflow: hidden;
+}
+.ab-special i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #7b2cff, var(--special) 55%, #ffd23f);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2);
+  transition: width 0.2s ease-out;
+}
+.ab-special span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 900 9px/1 var(--ab-ui);
+  letter-spacing: 0.12em;
+  color: #fff;
+  text-shadow: 0 1px 0 var(--ab-edge);
+  pointer-events: none;
+}
+.ab-special.ready {
+  border-color: #ffe066;
+  box-shadow: 0 0 18px var(--special);
+  animation: ab-throb 0.5s ease-in-out infinite;
+}
+.ab-special.ready i {
+  animation: ab-special-shine 0.6s linear infinite;
+  background-size: 200% 100%;
+}
+@keyframes ab-special-shine {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+.ab-hud-bar.final span {
+  color: #ffe066;
+  animation: ab-throb 0.8s ease-in-out infinite;
 }

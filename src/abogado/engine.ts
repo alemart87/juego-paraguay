@@ -1,4 +1,5 @@
 import type { SfxName } from "@/game/audio";
+import { SPECIALS, SPECIAL_COST, SPECIAL_HIT_AT, SPECIAL_SECONDS } from "./specials";
 
 /**
  * Pure simulation for "Hernán Rivas ES ABOGADO". Everything lives in logical
@@ -25,7 +26,12 @@ export type Mood =
   | "jailed";
 export type Zone = "head" | "body" | "arm";
 
-export const GAME_SECONDS = 60;
+/** Rounds por partida; "A la cárcel" solo se habilita en el último. */
+export const ROUNDS = 6;
+export const ROUND_SECONDS = 35;
+export const GAME_SECONDS = ROUNDS * ROUND_SECONDS;
+/** Vida del abogado por round: cada vez aguanta más golpes. */
+export const hpForRound = (round: number) => 180 + 45 * (round - 1);
 
 export const WEAPON_STATS: Record<
   Weapon,
@@ -110,8 +116,38 @@ const SIGNATURE: { text: string; gesture: number }[] = [
 ];
 const HURT = ["¡Ay!", "¡Mi título!", "¡Protesto!", "¡No vale!", "¡Auch!", "¡Mi traje!"];
 const BLOCK = ["¡Objeción!", "¡No ha lugar!"];
+/** Lo primero que dice: te reta apenas entrás. */
+const OPENERS = [
+  "¿Vos? ¿VOS me vas a pegar? ¡JAJAJA!",
+  "Dale, probá. Ni título tenés vos.",
+  "Seis rounds y no me vas a tocar. ¡JAJA!",
+  "¿Con esas manitos? ¡Andá a estudiar!",
+  "Pegame si podés, pobre. ¡JAJAJA!",
+];
+/** Provocación al arrancar cada round (índice = round). */
+const ROUND_TAUNTS: Record<number, string> = {
+  2: "¿Seguís acá? ¡Qué necio! ¡JAJA!",
+  3: "Round 3 y yo sigo abogado. ¡JAJAJA!",
+  4: "¡Ya me aburrís! ¡Pegá de verdad!",
+  5: "¡Falta poco y no me tumbás! ¡JAJA!",
+  6: "¡ROUND FINAL! ¡Nadie me mete preso!",
+};
+const BELL_MOCK = [
+  "¡Salvado por la campana! ¡JAJAJA!",
+  "¡Se te acabó el tiempo, lento! ¡JAJA!",
+  "¡Ni un K.O.! ¡Qué papelón! ¡JAJAJA!",
+];
+const ACCURACY_MOCK = [
+  "¡Ni a la pantalla le pegás! ¡JAJAJA!",
+  "¡Pegale al aire, campeón! ¡JAJA!",
+  "¿Cerrás los ojos para pegar? ¡JAJAJA!",
+];
 const MOCK = [
   "¡JAJAJA! ¡No me hacés nada!",
+  "¡Tu mamá pega más fuerte! ¡JAJA!",
+  "¡Sos más flojo que mi tesis! ¡JAJAJA!",
+  "¡Ni con seis rounds! ¡JAJA!",
+  "¿Te cansaste ya? ¡JAJAJA!",
   "¡Pegás como mi abuela! ¡JAJAJA!",
   "¡Soy intocable! ¡JAJAJA!",
   "¡JAJAJA, qué flojo!",
@@ -145,7 +181,10 @@ const MILESTONES: Record<number, string> = {
   10: "¡UPEI!",
   25: "¡IMPARABLE!",
   50: "¡JUSTICIA!",
+  75: "¡BESTIA!",
   100: "¡LEYENDA!",
+  150: "¡SIN TÍTULO!",
+  200: "¡DIOS DEL RING!",
 };
 
 export type Particle = {
@@ -157,7 +196,7 @@ export type Particle = {
   max: number;
   color: string;
   size: number;
-  kind: "dot" | "star" | "tooth" | "paper" | "sweat" | "confetti" | "water" | "button";
+  kind: "dot" | "star" | "tooth" | "paper" | "sweat" | "confetti" | "water" | "button" | "blood";
 };
 export type FloatText = {
   x: number;
@@ -215,6 +254,21 @@ export type World = {
   signatureIndex: number;
   missStreak: number;
   laughs: number;
+  /** Ya dijo la provocación inicial. */
+  opened: boolean;
+  /** K.O. conseguidos en el round actual (el finisher pide uno en el round final). */
+  roundKos: number;
+  /** Round en el que ya se burló de la puntería (una vez por round). */
+  accuracyMockRound: number;
+  /** Medidor de arma especial, 0..1. */
+  special: number;
+  /** Cartas cargadas esperando dispararse. */
+  specialQueue: number;
+  specialIndex: number;
+  specialsFired: number;
+  specialActive: { index: number; t0: number; hit: boolean } | null;
+  /** Cámara lenta (tiempo de mundo) tras un K.O. o una carta. */
+  slowUntil: number;
   jailAt: number;
   jailClang: boolean;
   armKick: Spring;
@@ -281,7 +335,7 @@ export function createWorld(opts: {
     H: 160,
     t: 0,
     demo: Boolean(opts.demo),
-    timeLeft: GAME_SECONDS,
+    timeLeft: ROUND_SECONDS,
     ended: false,
     endAt: 0,
     endSent: false,
@@ -298,6 +352,15 @@ export function createWorld(opts: {
     signatureIndex: 0,
     missStreak: 0,
     laughs: 0,
+    opened: false,
+    roundKos: 0,
+    accuracyMockRound: 0,
+    special: 0,
+    specialQueue: 0,
+    specialIndex: 0,
+    specialsFired: 0,
+    specialActive: null,
+    slowUntil: 0,
     jailAt: 0,
     jailClang: false,
     armKick: spring(),
@@ -317,12 +380,12 @@ export function createWorld(opts: {
     round: 1,
     swats: 0,
     sued: 0,
-    hp: 100,
-    maxHp: 100,
+    hp: hpForRound(1),
+    maxHp: hpForRound(1),
     damage: 0,
     mood: "idle",
     moodUntil: 0,
-    nextAiAt: 1.6,
+    nextAiAt: opts.demo ? 1.6 : 3.2,
     koAt: 0,
     lean: spring(),
     leanTarget: 0,
@@ -544,7 +607,10 @@ export function tapAt(w: World, x: number, y: number, charged = false) {
       w.papers.splice(i, 1);
       w.swats++;
       const pts = 300 * w.round;
-      if (!w.demo) w.score += pts;
+      if (!w.demo) {
+        w.score += pts;
+        chargeSpecial(w, pts);
+      }
       spray(w, p.x, p.y, 16, "paper", "#f4efe2", 90);
       float(w, p.x, p.y - 6, "¡RECHAZADA!", "#7ee0ff");
       float(w, p.x, p.y + 4, `+${pts}`, "#ffe066");
@@ -601,7 +667,11 @@ function resolveFist(w: World, f: Fist) {
     else if (w.mood === "dodge") float(w, f.tx, f.ty, "¡ESQUIVÓ!", "#ff8a8a");
     w.combo = 0;
     w.missStreak++;
-    if (w.mood === "dodge" && Math.random() < 0.5) laugh(w, pick(DODGE_MOCK));
+    const sloppy = w.throws >= 12 && w.hits / w.throws < 0.4 && w.accuracyMockRound < w.round;
+    if (sloppy && !w.demo) {
+      w.accuracyMockRound = w.round;
+      laugh(w, pick(ACCURACY_MOCK));
+    } else if (w.mood === "dodge" && Math.random() < 0.5) laugh(w, pick(DODGE_MOCK));
     else if (w.missStreak >= 2 && w.mood !== "laugh") laugh(w);
     return;
   }
@@ -647,7 +717,10 @@ function resolveFist(w: World, f: Fist) {
   else if (zone === "arm") tags.push("¡AL BRAZO!");
   const mult = 1 + Math.min(4, Math.floor(w.combo / 5) * 0.5);
   const pts = Math.round(base * stats.pts * mult);
-  if (!w.demo) w.score += pts;
+  if (!w.demo) {
+    w.score += pts;
+    chargeSpecial(w, pts);
+  }
   w.combo++;
   w.maxCombo = Math.max(w.maxCombo, w.combo);
   w.lastHitAt = w.t;
@@ -769,6 +842,9 @@ function resolveFist(w: World, f: Fist) {
   if (heavy) spray(w, f.tx, f.ty, 5, "star", "#ffe066", 70);
   if (zone === "head" && w.damage > 0.45 && Math.random() < (heavy ? 0.5 : 0.08))
     spray(w, f.tx, f.ty + 6, 1, "tooth", "#fffbe8", 80);
+  // Máxima violencia: a partir de cierto castigo, los golpes a la cara salpican.
+  if (zone === "head" && (heavy || w.damage > 0.3) && Math.random() < (heavy ? 0.85 : 0.4))
+    spray(w, f.tx, f.ty + 2, heavy ? 10 : 4, "blood", "#c8102e", heavy ? 95 : 65);
   w.shake = Math.max(w.shake, f.weapon === "mazo" ? 7 : heavy ? 5 : 2.2);
   if (f.weapon === "hacha") w.events.push({ type: "sfx", name: "glove" });
   w.hitStop = heavy ? 0.075 : 0.03;
@@ -813,7 +889,10 @@ function resolveFist(w: World, f: Fist) {
 function knockout(w: World) {
   w.hp = 0;
   w.kos++;
+  w.roundKos++;
   w.koAt = w.t;
+  w.slowUntil = w.t + 0.4;
+  spray(w, layout(w).headCx, layout(w).headCy, 14, "blood", "#c8102e", 110);
   setMood(w, "ko", 2.2);
   w.speech = null;
   w.papers = [];
@@ -836,7 +915,7 @@ function knockout(w: World) {
       kind: "confetti",
     });
   }
-  w.hitStop = 0.14;
+  w.hitStop = 0.2;
   w.texts.push(
     {
       x: w.W / 2,
@@ -906,8 +985,166 @@ export function laugh(w: World, line = pick(MOCK)) {
   }
 }
 
+/** Los puntos llenan el medidor; cada carga dispara una carta apenas se pueda. */
+function chargeSpecial(w: World, pts: number) {
+  w.special += pts / SPECIAL_COST;
+  while (w.special >= 1) {
+    w.special -= 1;
+    w.specialQueue++;
+  }
+}
+
+export function activeSpecial(w: World) {
+  return w.specialActive ? SPECIALS[w.specialActive.index] : null;
+}
+
+/** La carta entra de golpe: flash, rayos, frase gritada; el impacto llega un poco después. */
+function fireSpecial(w: World) {
+  const index = w.specialIndex % SPECIALS.length;
+  const card = SPECIALS[index];
+  w.specialIndex++;
+  w.specialQueue--;
+  w.specialsFired++;
+  w.specialActive = { index, t0: w.t, hit: false };
+  w.hitStop = 0.06;
+  w.flash = 0.9;
+  w.shake = 8;
+  w.slowUntil = w.t + 0.18;
+  w.speech = null;
+  w.texts.push({
+    x: w.W / 2,
+    y: w.H * 0.12,
+    text: "¡ARMA ESPECIAL!",
+    color: card.color,
+    scale: 2.4,
+    life: 1.4,
+    max: 1.4,
+    vy: -3,
+  });
+  w.events.push(
+    { type: "sfx", name: "boom" },
+    { type: "sfx", name: "crowd" },
+    { type: "vibrate", ms: 80 },
+    { type: "say", text: card.phrase },
+  );
+}
+
+function specialImpact(w: World) {
+  const card = activeSpecial(w);
+  if (!card || !w.specialActive) return;
+  w.specialActive.hit = true;
+  if (w.mood === "ko" || w.mood === "getup" || w.mood === "jailed") return;
+  const L = layout(w);
+  const dmg = Math.max(70, w.maxHp * card.damage);
+  const bonus = 1500 * w.round;
+  w.hp -= dmg;
+  w.damage = Math.min(1, w.damage + 0.12);
+  w.score += bonus;
+  w.combo += 5;
+  w.maxCombo = Math.max(w.maxCombo, w.combo);
+  w.lastHitAt = w.t;
+  w.headX.vel += 380;
+  w.headR.vel += 11;
+  w.headY.vel += 120;
+  w.squash.vel -= 18;
+  w.bodyDip.vel += 200;
+  w.zoom.vel += 75;
+  w.speedUntil = w.t + 0.4;
+  w.shake = 14;
+  w.flash = Math.max(w.flash, 0.7);
+  w.hitStop = 0.11;
+  w.slowUntil = w.t + 0.22;
+  w.rings.push({ x: L.headCx, y: L.headCy, t0: w.t, heavy: true });
+  spray(w, L.headCx, L.headCy, 18, "star", "#ffe066", 120);
+  spray(w, L.headCx, L.headCy + 4, 16, "blood", "#c8102e", 130);
+  spray(w, L.headCx, L.headCy + 6, 3, "tooth", "#fffbe8", 100);
+  for (let i = 0; i < 30; i++) {
+    const life = 1.2 + Math.random();
+    w.particles.push({
+      x: L.headCx,
+      y: L.headCy,
+      vx: (Math.random() - 0.5) * 220,
+      vy: -60 - Math.random() * 120,
+      life,
+      max: life,
+      color: [card.color, "#ffffff", "#ffd23f"][i % 3],
+      size: 2 + Math.random() * 2,
+      kind: "confetti",
+    });
+  }
+  w.texts.push({
+    x: L.headCx + 30,
+    y: L.headCy - 16,
+    text: `+${bonus}`,
+    color: "#ffe066",
+    scale: 2,
+    life: 1.3,
+    max: 1.3,
+    vy: -14,
+  });
+  w.events.push(
+    { type: "sfx", name: "hammer" },
+    { type: "sfx", name: "boom" },
+    { type: "vibrate", ms: 120 },
+    { type: "snap" },
+  );
+  if (w.hp <= 0) knockout(w);
+  else {
+    setMood(w, "dizzy", 2.4);
+    say(w, card.reply, 1.8);
+  }
+}
+
+function stepSpecial(w: World) {
+  if (w.specialActive) {
+    const since = w.t - w.specialActive.t0;
+    if (!w.specialActive.hit && since >= SPECIAL_HIT_AT) specialImpact(w);
+    if (since >= SPECIAL_SECONDS) w.specialActive = null;
+    return;
+  }
+  const busy = w.mood === "ko" || w.mood === "getup" || w.mood === "jailed";
+  if (w.specialQueue > 0 && !w.ended && !busy) fireSpecial(w);
+}
+
+/** Round nuevo: más vida, campana, y una provocación de arranque. */
+function nextRound(w: World, reason: "ko" | "bell") {
+  w.round++;
+  w.roundKos = 0;
+  w.timeLeft = ROUND_SECONDS;
+  w.maxHp = hpForRound(w.round);
+  w.hp = reason === "ko" ? w.maxHp : Math.min(w.maxHp, w.hp + w.maxHp * 0.45);
+  w.papers = [];
+  w.suedUntil = 0;
+  const final = w.round === ROUNDS;
+  w.texts.push(
+    {
+      x: w.W / 2,
+      y: w.H * 0.2,
+      text: final ? "ROUND FINAL" : `ROUND ${w.round}`,
+      color: final ? "#ff3b3b" : "#ffffff",
+      scale: 3,
+      life: 1.5,
+      max: 1.5,
+      vy: 0,
+    },
+    {
+      x: w.W / 2,
+      y: w.H * 0.2 + 22,
+      text: final ? "¡MANDALO PRESO!" : "¡PELEÁ!",
+      color: "#ffe066",
+      scale: 1.6,
+      life: 1.5,
+      max: 1.5,
+      vy: -4,
+    },
+  );
+  w.events.push({ type: "sfx", name: "bell" });
+  if (final) w.events.push({ type: "sfx", name: "crowd" });
+}
+
 export function canJail(w: World) {
-  return !w.demo && !w.ended && w.mood !== "jailed" && (w.kos >= 1 || w.t >= 20);
+  if (w.demo || w.ended || w.mood === "jailed" || w.round < ROUNDS) return false;
+  return w.roundKos >= 1 || ROUND_SECONDS - w.timeLeft >= 15;
 }
 
 /** Finisher: police lights, bars slam down, mugshot, and the match ends with a bonus. */
@@ -943,7 +1180,7 @@ export function sendToJail(w: World) {
 function ai(w: World) {
   if (w.mood !== "idle" || w.t < w.nextAiAt) return;
   const r = Math.random();
-  if (!w.demo && (r < 0.3 || w.t - w.lastHitAt > 5)) {
+  if (!w.demo && (r < 0.3 || w.t - w.lastHitAt > 3.5)) {
     laugh(w);
     w.nextAiAt = w.moodUntil + 1 + Math.random();
     return;
@@ -987,30 +1224,73 @@ export function step(w: World, dt: number) {
     w.hitStop -= dt;
     return;
   }
+  if (w.slowUntil > w.t) dt *= 0.35;
   w.t += dt;
+
+  // Te reta apenas entrás al ring.
+  if (!w.demo && !w.opened && w.t >= 0.45) {
+    w.opened = true;
+    w.gesture = 2;
+    laugh(w, pick(OPENERS));
+    w.texts.push(
+      {
+        x: w.W / 2,
+        y: w.H * 0.2,
+        text: "ROUND 1",
+        color: "#ffffff",
+        scale: 3,
+        life: 1.5,
+        max: 1.5,
+        vy: 0,
+      },
+      {
+        x: w.W / 2,
+        y: w.H * 0.2 + 22,
+        text: "¡PEGALE!",
+        color: "#ffe066",
+        scale: 1.6,
+        life: 1.5,
+        max: 1.5,
+        vy: -4,
+      },
+    );
+    w.events.push({ type: "sfx", name: "bell" });
+  }
 
   if (!w.demo && !w.ended) {
     w.timeLeft -= dt;
     if (w.timeLeft <= 0) {
-      w.timeLeft = 0;
-      w.ended = true;
-      w.endAt = w.t;
-      w.papers = [];
-      w.charging = null;
-      w.texts.push({
-        x: w.W / 2,
-        y: w.H * 0.2,
-        text: "¡TIEMPO!",
-        color: "#ffffff",
-        scale: 3,
-        life: 1.8,
-        max: 1.8,
-        vy: 0,
-      });
-      w.events.push({ type: "sfx", name: "bell" }, { type: "snap", fallback: true });
-      if (w.kos === 0) laugh(w, "¡JAJAJA! ¡Ni un K.O.!");
+      if (w.round < ROUNDS && w.mood !== "ko") {
+        // Campana: se salva, se burla, y arranca el round siguiente.
+        nextRound(w, "bell");
+        w.specialActive = null;
+        laugh(w, pick(BELL_MOCK));
+        w.nextAiAt = w.moodUntil + 0.8;
+      } else if (w.round < ROUNDS) {
+        w.timeLeft = 0.01;
+      } else {
+        w.timeLeft = 0;
+        w.ended = true;
+        w.endAt = w.t;
+        w.papers = [];
+        w.charging = null;
+        w.specialActive = null;
+        w.texts.push({
+          x: w.W / 2,
+          y: w.H * 0.2,
+          text: "¡TIEMPO!",
+          color: "#ffffff",
+          scale: 3,
+          life: 1.8,
+          max: 1.8,
+          vy: 0,
+        });
+        w.events.push({ type: "sfx", name: "bell" }, { type: "snap", fallback: true });
+        laugh(w, w.kos === 0 ? "¡JAJAJA! ¡Ni un K.O.!" : "¡JAJAJA! ¡Sigo libre, pobre!");
+      }
     }
   }
+  if (!w.demo) stepSpecial(w);
   if (w.mood === "jailed") {
     const since = w.t - w.jailAt;
     if (!w.jailClang && since >= 0.62) {
@@ -1039,22 +1319,27 @@ export function step(w: World, dt: number) {
 
   // Mood timeline
   if (w.mood === "ko" && w.t >= w.moodUntil) {
-    w.round++;
-    w.maxHp = 100 + 35 * (w.round - 1);
-    w.hp = w.maxHp;
-    setMood(w, "getup", 0.8);
-    say(w, pick(GETUP), 1.4);
-    w.texts.push({
-      x: w.W / 2,
-      y: w.H * 0.2,
-      text: `ROUND ${w.round}`,
-      color: "#ffffff",
-      scale: 2,
-      life: 1.3,
-      max: 1.3,
-      vy: 0,
-    });
-    w.events.push({ type: "sfx", name: "bell" });
+    if (w.round < ROUNDS) {
+      nextRound(w, "ko");
+      setMood(w, "getup", 0.8);
+      say(w, ROUND_TAUNTS[w.round] ?? pick(GETUP), 2.2);
+    } else {
+      // Round final: se levanta con toda la vida, pero ya podés mandarlo preso.
+      w.hp = w.maxHp;
+      setMood(w, "getup", 0.8);
+      say(w, pick(GETUP), 1.4);
+      w.texts.push({
+        x: w.W / 2,
+        y: w.H * 0.2,
+        text: "¡A LA CÁRCEL!",
+        color: "#ff3b3b",
+        scale: 2.2,
+        life: 1.6,
+        max: 1.6,
+        vy: -3,
+      });
+      w.events.push({ type: "sfx", name: "siren" });
+    }
     w.nextAiAt = w.t + 1.5;
   } else if (w.mood !== "ko" && w.mood !== "idle" && w.t >= w.moodUntil) {
     w.mood = "idle";
@@ -1144,7 +1429,13 @@ export type Snapshot = {
   hp: number;
   maxHp: number;
   round: number;
+  rounds: number;
+  finalRound: boolean;
   kos: number;
+  special: number;
+  specialQueue: number;
+  specialName: string | null;
+  specialColor: string | null;
   weapon: Weapon;
   bonusMazo: number;
   sued: boolean;
@@ -1162,7 +1453,13 @@ export function snapshot(w: World): Snapshot {
     hp: Math.max(0, w.hp),
     maxHp: w.maxHp,
     round: w.round,
+    rounds: ROUNDS,
+    finalRound: w.round === ROUNDS,
     kos: w.kos,
+    special: Math.min(1, w.special),
+    specialQueue: w.specialQueue,
+    specialName: activeSpecial(w)?.name ?? null,
+    specialColor: activeSpecial(w)?.color ?? null,
     weapon: activeWeapon(w),
     bonusMazo: Math.max(0, w.bonusMazoUntil - w.t),
     sued: w.suedUntil > w.t,
@@ -1185,6 +1482,8 @@ export type RunResult = {
   weapon: Weapon;
   jailed: boolean;
   laughs: number;
+  specials: number;
+  rounds: number;
 };
 
 export function result(w: World): RunResult {
@@ -1200,5 +1499,7 @@ export function result(w: World): RunResult {
     weapon: w.weapon,
     jailed: w.mood === "jailed",
     laughs: w.laughs,
+    specials: w.specialsFired,
+    rounds: ROUNDS,
   };
 }

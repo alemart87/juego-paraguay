@@ -179,8 +179,9 @@ export function AbogadoGame() {
               <em>ES ABOGADO</em>
             </h1>
             <p className="ab-tag">
-              Tenés 60 segundos. Pegale a full, cortá las demandas y noqueálo. Cada arma paga trae 1
-              golpe gratis por partida.
+              Seis rounds de 35 segundos. Pegale a full, cortá las demandas, llená el medidor de
+              ARMA ESPECIAL y en el round final mandalo a la cárcel. Cada arma paga trae 1 golpe
+              gratis por partida.
             </p>
             <div className="ab-weapons" role="radiogroup" aria-label="Elegí tu arma">
               {WEAPONS.map((w) => {
@@ -285,6 +286,16 @@ export function AbogadoGame() {
             <div>
               <b>{run.swats}</b>
               <small>DEMANDAS</small>
+            </div>
+            <div>
+              <b>{run.specials}</b>
+              <small>ESPECIALES</small>
+            </div>
+            <div>
+              <b>
+                {run.round}/{run.rounds}
+              </b>
+              <small>ROUNDS</small>
             </div>
           </div>
           <div className="ab-card-preview">
