@@ -13,13 +13,19 @@ export function PrizeBanner({
   delayMs = 3000,
   onEnter,
   onOpenChange,
+  cta = "PARTICIPAR",
+  note,
 }: {
   /** Solo cuenta el tiempo mientras esto es true (portada visible, sin diálogos). */
   active?: boolean;
   delayMs?: number;
   onEnter: () => void;
-  /** Avisa cuando se abre o cierra, para pausar el juego mientras está en pantalla. */
+  /** Avisa cuando se abre o cierra. */
   onOpenChange?: (open: boolean) => void;
+  /** Texto del botón principal (por defecto "PARTICIPAR"). */
+  cta?: string;
+  /** Línea chica debajo del botón que aclara a dónde lleva. */
+  note?: string;
 }) {
   const [open, setOpen] = useState(false);
   const shown = useRef(false);
@@ -71,7 +77,11 @@ export function PrizeBanner({
             onEnter();
           }}
         >
-          PARTICIPAR
+          {cta}
+        </button>
+        {note && <span className="prize-banner-note">{note}</span>}
+        <button type="button" className="prize-banner-later" onClick={() => setOpen(false)}>
+          Ahora no
         </button>
       </div>
     </div>

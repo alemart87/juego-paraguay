@@ -518,15 +518,17 @@ export function BattleGame() {
       )}
 
       <PrizeBanner
-        active={!intro && weeklyChismeDone && !dialog}
-        onOpenChange={(open) => {
-          if (!world || world.ended) return;
-          if (open) world.paused = true;
-          else if (!dialog) world.paused = false;
-        }}
+        active={
+          !intro &&
+          weeklyChismeDone &&
+          !dialog &&
+          !autoStart &&
+          (screen === "home" || screen === "result")
+        }
+        cta="VER EL RANKING"
+        note="Se abre acá mismo. Cargá tu usuario y cada victoria suma."
         onEnter={() => {
           sfx("ui");
-          if (world && !world.ended) world.paused = true;
           setDialog("ranking");
         }}
       />

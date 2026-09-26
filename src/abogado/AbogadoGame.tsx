@@ -90,7 +90,6 @@ export function AbogadoGame() {
   const [sharing, setSharing] = useState(false);
   const [buying, setBuying] = useState<Weapon | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
-  const [bannerOpen, setBannerOpen] = useState(false);
   const refreshWallet = () => fetchWallet().then(setWallet);
 
   useEffect(() => {
@@ -212,8 +211,9 @@ export function AbogadoGame() {
   return (
     <main className={`ab-root ab-screen-${screen}`}>
       <PrizeBanner
-        active={!shopOpen && buying === null}
-        onOpenChange={setBannerOpen}
+        active={(screen === "title" || screen === "result") && !shopOpen && buying === null}
+        cta="IR AL RANKING"
+        note="Te lleva al ranking de Influencers Battle, donde se juega el bono."
         onEnter={() => window.location.assign(PRIZE.rankingUrl)}
       />
       {screen === "title" && (
@@ -316,7 +316,7 @@ export function AbogadoGame() {
           goldTitle={goldTitle}
           owned={ownedWeapons}
           prices={prices}
-          hold={buying !== null || bannerOpen}
+          hold={buying !== null}
           credits={wallet?.credits ?? 0}
           onLockedWeapon={(id) => setBuying(id)}
           soundOn={soundOn}

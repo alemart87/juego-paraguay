@@ -118,3 +118,19 @@
     transform: scale(1.04);
   }
 }
+
+.prize-banner-note {
+  display: block;
+  margin-top: 10px;
+  font: 600 12px/1.35 "Figtree", system-ui, sans-serif;
+  color: #5a4520;
+}
+.prize-banner-later {
+  margin-top: 8px;
+  border: 0;
+  background: none;
+  color: #7a1b4d;
+  font: 800 13px/1 "Figtree", system-ui, sans-serif;
+  text-decoration: underline;
+  cursor: pointer;
+}
