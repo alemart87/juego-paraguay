@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ComoJugarRouteImport } from './routes/como-jugar'
 import { Route as HernanRivasAbogadoRouteImport } from './routes/hernan-rivas-abogado'
+import { Route as JesusTeAmaRouteImport } from './routes/jesus-te-ama'
 import { Route as PoliticaDeComprasRouteImport } from './routes/politica-de-compras'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as PersonajesIndexRouteImport } from './routes/personajes.index'
@@ -36,6 +37,11 @@ const ComoJugarRoute = ComoJugarRouteImport.update({
 const HernanRivasAbogadoRoute = HernanRivasAbogadoRouteImport.update({
   id: '/hernan-rivas-abogado',
   path: '/hernan-rivas-abogado',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JesusTeAmaRoute = JesusTeAmaRouteImport.update({
+  id: '/jesus-te-ama',
+  path: '/jesus-te-ama',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoliticaDeComprasRoute = PoliticaDeComprasRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/como-jugar': typeof ComoJugarRoute
   '/hernan-rivas-abogado': typeof HernanRivasAbogadoRoute
+  '/jesus-te-ama': typeof JesusTeAmaRoute
   '/politica-de-compras': typeof PoliticaDeComprasRoute
   '/privacidad': typeof PrivacidadRoute
   '/personajes/$slug': typeof PersonajesSlugRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/como-jugar': typeof ComoJugarRoute
   '/hernan-rivas-abogado': typeof HernanRivasAbogadoRoute
+  '/jesus-te-ama': typeof JesusTeAmaRoute
   '/politica-de-compras': typeof PoliticaDeComprasRoute
   '/privacidad': typeof PrivacidadRoute
   '/personajes/$slug': typeof PersonajesSlugRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/como-jugar': typeof ComoJugarRoute
   '/hernan-rivas-abogado': typeof HernanRivasAbogadoRoute
+  '/jesus-te-ama': typeof JesusTeAmaRoute
   '/politica-de-compras': typeof PoliticaDeComprasRoute
   '/privacidad': typeof PrivacidadRoute
   '/personajes/$slug': typeof PersonajesSlugRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/como-jugar'
     | '/hernan-rivas-abogado'
+    | '/jesus-te-ama'
     | '/politica-de-compras'
     | '/privacidad'
     | '/personajes/$slug'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/como-jugar'
     | '/hernan-rivas-abogado'
+    | '/jesus-te-ama'
     | '/politica-de-compras'
     | '/privacidad'
     | '/personajes/$slug'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/como-jugar'
     | '/hernan-rivas-abogado'
+    | '/jesus-te-ama'
     | '/politica-de-compras'
     | '/privacidad'
     | '/personajes/$slug'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ComoJugarRoute: typeof ComoJugarRoute
   HernanRivasAbogadoRoute: typeof HernanRivasAbogadoRoute
+  JesusTeAmaRoute: typeof JesusTeAmaRoute
   PoliticaDeComprasRoute: typeof PoliticaDeComprasRoute
   PrivacidadRoute: typeof PrivacidadRoute
   PersonajesSlugRoute: typeof PersonajesSlugRoute
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/hernan-rivas-abogado'
       fullPath: '/hernan-rivas-abogado'
       preLoaderRoute: typeof HernanRivasAbogadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jesus-te-ama': {
+      id: '/jesus-te-ama'
+      path: '/jesus-te-ama'
+      fullPath: '/jesus-te-ama'
+      preLoaderRoute: typeof JesusTeAmaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/politica-de-compras': {
@@ -200,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ComoJugarRoute: ComoJugarRoute,
   HernanRivasAbogadoRoute: HernanRivasAbogadoRoute,
+  JesusTeAmaRoute: JesusTeAmaRoute,
   PoliticaDeComprasRoute: PoliticaDeComprasRoute,
   PrivacidadRoute: PrivacidadRoute,
   PersonajesSlugRoute: PersonajesSlugRoute,

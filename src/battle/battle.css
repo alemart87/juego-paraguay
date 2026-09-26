@@ -5099,3 +5099,28 @@
     display: none;
   }
 }
+
+.jesus-launch {
+  position: relative;
+  border: 1px solid #f2c86b !important;
+  border-left: 6px solid #f2c86b !important;
+  background: linear-gradient(90deg, #f2c86b26, transparent 60%), #0e0a06;
+  box-shadow: 8px 8px 0 #f2c86b22;
+  padding-right: 96px;
+}
+.jesus-launch span {
+  color: #f2c86b;
+}
+.jesus-launch img {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 72px;
+  height: 72px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: 50% 20%;
+  border: 2px solid #f2c86b;
+  box-shadow: 0 0 22px #f2c86b88;
+}

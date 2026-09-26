@@ -601,6 +601,12 @@ export function BattleGame() {
                 <strong>HERNÁN RIVAS ES ABOGADO</strong>
                 <small>PEGALE A FULL · 6 ROUNDS · GRATIS</small>
               </a>
+              <a className="rose-launch jesus-launch" href="/jesus-te-ama">
+                <img src="/jesus/sagrado-corazon.jpg" alt="" />
+                <span>NUEVO · UN MOMENTO PARA VOS</span>
+                <strong>JESÚS TE AMA</strong>
+                <small>HAS LLEGADO AQUÍ POR ALGO · GRATIS</small>
+              </a>
               <button
                 className="primary play-cta"
                 onClick={() => {
