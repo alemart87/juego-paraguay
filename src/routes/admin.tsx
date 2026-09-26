@@ -82,7 +82,7 @@ function AdminPage() {
     [chismeEnabled, setChismeEnabled] = useState(false),
     [chismeMessage, setChismeMessage] = useState(""),
     [quickEnabled, setQuickEnabled] = useState(false),
-    [quickLevel, setQuickLevel] = useState<EpisodeId | 6>(1),
+    [quickLevel, setQuickLevel] = useState<EpisodeId | 6 | 7>(1),
     [quickFighter, setQuickFighter] = useState(""),
     [quickMessage, setQuickMessage] = useState("");
   const load = async () => {
@@ -103,7 +103,7 @@ function AdminPage() {
       const data = (await quick.json()) as { enabled?: boolean; level?: number; fighter?: string };
       setQuickEnabled(Boolean(data.enabled));
       setQuickLevel(
-        ([1, 2, 3, 4, 5, 6].includes(Number(data.level)) ? data.level : 1) as EpisodeId | 6,
+        ([1, 2, 3, 4, 5, 6, 7].includes(Number(data.level)) ? data.level : 1) as EpisodeId | 6 | 7,
       );
       setQuickFighter(data.fighter ?? "");
     }
@@ -199,9 +199,11 @@ function AdminPage() {
         );
       const who = quickFighter ? fighter(quickFighter as FighterId).name : "el personaje guardado";
       setQuickMessage(
-        quickEnabled && quickLevel === 6
-          ? "Inicio directo activo: al entrar al link se juega Hernán Rivas ES ABOGADO, sin chisme, intro ni portada."
-          : quickEnabled
+        quickEnabled && quickLevel === 7
+          ? "Inicio directo activo: al entrar al link se abre Jesús te ama, sin chisme, intro ni portada."
+          : quickEnabled && quickLevel === 6
+            ? "Inicio directo activo: al entrar al link se juega Hernán Rivas ES ABOGADO, sin chisme, intro ni portada."
+            : quickEnabled
             ? `Inicio directo activo: al entrar al link se juega ${EPISODES[quickLevel - 1].title} con ${who}, sin chisme ni intro.`
             : "Inicio directo apagado: el juego arranca con chisme, intro y portada.",
       );
@@ -400,7 +402,7 @@ function AdminPage() {
               EPISODIO QUE SE JUEGA
               <select
                 value={quickLevel}
-                onChange={(event) => setQuickLevel(Number(event.target.value) as EpisodeId | 6)}
+                onChange={(event) => setQuickLevel(Number(event.target.value) as EpisodeId | 6 | 7)}
               >
                 {EPISODES.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -408,13 +410,14 @@ function AdminPage() {
                   </option>
                 ))}
                 <option value={6}>06 · Hernán Rivas ES ABOGADO — Ring del Abogado</option>
+                <option value={7}>07 · Jesús te ama — Un momento de oración</option>
               </select>
             </label>
             <label>
               PERSONAJE
               <select
                 value={quickFighter}
-                disabled={quickLevel === 6}
+                disabled={quickLevel === 6 || quickLevel === 7}
                 onChange={(event) => setQuickFighter(event.target.value)}
               >
                 <option value="">El que tenga guardado el jugador</option>

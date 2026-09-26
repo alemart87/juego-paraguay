@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   const enabled = Boolean(body?.enabled);
   const level = Number(body?.level);
   if (!isQuickStartLevel(level))
-    throw createError({ statusCode: 400, statusMessage: "Elegí un nivel válido (1 a 6)." });
+    throw createError({ statusCode: 400, statusMessage: "Elegí un nivel válido (1 a 7)." });
   const rawFighter = typeof body?.fighter === "string" ? body.fighter.trim() : "";
   if (rawFighter && !isQuickStartFighter(rawFighter))
     throw createError({

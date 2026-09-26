@@ -2,7 +2,9 @@ import { FIGHTERS, type EpisodeId, type FighterId } from "../../src/battle/conte
 
 /** Nivel 06 del inicio directo: el juego "Hernán Rivas ES ABOGADO" (/hernan-rivas-abogado). */
 export const ABOGADO_LEVEL = 6;
-export type QuickStartLevel = EpisodeId | typeof ABOGADO_LEVEL;
+/** Nivel 07 del inicio directo: "Jesús te ama" (/jesus-te-ama). */
+export const JESUS_LEVEL = 7;
+export type QuickStartLevel = EpisodeId | typeof ABOGADO_LEVEL | typeof JESUS_LEVEL;
 
 export type QuickStart = { level: QuickStartLevel; fighter: FighterId | "" };
 
@@ -15,7 +17,7 @@ export const isEpisodeId = (value: unknown): value is EpisodeId =>
   typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5;
 
 export const isQuickStartLevel = (value: unknown): value is QuickStartLevel =>
-  isEpisodeId(value) || value === ABOGADO_LEVEL;
+  isEpisodeId(value) || value === ABOGADO_LEVEL || value === JESUS_LEVEL;
 
 export const isQuickStartFighter = (value: unknown): value is FighterId =>
   typeof value === "string" && quickStartFighters().some((f) => f.id === value);

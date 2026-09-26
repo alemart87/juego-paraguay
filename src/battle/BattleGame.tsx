@@ -160,6 +160,11 @@ export function BattleGame() {
             window.location.replace("/hernan-rivas-abogado?quick=1");
             return;
           }
+          // Nivel 07 es "Jesús te ama".
+          if (data?.enabled && Number(data.level) === 7) {
+            window.location.replace("/jesus-te-ama");
+            return;
+          }
           if (!data?.enabled || ![1, 2, 3, 4, 5].includes(Number(data.level))) return;
           const pick = FIGHTERS.find((f) => f.id === data.fighter && !f.premium);
           const savedHero = fighter(local.hero);
