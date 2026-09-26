@@ -697,3 +697,23 @@
     grid-template-columns: 1fr;
   }
 }
+
+.admin-jesus {
+  border-color: #f2c86b66;
+  border-top-color: #f2c86b;
+  background: linear-gradient(135deg, #f2c86b14, transparent 45%), #111018;
+}
+.admin-jesus > div > span {
+  color: #f2c86b;
+}
+.admin-jesus .admin-chat-grids {
+  grid-template-columns: 1fr;
+}
+.admin-jesus .admin-bar {
+  grid-template-columns: minmax(120px, 1fr) 1fr 110px;
+}
+.admin-jesus .admin-bar span small {
+  color: #aaa3b4;
+  font-weight: 600;
+  text-transform: none;
+}

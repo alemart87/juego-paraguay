@@ -19,6 +19,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { EPISODES, FIGHTERS, fighter, type EpisodeId, type FighterId } from "@/battle/content";
+import { TOPICS } from "@/jesus/content";
 import { SHOP_ITEMS, type ShopSku } from "@/battle/shop-catalog";
 import "./admin.css";
 
@@ -474,6 +475,7 @@ function AdminPage() {
             </div>
           </section>
         )}
+        <AdminJesus />
         <AdminChat />
         <section className="admin-grants">
           <div className="admin-grants-copy">
@@ -769,6 +771,138 @@ function AdminChat() {
             <p className="admin-empty">Todavía no hay chismes.</p>
           )}
         </section>
+      </div>
+    </section>
+  );
+}
+
+type JesusTelemetry = {
+  summary: {
+    total: number;
+    today: number;
+    week: number;
+    people: number;
+    wrote: number;
+    shared: number;
+    support: number;
+    avg_lights: number;
+  };
+  topics: { topic: string; n: number; people: number }[];
+  options: { topic: string; option: string; n: number }[];
+  days: { label: string; n: number; people: number }[];
+  donations: { count: number; total: number };
+};
+
+const topicLabel = (id: string) => TOPICS.find((t) => t.id === id)?.label ?? id;
+const optionLabel = (topicId: string, optionId: string) =>
+  TOPICS.find((t) => t.id === topicId)?.options.find((o) => o.id === optionId)?.label ?? optionId;
+
+/** Jesús te ama: cuántas conversaciones, de qué temas y qué hicieron después. */
+function AdminJesus() {
+  const [data, setData] = useState<JesusTelemetry | null>(null);
+  useEffect(() => {
+    const load = () =>
+      fetch("/api/admin/jesus", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: JesusTelemetry | null) => d && setData(d))
+        .catch(() => undefined);
+    void load();
+    const timer = window.setInterval(() => void load(), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  if (!data) return null;
+  const pct = (n: number) => (data.summary.total ? Math.round((n / data.summary.total) * 100) : 0);
+  const cards = [
+    ["CONVERSACIONES", data.summary.total],
+    ["HOY", data.summary.today],
+    ["ÚLTIMOS 7 DÍAS", data.summary.week],
+    ["PERSONAS", data.summary.people],
+    ["ESCRIBIERON UN PEDIDO", `${pct(data.summary.wrote)}%`],
+    ["COMPARTIERON", `${pct(data.summary.shared)}%`],
+    ["ABRIERON EL APORTE", `${pct(data.summary.support)}%`],
+    ["LUCES PROMEDIO", data.summary.avg_lights],
+    ["APORTES", `${data.donations.count} · USD ${data.donations.total.toFixed(2)}`],
+  ] as const;
+  const maxTopic = Math.max(1, ...data.topics.map((x) => x.n)),
+    maxOption = Math.max(1, ...data.options.map((x) => x.n)),
+    maxDay = Math.max(1, ...data.days.map((x) => x.n));
+  return (
+    <section className="admin-chisme admin-jesus">
+      <div>
+        <span>JESÚS TE AMA · TELEMETRÍA ANÓNIMA</span>
+        <h2>
+          <Eye /> DE QUÉ HABLA LA GENTE
+        </h2>
+        <p>
+          Cada conversación que llega a la bendición se cuenta con su tema y su opción. No se
+          guarda el nombre ni lo que escriben: solo si escribieron algo.
+        </p>
+      </div>
+      <div>
+        <div className="admin-chat-cards">
+          {cards.map(([label, value]) => (
+            <article key={label}>
+              <small>{label}</small>
+              <strong>{typeof value === "number" ? value.toLocaleString("es-PY") : value}</strong>
+            </article>
+          ))}
+        </div>
+        <div className="admin-grids admin-chat-grids">
+          <section>
+            <h2>
+              <BarChart3 /> Temas
+            </h2>
+            {data.topics.length ? (
+              data.topics.map((x) => (
+                <div className="admin-bar" key={x.topic}>
+                  <span>{topicLabel(x.topic)}</span>
+                  <i style={{ width: `${(x.n / maxTopic) * 100}%` }} />
+                  <b>
+                    {x.n} <small>/ {x.people} pers.</small>
+                  </b>
+                </div>
+              ))
+            ) : (
+              <p className="admin-empty">Todavía no hay conversaciones.</p>
+            )}
+          </section>
+          <section>
+            <h2>
+              <Activity /> Lo que más dicen
+            </h2>
+            {data.options.length ? (
+              data.options.map((x) => (
+                <div className="admin-bar pink" key={`${x.topic}-${x.option}`}>
+                  <span>
+                    {optionLabel(x.topic, x.option)} <small>· {topicLabel(x.topic)}</small>
+                  </span>
+                  <i style={{ width: `${(x.n / maxOption) * 100}%` }} />
+                  <b>{x.n}</b>
+                </div>
+              ))
+            ) : (
+              <p className="admin-empty">Todavía no hay respuestas.</p>
+            )}
+          </section>
+          <section>
+            <h2>
+              <Activity /> Por día (14 días)
+            </h2>
+            {data.days.length ? (
+              data.days.map((x) => (
+                <div className="admin-bar" key={x.label}>
+                  <span>{x.label}</span>
+                  <i style={{ width: `${(x.n / maxDay) * 100}%` }} />
+                  <b>
+                    {x.n} <small>/ {x.people} pers.</small>
+                  </b>
+                </div>
+              ))
+            ) : (
+              <p className="admin-empty">Sin actividad en las últimas dos semanas.</p>
+            )}
+          </section>
+        </div>
       </div>
     </section>
   );

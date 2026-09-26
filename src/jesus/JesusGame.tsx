@@ -25,6 +25,7 @@ import { getDonationCheckout } from "./donate";
 import { EffectsLayer } from "./Effects";
 import { useEffects } from "./useEffects";
 import { lightCard } from "./share";
+import { sessionId } from "@/battle/analytics";
 import "./jesus.css";
 
 type Step =
@@ -69,6 +70,22 @@ export function JesusGame() {
   const [cardBusy, setCardBusy] = useState(false);
   const { particles, burst } = useEffects();
   const figure = useRef<HTMLButtonElement>(null);
+  /** Id de la conversación registrada (solo tema, opción y luces; nunca el texto). */
+  const eventId = useRef<number | null>(null);
+  const pendingFlags = useRef<{ shared?: boolean; support?: boolean }>({});
+  const track = (flags: { shared?: boolean; support?: boolean }) => {
+    if (!eventId.current) {
+      // Todavía no volvió el id del registro: se manda apenas llegue.
+      pendingFlags.current = { ...pendingFlags.current, ...flags };
+      return;
+    }
+    void fetch("/api/jesus/event", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({ sessionId: sessionId(), id: eventId.current, ...flags }),
+    }).catch(() => undefined);
+  };
   const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Volver de Whop: ?gracias=<monto>
@@ -170,6 +187,30 @@ export function JesusGame() {
       }
     burst(50, 35, ["angel", "dove", "dove", "spark", "spark", "light"]);
     go("blessing");
+    if (current && choice)
+      void fetch("/api/jesus/event", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          sessionId: sessionId(),
+          topic: current.id,
+          option: choice.id,
+          lights,
+          wrote: request.trim().length > 0,
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { id?: number } | null) => {
+          if (!data?.id) return;
+          eventId.current = data.id;
+          if (Object.keys(pendingFlags.current).length) {
+            const flags = pendingFlags.current;
+            pendingFlags.current = {};
+            track(flags);
+          }
+        })
+        .catch(() => undefined);
   };
 
   const makeCard = async (thanks?: string) => {
@@ -193,6 +234,7 @@ export function JesusGame() {
   };
 
   const shareCard = async () => {
+    track({ shared: true });
     const blob = card?.blob ?? (await makeCard());
     const text = `Hoy pedí por ${current?.shareLabel ?? "mi gente"} 🕊️ Jesús te ama: ${location.origin}/jesus-te-ama`;
     if (blob && navigator.share && navigator.canShare?.({ files: [new File([blob], "luz.png")] })) {
@@ -426,7 +468,13 @@ export function JesusGame() {
               </button>
             </div>
             {card && <img className="jt-card-preview" src={card.url} alt="Tarjeta de luz" />}
-            <button className="jt-btn jt-btn-soft" onClick={() => go("support")}>
+            <button
+              className="jt-btn jt-btn-soft"
+              onClick={() => {
+                track({ support: true });
+                go("support");
+              }}
+            >
               <Heart size={18} /> Apoyar este espacio
             </button>
             <button className="jt-link" onClick={() => { setChoice(null); setCurrent(null); setLights(0); go("topic"); }}>
@@ -529,6 +577,10 @@ export function JesusGame() {
         <p>
           Este espacio no reemplaza ayuda médica ni profesional. Si es una emergencia, llamá al{" "}
           <b>911</b>. Si sentís que no podés más, hablá hoy con alguien de confianza.
+        </p>
+        <p>
+          Para mejorar este espacio guardamos, de forma anónima, el tema que elegís y cuántas luces
+          encendés. Lo que escribís y tu nombre nunca salen de tu teléfono.
         </p>
         <p>
           PY-STAR GAMES · <a href="/privacidad">Privacidad</a> ·{" "}
