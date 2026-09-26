@@ -18,7 +18,14 @@ import {
  * device-pixel transform, so it stays sharp on any screen.
  */
 
-import { SPECIALS, SPECIAL_HIT_AT, SPECIAL_SECONDS } from "./specials";
+import {
+  POWERUPS,
+  POWER_HIT_AT,
+  POWER_SECONDS,
+  SPECIALS,
+  SPECIAL_HIT_AT,
+  SPECIAL_SECONDS,
+} from "./specials";
 
 type Ctx = CanvasRenderingContext2D;
 type Pt = { x: number; y: number };
@@ -61,6 +68,8 @@ export type Art = {
   skin: string;
   /** Fotos recortadas de las armas especiales (null si alguna no cargó). */
   specials: (HTMLImageElement | null)[];
+  /** Fotos de los refuerzos de Hernán. */
+  powers: (HTMLImageElement | null)[];
 };
 
 function loadImage(src: string) {
@@ -77,13 +86,16 @@ let artPromise: Promise<Art> | null = null;
 
 export function loadArt(): Promise<Art> {
   artPromise ??= (async () => {
-    const [head, body, arm, , ...specials] = await Promise.all([
+    const [head, body, arm, , ...cards] = await Promise.all([
       loadImage(PHOTO.head.src),
       loadImage(PHOTO.body.src),
       loadImage(PHOTO.arm.src),
       document.fonts?.load(`italic 900 20px ${FONT}`).catch(() => undefined),
       ...SPECIALS.map((card) => loadImage(card.src).catch(() => null)),
+      ...POWERUPS.map((card) => loadImage(card.src).catch(() => null)),
     ]);
+    const specials = cards.slice(0, SPECIALS.length) as (HTMLImageElement | null)[];
+    const powers = cards.slice(SPECIALS.length) as (HTMLImageElement | null)[];
     // Red "ouch" flash: the head silhouette filled red, drawn over it on hits.
     const headTint = document.createElement("canvas");
     headTint.width = head.naturalWidth;
@@ -108,7 +120,7 @@ export function loadArt(): Promise<Art> {
     } catch {
       /* keep default */
     }
-    return { head, body, arm, headTint, skin, specials: specials as (HTMLImageElement | null)[] };
+    return { head, body, arm, headTint, skin, specials, powers };
   })();
   return artPromise;
 }
@@ -362,7 +374,65 @@ function drawFaceFx(w: World, c: Ctx, art: Art, mood: Mood) {
     c.fillRect(e.x - 12, e.y - 12, 24, 24);
   };
   if (d > 0.25) bruise(eyeR, Math.min(0.85, (d - 0.25) * 2.4));
-  if (d > 0.7) bruise(eyeL, Math.min(0.85, (d - 0.7) * 3));
+  if (d > 0.55) bruise(eyeL, Math.min(0.85, (d - 0.55) * 3));
+  // Deterioro progresivo: sangre de nariz, cortes en la frente, labio partido, curita.
+  if (d > 0.3) {
+    const len = 6 + Math.min(14, (d - 0.3) * 30) + Math.sin(t * 3) * 0.6;
+    c.strokeStyle = "rgba(190,16,30,0.9)";
+    c.lineWidth = 1.6;
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(nose.x + 3, nose.y + 6);
+    c.lineTo(nose.x + 2, nose.y + 6 + len);
+    c.stroke();
+    if (d > 0.6) {
+      c.beginPath();
+      c.moveTo(nose.x - 3, nose.y + 6);
+      c.lineTo(nose.x - 4, nose.y + 6 + len * 0.7);
+      c.stroke();
+    }
+  }
+  if (d > 0.45) {
+    c.strokeStyle = "rgba(170,10,25,0.95)";
+    c.lineWidth = 1.4;
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(forehead.x - 10, forehead.y - 6);
+    c.lineTo(forehead.x - 2, forehead.y + 4);
+    c.moveTo(forehead.x - 7, forehead.y - 1);
+    c.lineTo(forehead.x - 4, forehead.y - 5);
+    c.stroke();
+  }
+  if (d > 0.6) {
+    const m = PHOTO.mouth;
+    c.fillStyle = "rgba(160,10,30,0.85)";
+    c.beginPath();
+    c.ellipse(m.x - 9, m.y + 3, 3.2, 1.8, -0.4, 0, Math.PI * 2);
+    c.fill();
+  }
+  if (d > 0.78) {
+    // Curita torcida sobre la ceja
+    c.save();
+    c.translate(eyeR.x + 4, eyeR.y - 13);
+    c.rotate(-0.5);
+    c.fillStyle = "#e9c9a8";
+    c.strokeStyle = "#b8916a";
+    c.lineWidth = 0.8;
+    roundRect(c, -9, -3, 18, 6, 2);
+    c.fill();
+    c.stroke();
+    c.fillStyle = "#d8ab85";
+    for (let i = -5; i <= 5; i += 2.5) c.fillRect(i, -1, 1, 2);
+    c.restore();
+  }
+  if (d > 0.9) {
+    // Hinchazón: la mejilla se pone morada además de roja
+    const r = c.createRadialGradient(cheek.x + 4, cheek.y + 6, 1, cheek.x + 4, cheek.y + 6, 16);
+    r.addColorStop(0, "rgba(120,30,140,0.55)");
+    r.addColorStop(1, "rgba(120,30,140,0)");
+    c.fillStyle = r;
+    c.fillRect(cheek.x - 14, cheek.y - 12, 36, 36);
+  }
 
   const blink = w.blinkAt < t && t < w.blinkAt + 0.12;
   if (mood === "ko") {
@@ -987,7 +1057,7 @@ function drawCharacter(w: World, c: Ctx, art: Art) {
   c.transform(1, 0, Math.max(-0.35, Math.min(0.35, w.headX.vel * 0.0006)), 1, 0, 0);
   c.translate(-neck.x, -neck.y);
   drawHead(w, c, art, mood === "getup" ? "hurt" : mood);
-  if (mood === "block") drawShield(c, t);
+  if (mood === "block" || w.shieldUntil > w.t) drawShield(c, t);
   c.restore();
   if (mood === "jailed") drawPlacard(c, t);
 
@@ -1575,26 +1645,70 @@ function drawRays(c: Ctx, x: number, y: number, color: string, t: number, alpha:
   c.restore();
 }
 
-/** La carta especial: foto recortada tipo sticker sobre una carta, frase gritada debajo. */
+type CardDraw = {
+  img: HTMLImageElement | null;
+  name: string;
+  color: string;
+  label: string;
+  phrase: string;
+  since: number;
+  seconds: number;
+  hitAt: number;
+  /** +1 entra por la derecha (nuestras), -1 por la izquierda (las de Hernán). */
+  dir: 1 | -1;
+};
+
+/** Nuestras armas especiales caen sobre Hernán. */
 function drawSpecial(w: World, c: Ctx, art: Art | null) {
   if (!w.specialActive) return;
   const card = SPECIALS[w.specialActive.index];
-  const since = w.t - w.specialActive.t0;
+  drawCard(w, c, {
+    img: art?.specials[w.specialActive.index] ?? null,
+    name: card.name,
+    color: card.color,
+    label: "ARMA ESPECIAL",
+    phrase: card.phrase,
+    since: w.t - w.specialActive.t0,
+    seconds: SPECIAL_SECONDS,
+    hitAt: SPECIAL_HIT_AT,
+    dir: 1,
+  });
+}
+
+/** Los refuerzos de Hernán entran por su lado. */
+function drawPower(w: World, c: Ctx, art: Art | null) {
+  if (!w.powerActive) return;
+  const card = POWERUPS[w.powerActive.index];
+  drawCard(w, c, {
+    img: art?.powers[w.powerActive.index] ?? null,
+    name: card.name,
+    color: card.color,
+    label: "PODER DEL ABOGADO",
+    phrase: card.shout,
+    since: w.t - w.powerActive.t0,
+    seconds: POWER_SECONDS,
+    hitAt: POWER_HIT_AT,
+    dir: -1,
+  });
+}
+
+/** Una carta: foto recortada tipo sticker sobre una carta, frase gritada debajo. */
+function drawCard(w: World, c: Ctx, card: CardDraw) {
+  const { since, img } = card;
   const { W, H } = w;
-  const img = art?.specials[w.specialActive.index] ?? null;
   // Entra de golpe (0→0.3 s), flota, y se va volando al final.
   const enter = Math.min(1, since / 0.3);
   const ease = 1 - Math.pow(1 - enter, 3);
-  const leave = Math.max(0, (since - (SPECIAL_SECONDS - 0.4)) / 0.4);
-  const hitK = Math.max(0, 1 - Math.abs(since - SPECIAL_HIT_AT) / 0.16);
+  const leave = Math.max(0, (since - (card.seconds - 0.4)) / 0.4);
+  const hitK = Math.max(0, 1 - Math.abs(since - card.hitAt) / 0.16);
   const cw = Math.min(W * 0.55, 72);
   const ch = cw * 1.3;
-  const cx = W / 2 + (1 - ease) * W * 0.9 - leave * leave * W * 1.2;
+  const cx = W / 2 + card.dir * ((1 - ease) * W * 0.9 - leave * leave * W * 1.2);
   const cy = H * 0.47 + Math.sin(since * 5) * 2 - leave * 20;
   const scale = (0.6 + ease * 0.4) * (1 + hitK * 0.18) * (1 + (1 - ease) * 1.4);
-  const rot = -0.14 + (1 - ease) * 0.9 + Math.sin(since * 4) * 0.03 + hitK * 0.08;
+  const rot = card.dir * (-0.14 + (1 - ease) * 0.9) + Math.sin(since * 4) * 0.03 + hitK * 0.08;
 
-  if (since < SPECIAL_SECONDS - 0.4)
+  if (since < card.seconds - 0.4)
     drawRays(c, cx, cy, card.color, w.t, Math.min(0.55, ease * 0.55) * (1 - leave));
   c.save();
   c.translate(cx, cy);
@@ -1645,7 +1759,7 @@ function drawSpecial(w: World, c: Ctx, art: Art | null) {
   c.fillRect(-cw / 2, ch / 2 - bannerH, cw, bannerH);
   c.fillStyle = card.color;
   c.fillRect(-cw / 2, ch / 2 - bannerH, cw, 1.6);
-  text(c, "ARMA ESPECIAL", 0, ch / 2 - bannerH + 6, 5, { color: card.color });
+  text(c, card.label, 0, ch / 2 - bannerH + 6, 5, { color: card.color });
   c.font = `italic 900 8px ${FONT}`;
   const nameLines = wrap(c, card.name, cw - 8);
   nameLines.forEach((line, i) =>
@@ -1744,7 +1858,21 @@ export function drawScene(w: World, c: Ctx, art: Art | null) {
     drawPoliceLights(w, c, since);
     drawJailStamp(w, c, since);
   } else drawHands(w, c);
+  // Auras de los refuerzos: dorada (blindado) y verde (tereré).
+  if (w.shieldUntil > t || w.hypeUntil > t) {
+    const gold = w.shieldUntil > t;
+    const pulse = 0.5 + Math.sin(t * 9) * 0.25;
+    c.strokeStyle = gold ? `rgba(255,210,63,${pulse})` : `rgba(46,194,126,${pulse})`;
+    c.lineWidth = 2.2;
+    c.setLineDash([4, 3]);
+    c.lineDashOffset = -t * 30;
+    c.beginPath();
+    c.ellipse(L.cx + 6, L.headY + 44, 46 + pulse * 4, 70 + pulse * 4, 0, 0, Math.PI * 2);
+    c.stroke();
+    c.setLineDash([]);
+  }
   drawSpecial(w, c, art);
+  drawPower(w, c, art);
 
   for (const tx of w.texts) {
     const a = Math.min(1, tx.life / (tx.max * 0.35));

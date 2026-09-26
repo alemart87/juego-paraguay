@@ -179,9 +179,10 @@ export function AbogadoGame() {
               <em>ES ABOGADO</em>
             </h1>
             <p className="ab-tag">
-              Seis rounds de 35 segundos. Pegale a full, cortá las demandas, llená el medidor de
-              ARMA ESPECIAL y en el round final mandalo a la cárcel. Cada arma paga trae 1 golpe
-              gratis por partida.
+              Seis rounds de 75 segundos. Pegale a full, cortá las demandas, llená el medidor de
+              ARMA ESPECIAL para que Kattya y la Sole lo bajen, y cuidado: Bachi y su foto oficial
+              lo curan. En el round final, mandalo a la cárcel. Cada arma paga trae 1 golpe gratis
+              por partida.
             </p>
             <div className="ab-weapons" role="radiogroup" aria-label="Elegí tu arma">
               {WEAPONS.map((w) => {
@@ -270,6 +271,9 @@ export function AbogadoGame() {
             </h2>
             {newBest && <span className="ab-newbest">★ NUEVO RÉCORD ★</span>}
           </header>
+          <button className="ab-btn ab-btn-primary ab-revancha" onClick={start}>
+            <RotateCcw size={20} /> REVANCHA
+          </button>
           <div className="ab-stats">
             <div>
               <b>{run.kos}</b>
@@ -292,6 +296,10 @@ export function AbogadoGame() {
               <small>ESPECIALES</small>
             </div>
             <div>
+              <b>{run.powers}</b>
+              <small>REFUERZOS</small>
+            </div>
+            <div>
               <b>
                 {run.round}/{run.rounds}
               </b>
@@ -306,9 +314,6 @@ export function AbogadoGame() {
             )}
           </div>
           <div className="ab-result-actions">
-            <button className="ab-btn ab-btn-primary" onClick={start}>
-              <RotateCcw size={16} /> REVANCHA
-            </button>
             <button
               className="ab-btn ab-btn-share"
               disabled={!cardUrl}

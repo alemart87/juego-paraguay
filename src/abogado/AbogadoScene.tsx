@@ -360,7 +360,7 @@ export function AbogadoScene({
   };
 
   const hpPct = hud ? Math.max(0, Math.min(100, (hud.hp / hud.maxHp) * 100)) : 100;
-  const secs = hud ? Math.ceil(hud.timeLeft) : 35;
+  const secs = hud ? Math.ceil(hud.timeLeft) : 75;
   const specialPct = hud ? Math.round(hud.special * 100) : 0;
 
   return (
@@ -447,6 +447,28 @@ export function AbogadoScene({
           )}
           {hud.bonusMazo > 0 && (
             <div className="ab-bonus">🔨 MAZO DORADO {hud.bonusMazo.toFixed(1)}s</div>
+          )}
+          {(hud.powerName || hud.shield || hud.hype) && (
+            <div className="ab-status" aria-live="polite">
+              {hud.powerName && (
+                <div
+                  className="ab-power"
+                  style={{ "--power": hud.powerColor ?? "#e8332a" } as CSSProperties}
+                >
+                  ⚡ HERNÁN: {hud.powerName}
+                </div>
+              )}
+              {hud.shield && (
+                <div className="ab-power" style={{ "--power": "#ffd23f" } as CSSProperties}>
+                  🛡 TÍTULO BLINDADO · MENOS DAÑO
+                </div>
+              )}
+              {hud.hype && (
+                <div className="ab-power" style={{ "--power": "#2ec27e" } as CSSProperties}>
+                  🧉 TERERÉ ENERGÉTICO · ESQUIVA
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

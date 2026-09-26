@@ -1,5 +1,15 @@
 import type { SfxName } from "@/game/audio";
-import { SPECIALS, SPECIAL_COST, SPECIAL_HIT_AT, SPECIAL_SECONDS } from "./specials";
+import {
+  HEAL_FRACTION,
+  POWERUPS,
+  POWER_HIT_AT,
+  POWER_INTERVAL,
+  POWER_SECONDS,
+  SPECIALS,
+  SPECIAL_COST,
+  SPECIAL_HIT_AT,
+  SPECIAL_SECONDS,
+} from "./specials";
 
 /**
  * Pure simulation for "Hernán Rivas ES ABOGADO". Everything lives in logical
@@ -28,10 +38,10 @@ export type Zone = "head" | "body" | "arm";
 
 /** Rounds por partida; "A la cárcel" solo se habilita en el último. */
 export const ROUNDS = 6;
-export const ROUND_SECONDS = 35;
+export const ROUND_SECONDS = 75;
 export const GAME_SECONDS = ROUNDS * ROUND_SECONDS;
 /** Vida del abogado por round: cada vez aguanta más golpes. */
-export const hpForRound = (round: number) => 180 + 45 * (round - 1);
+export const hpForRound = (round: number) => 220 + 60 * (round - 1);
 
 export const WEAPON_STATS: Record<
   Weapon,
@@ -142,8 +152,22 @@ const ACCURACY_MOCK = [
   "¡Pegale al aire, campeón! ¡JAJA!",
   "¿Cerrás los ojos para pegar? ¡JAJAJA!",
 ];
+const HALF_MOCK = [
+  "¡Mitad del round y tengo toda la vida! ¡JAJAJA!",
+  "¡Ni la mitad me sacaste! ¡JAJA!",
+  "¡Se te va el tiempo, campeón! ¡JAJAJA!",
+];
+const SURVIVE_MOCK = [
+  "¿Eso es todo? ¡Sigo de pie! ¡JAJAJA!",
+  "¡Ni con ayuda me tumbás! ¡JAJA!",
+  "¡Traé a otra, dale! ¡JAJAJA!",
+];
 const MOCK = [
   "¡JAJAJA! ¡No me hacés nada!",
+  "¡Pegás con la mano del título! ¡JAJA!",
+  "¡Yo tengo amigos, vos no! ¡JAJAJA!",
+  "¡Llorá en la Corte! ¡JAJA!",
+  "¡Dale, que me hacés cosquillas! ¡JAJAJA!",
   "¡Tu mamá pega más fuerte! ¡JAJA!",
   "¡Sos más flojo que mi tesis! ¡JAJAJA!",
   "¡Ni con seis rounds! ¡JAJA!",
@@ -269,6 +293,17 @@ export type World = {
   specialActive: { index: number; t0: number; hit: boolean } | null;
   /** Cámara lenta (tiempo de mundo) tras un K.O. o una carta. */
   slowUntil: number;
+  /** Refuerzo de Hernán en pantalla. */
+  powerActive: { index: number; t0: number; hit: boolean } | null;
+  powerIndex: number;
+  powersUsed: number;
+  nextPowerAt: number;
+  /** "Título blindado": recibe menos daño. */
+  shieldUntil: number;
+  /** "Tereré energético": esquiva más y demanda el doble. */
+  hypeUntil: number;
+  /** Round en el que ya se burló a mitad de tiempo. */
+  halfMockRound: number;
   jailAt: number;
   jailClang: boolean;
   armKick: Spring;
@@ -361,6 +396,13 @@ export function createWorld(opts: {
     specialsFired: 0,
     specialActive: null,
     slowUntil: 0,
+    powerActive: null,
+    powerIndex: 0,
+    powersUsed: 0,
+    nextPowerAt: 14 + Math.random() * 6,
+    shieldUntil: 0,
+    hypeUntil: 0,
+    halfMockRound: 0,
     jailAt: 0,
     jailClang: false,
     armKick: spring(),
@@ -649,7 +691,8 @@ export function throwPunch(w: World, x: number, y: number, side: -1 | 1, charged
   w.events.push({ type: "sfx", name: "whiff" });
   // He tries to slip the first punch of a flurry, never while stunned.
   const calm = w.mood === "idle" || w.mood === "taunt";
-  const dodgeChance = Math.min(0.38, 0.1 + (w.round - 1) * 0.06);
+  const hype = w.hypeUntil > w.t ? 0.28 : 0;
+  const dodgeChance = Math.min(0.62, 0.12 + (w.round - 1) * 0.06 + hype);
   if (calm && w.t - w.lastHitAt > 0.5 && Math.random() < dodgeChance && !w.demo) {
     const L = layout(w);
     setMood(w, "dodge", 0.42);
@@ -715,6 +758,10 @@ function resolveFist(w: World, f: Fist) {
     tags.push("¡AL CUERPO!");
   } else if (zone === "body") tags.push("¡A LA PANZA!");
   else if (zone === "arm") tags.push("¡AL BRAZO!");
+  if (w.shieldUntil > w.t) {
+    dmg *= 0.45;
+    tags.unshift("¡BLINDADO!");
+  }
   const mult = 1 + Math.min(4, Math.floor(w.combo / 5) * 0.5);
   const pts = Math.round(base * stats.pts * mult);
   if (!w.demo) {
@@ -726,7 +773,7 @@ function resolveFist(w: World, f: Fist) {
   w.lastHitAt = w.t;
   w.hits++;
   w.hp -= w.demo ? dmg * 0.4 : dmg;
-  w.damage = Math.min(1, w.damage + dmg / 950);
+  w.damage = Math.min(1, w.damage + dmg / 900);
 
   const push = -f.side;
   const heavy = f.charged || f.weapon === "mazo" || f.weapon === "hacha";
@@ -1088,11 +1135,121 @@ function specialImpact(w: World) {
     { type: "vibrate", ms: 120 },
     { type: "snap" },
   );
+  w.shieldUntil = 0;
+  w.hypeUntil = 0;
   if (w.hp <= 0) knockout(w);
   else {
     setMood(w, "dizzy", 2.4);
     say(w, card.reply, 1.8);
+    if (w.hp > w.maxHp * 0.5) {
+      w.nextAiAt = Number.POSITIVE_INFINITY;
+      w.texts.push({
+        x: w.W / 2,
+        y: w.H * 0.3,
+        text: pick(SURVIVE_MOCK),
+        color: "#ff8ec4",
+        scale: 1.2,
+        life: 2.2,
+        max: 2.2,
+        vy: -5,
+      });
+      w.nextAiAt = w.moodUntil + 0.2;
+    }
   }
+}
+
+export function activePower(w: World) {
+  return w.powerActive ? POWERUPS[w.powerActive.index] : null;
+}
+
+/** Le llega un refuerzo: la carta entra por su lado y él festeja a carcajadas. */
+function firePower(w: World) {
+  const index = w.powerIndex % POWERUPS.length;
+  const card = POWERUPS[index];
+  w.powerIndex++;
+  w.powersUsed++;
+  w.powerActive = { index, t0: w.t, hit: false };
+  w.flash = Math.max(w.flash, 0.5);
+  w.shake = Math.max(w.shake, 4);
+  w.texts.push({
+    x: w.W / 2,
+    y: w.H * 0.12,
+    text: "¡PODER DEL ABOGADO!",
+    color: card.color,
+    scale: 2.2,
+    life: 1.4,
+    max: 1.4,
+    vy: -3,
+  });
+  laugh(w, card.line);
+  w.gesture = 1;
+  w.events.push({ type: "sfx", name: "pickup" }, { type: "vibrate", ms: 40 });
+  const [lo, hi] = POWER_INTERVAL;
+  w.nextPowerAt = w.t + lo + Math.random() * (hi - lo);
+}
+
+function throwPaper(w: World, delay = 0.2) {
+  const L = layout(w);
+  const hype = w.hypeUntil > w.t;
+  w.papers.push({
+    x0: L.cx - 62,
+    y0: L.neckY + 12,
+    tx: w.W * (0.2 + Math.random() * 0.6),
+    ty: w.H * (0.45 + Math.random() * 0.35),
+    t0: w.t + delay,
+    dur: Math.max(0.95, 1.7 - w.round * 0.12) * (hype ? 0.8 : 1),
+  });
+}
+
+function applyPower(w: World) {
+  const card = activePower(w);
+  if (!card || !w.powerActive) return;
+  w.powerActive.hit = true;
+  if (w.mood === "ko" || w.mood === "getup" || w.mood === "jailed") return;
+  const L = layout(w);
+  w.shake = Math.max(w.shake, 6);
+  w.flash = Math.max(w.flash, 0.4);
+  w.zoom.vel += 30;
+  spray(w, L.headCx, L.headCy - 10, 14, "star", card.color, 90);
+  if (card.effect === "heal") {
+    const heal = Math.round(w.maxHp * HEAL_FRACTION);
+    w.hp = Math.min(w.maxHp, w.hp + heal);
+    w.damage = Math.max(0, w.damage - 0.12);
+    w.texts.push({
+      x: L.headCx + 26,
+      y: L.headCy - 18,
+      text: `+${heal} VIDA`,
+      color: "#5cff8a",
+      scale: 1.8,
+      life: 1.4,
+      max: 1.4,
+      vy: -12,
+    });
+    w.events.push({ type: "sfx", name: "crowd" });
+  } else if (card.effect === "shield") {
+    w.shieldUntil = w.t + card.seconds;
+    float(w, w.W / 2, Math.max(8, L.headCy - 44), "¡BLINDADO!", card.color, 1.6);
+    w.events.push({ type: "sfx", name: "clang" });
+  } else {
+    w.hypeUntil = w.t + card.seconds;
+    throwPaper(w, 0.1);
+    throwPaper(w, 0.7);
+    w.nextPaperAt = w.t + 2.5;
+    float(w, w.W / 2, Math.max(8, L.headCy - 44), "¡ENERGÍA!", card.color, 1.6);
+    w.events.push({ type: "sfx", name: "squirt" });
+  }
+}
+
+function stepPower(w: World) {
+  if (w.powerActive) {
+    const since = w.t - w.powerActive.t0;
+    if (!w.powerActive.hit && since >= POWER_HIT_AT) applyPower(w);
+    if (since >= POWER_SECONDS) w.powerActive = null;
+    return;
+  }
+  const calm = w.mood === "idle" || w.mood === "taunt" || w.mood === "block";
+  if (w.t >= w.nextPowerAt && calm && !w.ended && !w.specialActive && w.timeLeft > 6)
+    firePower(w);
 }
 
 function stepSpecial(w: World) {
@@ -1112,7 +1269,9 @@ function nextRound(w: World, reason: "ko" | "bell") {
   w.roundKos = 0;
   w.timeLeft = ROUND_SECONDS;
   w.maxHp = hpForRound(w.round);
-  w.hp = reason === "ko" ? w.maxHp : Math.min(w.maxHp, w.hp + w.maxHp * 0.45);
+  w.hp = reason === "ko" ? w.maxHp : Math.min(w.maxHp, w.hp + w.maxHp * 0.5);
+  w.shieldUntil = 0;
+  w.hypeUntil = 0;
   w.papers = [];
   w.suedUntil = 0;
   const final = w.round === ROUNDS;
@@ -1144,7 +1303,7 @@ function nextRound(w: World, reason: "ko" | "bell") {
 
 export function canJail(w: World) {
   if (w.demo || w.ended || w.mood === "jailed" || w.round < ROUNDS) return false;
-  return w.roundKos >= 1 || ROUND_SECONDS - w.timeLeft >= 15;
+  return w.roundKos >= 1 || ROUND_SECONDS - w.timeLeft >= 25;
 }
 
 /** Finisher: police lights, bars slam down, mugshot, and the match ends with a bonus. */
@@ -1180,26 +1339,17 @@ export function sendToJail(w: World) {
 function ai(w: World) {
   if (w.mood !== "idle" || w.t < w.nextAiAt) return;
   const r = Math.random();
-  if (!w.demo && (r < 0.3 || w.t - w.lastHitAt > 3.5)) {
+  if (!w.demo && (r < 0.42 || w.t - w.lastHitAt > 2.8)) {
     laugh(w);
     w.nextAiAt = w.moodUntil + 1 + Math.random();
     return;
   }
-  const L = layout(w);
   if (!w.demo && w.t > w.nextPaperAt && r > 0.72) {
     setMood(w, "throw", 0.35);
     say(w, pick(THROW), 1);
-    w.nextPaperAt = w.t + Math.max(4.5, 9 - w.round);
-    const tx = w.W * (0.2 + Math.random() * 0.6);
-    const ty = w.H * (0.45 + Math.random() * 0.35);
-    w.papers.push({
-      x0: L.cx - 62,
-      y0: L.neckY + 12,
-      tx,
-      ty,
-      t0: w.t + 0.2,
-      dur: Math.max(1.15, 1.9 - w.round * 0.12),
-    });
+    w.nextPaperAt = w.t + Math.max(3.5, 7.5 - w.round) * (w.hypeUntil > w.t ? 0.5 : 1);
+    throwPaper(w);
+    if (w.hypeUntil > w.t) throwPaper(w, 0.6);
   } else if (r < 0.45 || w.demo) {
     setMood(w, "taunt", 2.1);
     // Cycle through the signature lines so every match hears all of them.
@@ -1264,6 +1414,7 @@ export function step(w: World, dt: number) {
         // Campana: se salva, se burla, y arranca el round siguiente.
         nextRound(w, "bell");
         w.specialActive = null;
+        w.powerActive = null;
         laugh(w, pick(BELL_MOCK));
         w.nextAiAt = w.moodUntil + 0.8;
       } else if (w.round < ROUNDS) {
@@ -1290,7 +1441,20 @@ export function step(w: World, dt: number) {
       }
     }
   }
-  if (!w.demo) stepSpecial(w);
+  if (!w.demo) {
+    stepSpecial(w);
+    stepPower(w);
+    if (
+      !w.ended &&
+      w.timeLeft < ROUND_SECONDS / 2 &&
+      w.hp > w.maxHp * 0.55 &&
+      w.halfMockRound < w.round &&
+      w.mood === "idle"
+    ) {
+      w.halfMockRound = w.round;
+      laugh(w, pick(HALF_MOCK));
+    }
+  }
   if (w.mood === "jailed") {
     const since = w.t - w.jailAt;
     if (!w.jailClang && since >= 0.62) {
@@ -1436,6 +1600,10 @@ export type Snapshot = {
   specialQueue: number;
   specialName: string | null;
   specialColor: string | null;
+  powerName: string | null;
+  powerColor: string | null;
+  shield: boolean;
+  hype: boolean;
   weapon: Weapon;
   bonusMazo: number;
   sued: boolean;
@@ -1460,6 +1628,10 @@ export function snapshot(w: World): Snapshot {
     specialQueue: w.specialQueue,
     specialName: activeSpecial(w)?.name ?? null,
     specialColor: activeSpecial(w)?.color ?? null,
+    powerName: activePower(w)?.name ?? null,
+    powerColor: activePower(w)?.color ?? null,
+    shield: w.shieldUntil > w.t,
+    hype: w.hypeUntil > w.t,
     weapon: activeWeapon(w),
     bonusMazo: Math.max(0, w.bonusMazoUntil - w.t),
     sued: w.suedUntil > w.t,
@@ -1483,6 +1655,7 @@ export type RunResult = {
   jailed: boolean;
   laughs: number;
   specials: number;
+  powers: number;
   rounds: number;
 };
 
@@ -1500,6 +1673,7 @@ export function result(w: World): RunResult {
     jailed: w.mood === "jailed",
     laughs: w.laughs,
     specials: w.specialsFired,
+    powers: w.powersUsed,
     rounds: ROUNDS,
   };
 }

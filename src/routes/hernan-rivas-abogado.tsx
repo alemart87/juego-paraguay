@@ -5,7 +5,7 @@ import { SITE_URL } from "@/seo/content";
 const URL = `${SITE_URL}/hernan-rivas-abogado`;
 const TITLE = "Hernán Rivas ES ABOGADO · Pegale al abogado";
 const DESCRIPTION =
-  "Juego arcade: seis rounds para boxear al abogado más discutido del Paraguay. Combos, K.O., armas especiales, mazo, guantes, cárcel en el round final y capturas para compartir.";
+  "Juego arcade: seis rounds de 75 segundos para boxear al abogado más discutido del Paraguay. Combos, K.O., armas especiales, refuerzos de sus amigos, mazo, guantes, cárcel en el round final y capturas para compartir.";
 const IMAGE = `${SITE_URL}/abogado/og.png`;
 
 export const Route = createFileRoute("/hernan-rivas-abogado")({
