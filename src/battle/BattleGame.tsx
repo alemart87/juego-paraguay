@@ -43,6 +43,7 @@ import { challengeUrl, downloadCard, resultCard, type ShareResult } from "./shar
 import { Intro } from "./Intro";
 import { WeeklyChisme } from "./WeeklyChisme";
 import { LiveChat } from "./LiveChat";
+import { PRIZE } from "@/promo/prize";
 import { Leaderboard } from "./LeaderboardPanel";
 import { loadLeaderboardProfile } from "./leaderboard-profile";
 import { getPlayerBenefits, submitLeaderboardScore } from "./leaderboard";
@@ -172,11 +173,18 @@ export function BattleGame() {
       setChallenge(true);
       setScreen("brief");
     }
+    // /?ranking=1 (promo del bono): directo al ranking, sin chisme ni intro.
+    const rankingLink = params.has("ranking");
+    if (rankingLink && !deepLink) {
+      setWeeklyChismeDone(true);
+      setIntro(false);
+      setDialog("ranking");
+    }
     // Inicio directo configurado por el superadmin: salta chisme, intro y menús.
     // ?menu=1 permite ver la portada igual (útil para el admin).
     const controller = new AbortController();
     const deadline = window.setTimeout(() => controller.abort(), 3000);
-    if (!deepLink && !params.has("menu")) {
+    if (!deepLink && !params.has("menu") && !rankingLink) {
       fetch("/api/quick-start", { cache: "no-store", signal: controller.signal })
         .then((response) => (response.ok ? response.json() : null))
         .then((data: { enabled?: boolean; level?: number; fighter?: string } | null) => {
@@ -549,7 +557,7 @@ export function BattleGame() {
                 setDialog("ranking");
               }}
             >
-              <Trophy size={17} /> Ranking
+              <Trophy size={17} /> Ranking <em className="header-prize">{PRIZE.short}</em>
             </button>
             <button
               className="header-help"
@@ -646,6 +654,25 @@ export function BattleGame() {
                 el quilombo y derrotá a cinco jefes imposibles.
               </p>
               <button
+                className="prize-launch"
+                onClick={() => {
+                  sfx("ui");
+                  setDialog("ranking");
+                }}
+              >
+                <span className="prize-badge">
+                  <Trophy size={26} />
+                </span>
+                <span className="prize-copy">
+                  <span>{PRIZE.kicker} · RANKING NACIONAL</span>
+                  <strong>{PRIZE.headline}</strong>
+                  <small>{PRIZE.sub} Cargá tu usuario y entrá al ranking.</small>
+                </span>
+                <b>
+                  ENTRAR <ArrowRight size={16} />
+                </b>
+              </button>
+              <button
                 className="rose-launch"
                 onClick={() => {
                   sfx("ui");
@@ -663,7 +690,7 @@ export function BattleGame() {
                 <img src="/abogado/rivas/head.png" alt="" />
                 <span>NUEVO NIVEL · 06</span>
                 <strong>HERNÁN RIVAS ES ABOGADO</strong>
-                <small>PEGALE A FULL · 60 SEGUNDOS · GRATIS</small>
+                <small>PEGALE A FULL · 6 ROUNDS · GRATIS</small>
               </a>
               <button
                 className="primary play-cta"
@@ -1024,6 +1051,16 @@ export function BattleGame() {
                   "La victoria quedó guardada. Abrí Ranking para reintentar la publicación."}
               </p>
             )}
+            <p className="result-prize">
+              <Trophy size={15} />
+              <span>
+                {won ? "Esta victoria suma" : "Cada victoria suma"} para el{" "}
+                <b>bono de {PRIZE.amount}</b> del ranking.
+              </span>
+              <button type="button" className="text-button" onClick={() => setDialog("ranking")}>
+                Ver ranking
+              </button>
+            </p>
             {won && (
               <div className="medal-row">
                 <span>

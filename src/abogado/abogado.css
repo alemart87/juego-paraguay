@@ -1149,3 +1149,75 @@
   font-size: 24px;
   animation: ab-throb 0.9s ease-in-out infinite;
 }
+
+/* Promo del bono */
+.ab-prize {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 3px solid #fff;
+  background: linear-gradient(110deg, #ffe97a, #ffd23f 45%, #ffb347);
+  color: #2b1a05;
+  text-decoration: none;
+  box-shadow:
+    0 10px 30px rgba(255, 210, 63, 0.35),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  isolation: isolate;
+}
+.ab-prize::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, #ffffffaa 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: ab-prize-shine 2.6s ease-in-out infinite;
+  z-index: -1;
+}
+@keyframes ab-prize-shine {
+  0% {
+    transform: translateX(-120%);
+  }
+  60%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+.ab-prize-badge {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--ab-edge, #1a0f24);
+  font-size: 22px;
+}
+.ab-prize-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.ab-prize-copy small {
+  font: 800 9.5px/1.25 var(--ab-ui);
+  letter-spacing: 0.12em;
+  color: #7a1b4d;
+}
+.ab-prize-copy b {
+  font: italic 900 clamp(22px, 6vw, 28px) / 0.95 var(--ab-display);
+  text-transform: uppercase;
+}
+.ab-prize em {
+  padding: 9px 11px;
+  border-radius: 999px;
+  background: var(--ab-edge, #1a0f24);
+  color: #ffd23f;
+  font: 900 11px/1 var(--ab-ui);
+  font-style: normal;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}

@@ -18,6 +18,7 @@ import type { IconKind } from "./render";
 import { GameIcon } from "./GameIcon";
 import { ShareSheet } from "./ShareSheet";
 import { QuickBuy } from "./QuickBuy";
+import { PRIZE } from "@/promo/prize";
 import {
   checkout,
   createProfile,
@@ -184,6 +185,15 @@ export function AbogadoGame() {
               lo curan. En el round final, mandalo a la cárcel. Cada arma paga trae 1 golpe gratis
               por partida.
             </p>
+            <a className="ab-prize" href={PRIZE.rankingUrl}>
+              <span className="ab-prize-badge">🏆</span>
+              <span className="ab-prize-copy">
+                <small>{PRIZE.kicker} · RANKING NACIONAL</small>
+                <b>{PRIZE.headline}</b>
+                <small>{PRIZE.sub} Cargá tu usuario y mirá el ranking.</small>
+              </span>
+              <em>VER RANKING</em>
+            </a>
             <div className="ab-weapons" role="radiogroup" aria-label="Elegí tu arma">
               {WEAPONS.map((w) => {
                 const has = ownsWeapon(w.id);
@@ -274,6 +284,15 @@ export function AbogadoGame() {
           <button className="ab-btn ab-btn-primary ab-revancha" onClick={start}>
             <RotateCcw size={20} /> REVANCHA
           </button>
+          <a className="ab-prize" href={PRIZE.rankingUrl}>
+            <span className="ab-prize-badge">🏆</span>
+            <span className="ab-prize-copy">
+              <small>{PRIZE.kicker}</small>
+              <b>{PRIZE.headline}</b>
+              <small>{PRIZE.sub} Cargá tu usuario y entrá al ranking.</small>
+            </span>
+            <em>VER RANKING</em>
+          </a>
           <div className="ab-stats">
             <div>
               <b>{run.kos}</b>

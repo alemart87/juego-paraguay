@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { PRIZE } from "@/promo/prize";
 import {
   Check,
   Camera,
@@ -209,6 +210,16 @@ export function Leaderboard({
           <p>Creá tu perfil ahora. Cada victoria suma a tu puntaje total automáticamente.</p>
         </div>
         <BrandLogo animated className="ranking-publisher" />
+        <div className="ranking-prize" role="note">
+          <span className="ranking-prize-badge">
+            <Trophy />
+          </span>
+          <div>
+            <small>{PRIZE.kicker}</small>
+            <strong>{PRIZE.headline}</strong>
+            <span>{PRIZE.sub} Cargá tu usuario para participar.</span>
+          </div>
+        </div>
       </header>
 
       <section className="ranking-main">
@@ -270,7 +281,7 @@ export function Leaderboard({
           </span>
           <div>
             <small>PERFIL DE JUGADOR</small>
-            <h3>{registered ? "Tu pase está listo" : "Entrá al ranking"}</h3>
+            <h3>{registered ? "Tu pase está listo" : "Entrá y jugá por el bono"}</h3>
           </div>
         </div>
         <p>
@@ -392,6 +403,7 @@ export function Leaderboard({
         <p className="ranking-privacy">
           <LockKeyhole /> El correo o teléfono nunca aparece públicamente.
         </p>
+        <p className="ranking-terms">{PRIZE.terms}</p>
         {error && (
           <p className="notice" role="alert">
             {error}
