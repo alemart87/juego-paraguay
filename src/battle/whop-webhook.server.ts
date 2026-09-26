@@ -121,6 +121,8 @@ export async function recordWhopWebhook(event: WhopWebhookEvent, webhookId: stri
          player_id = EXCLUDED.player_id, status = 'active', updated_at = now()`,
       [details.paymentId],
     );
+    const { creditPurchases } = await import("./credits.server");
+    await creditPurchases(sql, { paymentId: details.paymentId });
   }
 
   if (event.type === "refund.updated" && details.paymentId && event.data.status === "succeeded") {
@@ -135,6 +137,8 @@ export async function recordWhopWebhook(event: WhopWebhookEvent, webhookId: stri
         WHERE source_payment_id = $1`,
       [details.paymentId],
     );
+    const { reversePurchase } = await import("./credits.server");
+    await reversePurchase(sql, details.paymentId);
   }
 
   await sql.query("UPDATE whop_webhook_events SET processed_at = now() WHERE webhook_id = $1", [

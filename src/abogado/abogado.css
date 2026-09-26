@@ -1258,3 +1258,139 @@
 .ab-card-banner.power {
   border-color: #ffd23f;
 }
+
+/* Saldo de golpes y referidos */
+.ab-credits {
+  position: absolute;
+  left: 12px;
+  top: 52%;
+  padding: 6px 10px;
+  border-radius: 99px;
+  border: 2px solid #fff;
+  background: #1f5fd6;
+  color: #fff;
+  font: 900 11px/1 var(--ab-ui);
+  letter-spacing: 0.06em;
+}
+.ab-credits b {
+  font-size: 14px;
+}
+.ab-wbtn.credit em {
+  background: #1f5fd6;
+  color: #fff;
+}
+.ab-meta-credits {
+  color: #7ee0ff;
+}
+.ab-referral,
+.ab-packs {
+  margin: 14px 0 18px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+.ab-referral {
+  border-color: #2ec27e88;
+  background: linear-gradient(135deg, #2ec27e18, transparent 55%), rgba(255, 255, 255, 0.05);
+}
+.ab-referral header h3,
+.ab-packs header h3 {
+  margin: 6px 0 4px;
+  font: italic 900 clamp(20px, 5.4vw, 26px) / 1 var(--ab-display);
+  text-transform: uppercase;
+}
+.ab-referral header p {
+  margin: 0 0 12px;
+  color: #d6cfe0;
+  font-size: 13px;
+}
+.ab-referral header p b {
+  color: #5cff8a;
+}
+.ab-referral-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ab-referral-stats div {
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+.ab-referral-stats b {
+  display: block;
+  font: italic 900 24px/1 var(--ab-display);
+  color: #ffd23f;
+}
+.ab-referral-stats small {
+  font: 800 9px/1.2 var(--ab-ui);
+  letter-spacing: 0.1em;
+  color: #bdb4c9;
+}
+.ab-referral-link {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.ab-referral-link code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #7ee0ff;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.ab-referral-link .ab-btn {
+  width: 100%;
+  text-decoration: none;
+}
+.ab-referral-code {
+  display: block;
+  margin-top: 8px;
+  color: #bdb4c9;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.ab-referral-code b {
+  color: #fff;
+}
+.ab-packs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.ab-pack {
+  display: grid;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+.ab-pack b {
+  font: italic 900 26px/1 var(--ab-display);
+  color: #7ee0ff;
+}
+.ab-pack small {
+  font: 800 9px/1.2 var(--ab-ui);
+  letter-spacing: 0.08em;
+  color: #bdb4c9;
+}
+.ab-pack .ab-btn {
+  width: 100%;
+  min-height: 40px;
+  font-size: 12px;
+}
+@media (min-width: 560px) {
+  .ab-referral-link {
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+  }
+  .ab-referral-link .ab-btn {
+    width: auto;
+  }
+}

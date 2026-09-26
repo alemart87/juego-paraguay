@@ -60,6 +60,7 @@ export function AbogadoScene({
   onEnd,
   onLockedWeapon,
   hold = false,
+  credits = 0,
 }: {
   mode: "demo" | "play";
   weapon: Weapon;
@@ -73,6 +74,8 @@ export function AbogadoScene({
   onLockedWeapon?: (id: Weapon) => void;
   /** External pause (e.g. the in-game purchase dialog is open). */
   hold?: boolean;
+  /** Saldo de golpes al empezar la partida. */
+  credits?: number;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -93,6 +96,7 @@ export function AbogadoScene({
   const [offer, setOffer] = useState<Weapon | null>(null);
   const offerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialOwned = useRef(owned);
+  const initialCredits = useRef(credits);
 
   const flash = (msg: string, ms = 1900) => {
     setToast(msg);
@@ -112,6 +116,7 @@ export function AbogadoScene({
       goldTitle,
       demo: mode === "demo",
       owned: [...initialOwned.current],
+      credits: initialCredits.current,
     });
     worldRef.current = w;
     let alive = true;
@@ -259,6 +264,11 @@ export function AbogadoScene({
           setOffer(ev.weapon);
           if (offerTimer.current) clearTimeout(offerTimer.current);
           offerTimer.current = setTimeout(() => setOffer(null), 4500);
+        } else if (ev.type === "credits") {
+          if (ev.left === 0) {
+            flash("Se acabó tu saldo de golpes: volvés a Puños. Cargá más en la tienda.", 2600);
+            if (soundRef.current) sfx("empty");
+          } else if (ev.left === 50 || ev.left === 10) flash(`🥊 Te quedan ${ev.left} golpes de saldo`);
         } else if (ev.type === "snap") {
           // Wait for the KO flash to fade so the share card gets a clean action frame.
           if (!ev.fallback || !shotRef.current) snapAt = now + (ev.fallback ? 0 : 320);
@@ -351,7 +361,8 @@ export function AbogadoScene({
     if (!w) return;
     const res = selectWeapon(w, id);
     if (soundRef.current) sfx(res === "locked" ? "empty" : "swap");
-    if (res === "trial") flash(`🎁 ${WEAPON_STATS[id].label}: 1 golpe gratis. ¡Usalo!`);
+    if (res === "credits") flash(`🥊 ${WEAPON_STATS[id].label}: gasta 1 golpe de saldo por puñetazo`);
+    else if (res === "trial") flash(`🎁 ${WEAPON_STATS[id].label}: 1 golpe gratis. ¡Usalo!`);
     else if (res === "locked") {
       if (onLockedWeapon) onLockedWeapon(id);
       else flash("🔒 Ya usaste tu prueba");
@@ -428,18 +439,27 @@ export function AbogadoScene({
             <div className="ab-weapon-bar" role="toolbar" aria-label="Armas">
               {WEAPON_IDS.map((id) => {
                 const has = owned.includes(id);
-                const free = !has && (hud.trialsLeft[id] ?? 0) > 0;
+                const viaCredits = !has && id !== "punos" && hud.credits > 0;
+                const free = !has && !viaCredits && (hud.trialsLeft[id] ?? 0) > 0;
                 const on = hud.weapon === id;
+                const state = has ? "" : viaCredits ? "credit" : free ? "free" : "locked";
                 return (
                   <button
                     key={id}
-                    className={`ab-wbtn ${on ? "on" : ""} ${has ? "" : free ? "free" : "locked"}`}
-                    aria-label={`${WEAPON_STATS[id].label}${has ? "" : free ? ", 1 golpe gratis" : ", bloqueada"}`}
+                    className={`ab-wbtn ${on ? "on" : ""} ${state}`}
+                    aria-label={`${WEAPON_STATS[id].label}${has ? "" : viaCredits ? ", usa saldo" : free ? ", 1 golpe gratis" : ", bloqueada"}`}
                     aria-pressed={on}
                     onClick={() => pickWeapon(id)}
                   >
                     <GameIcon kind={id} size={30} />
-                    {!has && (free ? <em>GRATIS</em> : <Lock size={12} className="ab-wlock" />)}
+                    {!has &&
+                      (viaCredits ? (
+                        <em>SALDO</em>
+                      ) : free ? (
+                        <em>GRATIS</em>
+                      ) : (
+                        <Lock size={12} className="ab-wlock" />
+                      ))}
                   </button>
                 );
               })}
@@ -447,6 +467,11 @@ export function AbogadoScene({
           )}
           {hud.bonusMazo > 0 && (
             <div className="ab-bonus">🔨 MAZO DORADO {hud.bonusMazo.toFixed(1)}s</div>
+          )}
+          {hud.credits > 0 && (
+            <div className="ab-credits" aria-label={`Saldo: ${hud.credits} golpes`}>
+              🥊 SALDO <b>{hud.credits.toLocaleString("es-PY")}</b>
+            </div>
           )}
           {hud.cardBanner && (
             <div

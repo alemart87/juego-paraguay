@@ -1,0 +1,120 @@
+.prize-banner {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.prize-banner-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(6, 3, 12, 0.82);
+  backdrop-filter: blur(6px);
+  cursor: default;
+}
+.prize-banner-card {
+  position: relative;
+  width: min(100%, 360px);
+  padding: 34px 24px 26px;
+  border-radius: 20px;
+  border: 3px solid #fff3dc;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #ffe97a 0%, #f6e75a 45%, #ffb347 100%);
+  color: #1a0f24;
+  text-align: center;
+  box-shadow:
+    10px 10px 0 #ff3190,
+    0 30px 80px rgba(0, 0, 0, 0.6);
+  animation: prize-banner-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes prize-banner-in {
+  from {
+    opacity: 0;
+    transform: scale(0.7) translateY(30px);
+  }
+}
+.prize-banner-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(26, 15, 36, 0.12);
+  color: #1a0f24;
+  cursor: pointer;
+}
+.prize-banner-trophy {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: #1a0f24;
+  color: #f6e75a;
+  animation: prize-banner-bounce 1.4s ease-in-out infinite;
+}
+@keyframes prize-banner-bounce {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(4deg);
+  }
+}
+.prize-banner-card small {
+  display: block;
+  font: 900 11px/1 "Figtree", system-ui, sans-serif;
+  letter-spacing: 0.2em;
+  color: #7a1b4d;
+}
+.prize-banner-card strong {
+  display: block;
+  margin: 6px 0 4px;
+  font: 900 34px/0.9 "Barlow Condensed", Impact, sans-serif;
+  text-transform: uppercase;
+}
+.prize-banner-card strong em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: clamp(52px, 15vw, 64px);
+  line-height: 0.95;
+  color: #1a0f24;
+  text-shadow: 3px 3px 0 #fff3dc;
+}
+.prize-banner-card p {
+  margin: 8px 0 18px;
+  font: 600 15px/1.35 "Figtree", system-ui, sans-serif;
+  color: #3a2a12;
+}
+.prize-banner-cta {
+  width: 100%;
+  min-height: 58px;
+  border: 0;
+  border-radius: 14px;
+  background: #1a0f24;
+  color: #f6e75a;
+  font: 900 20px/1 "Figtree", system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.4);
+  animation: prize-banner-throb 0.9s ease-in-out infinite;
+}
+@keyframes prize-banner-throb {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}

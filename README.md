@@ -126,6 +126,8 @@ migrations/                     ranking, episodio 4 y compras Whop
 server/routes/health.ts        health check de Render
 server/routes/api/webhooks/    receptor firmado de eventos Whop
 server/routes/media/           imágenes desde /persistent
+src/battle/credits*.ts         saldo de golpes y referidos: 500 golpes al amigo que entra con
+                               tu link, 30% de cada carga suya para vos (libro mayor credit_ledger)
 server/routes/api/chat*        chismes en vivo: chat publico anonimo (polling, rate limit,
                                sin nombres); admin/chat* telemetria y moderacion
 server/routes/api/quick-start* inicio directo: el superadmin elige episodio y personaje

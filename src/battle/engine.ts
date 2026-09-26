@@ -1038,8 +1038,14 @@ export function applyShopPowerup(w: World, sku: ShopSku) {
     "rivas-guantes": "Disponible en Hernán Rivas ES ABOGADO",
     "rivas-hacha": "Disponible en Hernán Rivas ES ABOGADO",
     "rivas-magnum": "Disponible en Hernán Rivas ES ABOGADO",
+    "rivas-golpes-500": "Saldo cargado en Hernán Rivas ES ABOGADO",
+    "rivas-golpes-2500": "Saldo cargado en Hernán Rivas ES ABOGADO",
+    "rivas-golpes-6000": "Saldo cargado en Hernán Rivas ES ABOGADO",
   };
   switch (sku) {
+    case "rivas-golpes-500":
+    case "rivas-golpes-2500":
+    case "rivas-golpes-6000":
     case "rivas-titulo":
     case "rivas-mazo":
     case "rivas-guantes":

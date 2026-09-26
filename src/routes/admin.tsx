@@ -62,6 +62,15 @@ type Stats = {
     note: string | null;
     granted_at: string;
   }[];
+  referrals?: {
+    friends: number;
+    referrers: number;
+    packs: number;
+    bought: number;
+    granted: number;
+    earned: number;
+    spent: number;
+  };
 };
 function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null),
@@ -430,6 +439,38 @@ function AdminPage() {
             {quickMessage && <strong>{quickMessage}</strong>}
           </form>
         </section>
+        {stats.referrals && (
+          <section className="admin-chisme admin-referrals">
+            <div>
+              <span>REFERIDOS Y SALDO DE GOLPES</span>
+              <h2>
+                <Gift /> INVITÁ Y GANÁ
+              </h2>
+              <p>
+                Cada amigo que entra con un link arranca con {500} golpes; quien lo trajo recibe el
+                30% de cada carga. Los números salen del libro mayor de saldo.
+              </p>
+            </div>
+            <div className="admin-chat-cards">
+              {(
+                [
+                  ["AMIGOS TRAÍDOS", stats.referrals.friends],
+                  ["PERSONAS QUE INVITAN", stats.referrals.referrers],
+                  ["PACKS VENDIDOS", stats.referrals.packs],
+                  ["GOLPES COMPRADOS", stats.referrals.bought],
+                  ["GOLPES DE BIENVENIDA", stats.referrals.granted],
+                  ["GOLPES POR REFERIDOS", stats.referrals.earned],
+                  ["GOLPES GASTADOS", stats.referrals.spent],
+                ] as const
+              ).map(([label, value]) => (
+                <article key={label}>
+                  <small>{label}</small>
+                  <strong>{Number(value).toLocaleString("es-PY")}</strong>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
         <AdminChat />
         <section className="admin-grants">
           <div className="admin-grants-copy">

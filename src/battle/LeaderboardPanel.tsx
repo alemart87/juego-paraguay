@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PRIZE } from "@/promo/prize";
+import { readStoredRef } from "./credits-config";
 import {
   Check,
   Camera,
@@ -129,7 +130,14 @@ export function Leaderboard({
     setError("");
     setSuccess("");
     try {
-      const data = { name, contactKind: kind, contact, consent, purchaseEmail } as const;
+      const data = {
+        name,
+        contactKind: kind,
+        contact,
+        consent,
+        purchaseEmail,
+        ref: readStoredRef(),
+      } as const;
       const response = canSubmit
         ? await submitLeaderboardScore({
             data: {

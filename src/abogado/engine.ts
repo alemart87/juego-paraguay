@@ -254,6 +254,8 @@ export type GameEvent =
   | { type: "vibrate"; ms: number }
   | { type: "snap"; fallback?: boolean }
   | { type: "trial"; weapon: Weapon }
+  /** Se gastó (o se acabó) el saldo de golpes. */
+  | { type: "credits"; left: number }
   | { type: "end" };
 
 export type World = {
@@ -269,6 +271,10 @@ export type World = {
   goldTitle: boolean;
   bonusMazoUntil: number;
   bonusMazoGiven: boolean;
+  /** Saldo de golpes: cada puñetazo con un arma paga no comprada gasta uno. */
+  credits: number;
+  creditsUsed: number;
+  runId: string;
   /** One-shot free try of a weapon the player doesn't own. */
   trial: Weapon | null;
   trialsLeft: Partial<Record<Weapon, number>>;
@@ -363,6 +369,7 @@ export function createWorld(opts: {
   goldTitle: boolean;
   demo?: boolean;
   owned?: Weapon[];
+  credits?: number;
 }): World {
   const owned = opts.owned ?? ["punos"];
   return {
@@ -378,6 +385,12 @@ export function createWorld(opts: {
     goldTitle: opts.goldTitle,
     bonusMazoUntil: 0,
     bonusMazoGiven: false,
+    credits: Math.max(0, Math.floor(opts.credits ?? 0)),
+    creditsUsed: 0,
+    runId:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     trial: null,
     trialsLeft: Object.fromEntries(
       PAID_WEAPONS.filter((id) => !owned.includes(id)).map((id) => [id, 1]),
@@ -496,12 +509,17 @@ export function activeWeapon(w: World): Weapon {
   return w.trial ?? w.weapon;
 }
 
-/** Switch to an owned weapon, or arm a one-shot free try of a locked one. */
+/** Switch to an owned weapon, use the hit balance, or arm a one-shot free try. */
 export function selectWeapon(w: World, id: Weapon) {
   if (w.owned.includes(id)) {
     w.weapon = id;
     w.trial = null;
     return "owned" as const;
+  }
+  if (w.credits > 0) {
+    w.weapon = id;
+    w.trial = null;
+    return "credits" as const;
   }
   if ((w.trialsLeft[id] ?? 0) > 0) {
     w.trial = id;
@@ -670,10 +688,27 @@ export function throwPunch(w: World, x: number, y: number, side: -1 | 1, charged
   const weapon = activeWeapon(w);
   const stats = WEAPON_STATS[weapon];
   if (w.t - w.lastThrowAt < stats.cooldown && !charged) return;
+  const useSide = weaponSide(weapon, side);
+  const usingTrial = w.trial !== null && weapon === w.trial;
+  const paid =
+    !usingTrial &&
+    PAID_WEAPONS.includes(weapon) &&
+    !w.owned.includes(weapon) &&
+    w.bonusMazoUntil <= w.t;
+  if (paid) {
+    if (w.credits <= 0) {
+      // Se acabó el saldo: vuelve a los puños sin gastar el golpe.
+      w.weapon = "punos";
+      w.events.push({ type: "credits", left: 0 });
+      return;
+    }
+    w.credits--;
+    w.creditsUsed++;
+    w.events.push({ type: "credits", left: w.credits });
+  }
   w.lastThrowAt = w.t;
   w.throws++;
-  const useSide = weaponSide(weapon, side);
-  if (w.trial && weapon === w.trial) {
+  if (usingTrial) {
     w.trialsLeft[weapon] = Math.max(0, (w.trialsLeft[weapon] ?? 1) - 1);
     w.trial = null;
     w.events.push({ type: "trial", weapon });
@@ -1597,6 +1632,7 @@ export type Snapshot = {
   jailed: boolean;
   trial: Weapon | null;
   trialsLeft: Partial<Record<Weapon, number>>;
+  credits: number;
 };
 
 export function snapshot(w: World): Snapshot {
@@ -1640,6 +1676,7 @@ export function snapshot(w: World): Snapshot {
     jailed: w.mood === "jailed",
     trial: w.trial,
     trialsLeft: { ...w.trialsLeft },
+    credits: w.credits,
   };
 }
 
@@ -1658,6 +1695,8 @@ export type RunResult = {
   specials: number;
   powers: number;
   rounds: number;
+  creditsUsed: number;
+  runId: string;
 };
 
 export function result(w: World): RunResult {
@@ -1676,5 +1715,7 @@ export function result(w: World): RunResult {
     specials: w.specialsFired,
     powers: w.powersUsed,
     rounds: ROUNDS,
+    creditsUsed: w.creditsUsed,
+    runId: w.runId,
   };
 }

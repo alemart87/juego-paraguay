@@ -4,7 +4,7 @@ import { isAdmin } from "../../../utils/admin-auth";
 export default defineEventHandler(async (event) => {
   if (!isAdmin(event)) throw createError({ statusCode: 401, statusMessage: "Iniciá sesión" });
   const sql = await (await import("../../../../src/lib/db")).getSql();
-  const [summary, levels, heroes, dailyRows, leaders, players, grants] = await Promise.all([
+  const [summary, levels, heroes, dailyRows, leaders, players, grants, referrals] = await Promise.all([
     sql.query<{
       players: number;
       active_players: number;
@@ -74,6 +74,23 @@ export default defineEventHandler(async (event) => {
         ORDER BY g.granted_at DESC
         LIMIT 40`,
     ),
+    sql.query<{
+      friends: number;
+      referrers: number;
+      packs: number;
+      bought: number;
+      granted: number;
+      earned: number;
+      spent: number;
+    }>(
+      `SELECT (SELECT count(*) FROM referrals)::int friends,
+              (SELECT count(DISTINCT referrer_id) FROM referrals)::int referrers,
+              (SELECT count(*) FROM credit_ledger WHERE reason='purchase')::int packs,
+              (SELECT COALESCE(sum(delta),0) FROM credit_ledger WHERE reason='purchase')::int bought,
+              (SELECT COALESCE(sum(delta),0) FROM credit_ledger WHERE reason='signup_bonus')::int granted,
+              (SELECT COALESCE(sum(delta),0) FROM credit_ledger WHERE reason='referral')::int earned,
+              (SELECT COALESCE(-sum(delta),0) FROM credit_ledger WHERE reason='spend')::int spent`,
+    ),
   ]);
   return {
     ok: true,
@@ -84,5 +101,6 @@ export default defineEventHandler(async (event) => {
     leaders,
     players,
     grants,
+    referrals: referrals[0],
   };
 });

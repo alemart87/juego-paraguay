@@ -5,6 +5,7 @@ import {
   type StoredProfile,
 } from "@/battle/leaderboard-profile";
 import { getWhopCheckout } from "@/battle/shop";
+import { readStoredRef } from "@/battle/credits-config";
 import { ABOGADO_SHOP_ITEMS, type AbogadoSku } from "@/battle/shop-catalog";
 
 /**
@@ -78,7 +79,13 @@ export async function syncOwned(): Promise<{ ok: boolean; skus: AbogadoSku[]; me
 
 export async function createProfile(name: string, email: string) {
   const res = await registerLeaderboardPlayer({
-    data: { name: name.trim(), contactKind: "email", contact: email.trim(), consent: true },
+    data: {
+      name: name.trim(),
+      contactKind: "email",
+      contact: email.trim(),
+      consent: true,
+      ref: readStoredRef(),
+    },
   });
   if (!res.ok) return res;
   storeLeaderboardProfile({

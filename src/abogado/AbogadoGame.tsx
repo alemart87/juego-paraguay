@@ -19,6 +19,10 @@ import { GameIcon } from "./GameIcon";
 import { ShareSheet } from "./ShareSheet";
 import { QuickBuy } from "./QuickBuy";
 import { PRIZE } from "@/promo/prize";
+import { PrizeBanner } from "@/promo/PrizeBanner";
+import { getWallet, spendCredits, type Wallet } from "@/battle/credits";
+import { REFERRAL_RATE, SIGNUP_BONUS, captureRef, whatsappShare } from "@/battle/credits-config";
+import { Copy, Gift, Users } from "lucide-react";
 import {
   checkout,
   createProfile,
@@ -49,7 +53,26 @@ const ICON_FOR: Record<AbogadoSku, IconKind> = {
   "rivas-guantes": "guantes",
   "rivas-hacha": "hacha",
   "rivas-magnum": "magnum",
+  "rivas-golpes-500": "punos",
+  "rivas-golpes-2500": "guantes",
+  "rivas-golpes-6000": "mazo",
 };
+const CREDIT_PACKS = ABOGADO_SHOP_ITEMS.filter((item) => "credits" in item);
+const isCreditPack = (sku: AbogadoSku) => CREDIT_PACKS.some((item) => item.sku === sku);
+
+/** Saldo y referidos del perfil guardado (null si no hay perfil). */
+async function fetchWallet(): Promise<Wallet | null> {
+  const p = profile();
+  if (!p?.benefitToken) return null;
+  try {
+    const r = await getWallet({
+      data: { contactKind: p.kind, contact: p.contact, benefitToken: p.benefitToken },
+    });
+    return r.ok ? r.wallet : null;
+  } catch {
+    return null;
+  }
+}
 
 export function AbogadoGame() {
   const [screen, setScreen] = useState<Screen>("title");
@@ -66,12 +89,16 @@ export function AbogadoGame() {
   const [shopOpen, setShopOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [buying, setBuying] = useState<Weapon | null>(null);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const refreshWallet = () => fetchWallet().then(setWallet);
 
   useEffect(() => {
     installMobileAudioUnlock();
     setOwned(loadOwned());
     setBest(loadBest());
     void syncOwned().then((r) => r.ok && setOwned(r.skus));
+    captureRef(window.location.search);
+    void refreshWallet();
     const params = new URLSearchParams(window.location.search);
     const bought = params.get("compra");
     // Superadmin "omitir intros": nivel 06 entra directo a la partida.
@@ -97,9 +124,16 @@ export function AbogadoGame() {
       const poll = async () => {
         tries++;
         const r = await syncOwned();
-        if (r.skus.includes(bought)) {
+        const w = await fetchWallet();
+        if (w) setWallet(w);
+        const creditsArrived = isCreditPack(bought) && (w?.credits ?? 0) > 0;
+        if (r.skus.includes(bought) || creditsArrived) {
           setOwned(r.skus);
-          setNotice("✅ ¡Compra activada! Ya la podés usar.");
+          setNotice(
+            creditsArrived
+              ? `✅ ¡Saldo cargado! Tenés ${w!.credits.toLocaleString("es-PY")} golpes.`
+              : "✅ ¡Compra activada! Ya la podés usar.",
+          );
           window.history.replaceState(null, "", window.location.pathname);
         } else if (tries < 8) setTimeout(() => void poll(), 4000);
         else
@@ -146,6 +180,19 @@ export function AbogadoGame() {
     setRun(r);
     setScreen("result");
     if (soundOn) sfx(r.kos > 0 ? "win" : "ko");
+    const p = profile();
+    if (r.creditsUsed > 0 && p?.benefitToken)
+      void spendCredits({
+        data: {
+          contactKind: p.kind,
+          contact: p.contact,
+          benefitToken: p.benefitToken,
+          count: r.creditsUsed,
+          runId: r.runId,
+        },
+      })
+        .then((res) => res.ok && setWallet((w) => (w ? { ...w, credits: res.credits } : w)))
+        .catch(() => undefined);
     void resultCard(shot, r, profile()?.name).then((blob) => {
       cardBlob.current = blob;
       setCardUrl(URL.createObjectURL(blob));
@@ -170,6 +217,10 @@ export function AbogadoGame() {
             weapon={ownsWeapon(weapon) ? weapon : "punos"}
             goldTitle={goldTitle}
             soundOn={soundOn}
+          />
+          <PrizeBanner
+            active={!shopOpen}
+            onEnter={() => window.location.assign(PRIZE.rankingUrl)}
           />
           <section className="ab-title-panel">
             <a className="ab-back" href="/">
@@ -231,6 +282,11 @@ export function AbogadoGame() {
             </button>
             <div className="ab-title-meta">
               <span>RÉCORD {best.score.toLocaleString("es-PY")}</span>
+              {wallet && (
+                <span className="ab-meta-credits">
+                  🥊 SALDO {wallet.credits.toLocaleString("es-PY")}
+                </span>
+              )}
               <button className="ab-link" onClick={() => setShopOpen(true)}>
                 <ShoppingBag size={13} /> TIENDA
               </button>
@@ -259,6 +315,7 @@ export function AbogadoGame() {
           owned={ownedWeapons}
           prices={prices}
           hold={buying !== null}
+          credits={wallet?.credits ?? 0}
           onLockedWeapon={(id) => setBuying(id)}
           soundOn={soundOn}
           onToggleSound={() => setSoundOn((s) => !s)}
@@ -350,7 +407,14 @@ export function AbogadoGame() {
               <Download size={16} /> GUARDAR
             </button>
           </div>
-          <AbogadoShop owned={owned} onOwned={setOwned} notice={notice} best={best} />
+          <AbogadoShop
+            owned={owned}
+            onOwned={setOwned}
+            notice={notice}
+            best={best}
+            wallet={wallet}
+            onWallet={refreshWallet}
+          />
           <button className="ab-link ab-home" onClick={() => setScreen("title")}>
             <ArrowLeft size={13} /> VOLVER AL INICIO
           </button>
@@ -386,7 +450,14 @@ export function AbogadoGame() {
             >
               ×
             </button>
-            <AbogadoShop owned={owned} onOwned={setOwned} notice={notice} best={best} />
+            <AbogadoShop
+              owned={owned}
+              onOwned={setOwned}
+              notice={notice}
+              best={best}
+              wallet={wallet}
+              onWallet={refreshWallet}
+            />
           </div>
         </div>
       )}
@@ -399,11 +470,15 @@ function AbogadoShop({
   onOwned,
   notice,
   best,
+  wallet,
+  onWallet,
 }: {
   owned: AbogadoSku[];
   onOwned: (skus: AbogadoSku[]) => void;
   notice: string;
   best: Best;
+  wallet: Wallet | null;
+  onWallet: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState<AbogadoSku | "sync" | "profile" | null>(null);
   const [message, setMessage] = useState("");
@@ -442,8 +517,10 @@ function AbogadoShop({
         setMessage(r.message);
         return;
       }
+      void onWallet();
       const sku = pending;
       setPending(null);
+      if (sku === "rivas-golpes-500") return;
       await buy(sku);
     } catch {
       setMessage("Revisá tu nombre (2 a 24 letras) y tu correo.");
@@ -456,6 +533,7 @@ function AbogadoShop({
     setBusy("sync");
     const r = await syncOwned();
     onOwned(r.skus);
+    await onWallet();
     setMessage(
       r.ok
         ? r.skus.length
@@ -484,8 +562,14 @@ function AbogadoShop({
       {pending ? (
         <form className="ab-profile" onSubmit={(e) => void submitProfile(e)}>
           <p>
-            Para asociar la compra a vos, dejá tu nombre y el{" "}
-            <b>mismo correo que vas a usar en Whop</b>.
+            {pending === "rivas-golpes-500" && !profile()?.benefitToken ? (
+              <>Creá tu perfil para tener tu link de referido y tu saldo de golpes.</>
+            ) : (
+              <>
+                Para asociar la compra a vos, dejá tu nombre y el{" "}
+                <b>mismo correo que vas a usar en Whop</b>.
+              </>
+            )}
           </p>
           <input
             required
@@ -518,14 +602,103 @@ function AbogadoShop({
               CANCELAR
             </button>
             <button className="ab-btn ab-btn-primary" disabled={!consent || busy === "profile"}>
-              {busy === "profile" ? <LoaderCircle className="ab-spin" size={16} /> : null} IR A
-              PAGAR
+              {busy === "profile" ? <LoaderCircle className="ab-spin" size={16} /> : null}{" "}
+              {pending === "rivas-golpes-500" ? "CREAR PERFIL" : "IR A PAGAR"}
             </button>
           </div>
         </form>
       ) : (
+        <>
+        <section className="ab-referral" aria-label="Invitá y ganá">
+          <header>
+            <span className="ab-kicker">
+              <Gift size={13} /> INVITÁ Y GANÁ
+            </span>
+            <h3>Tu link trae {SIGNUP_BONUS} golpes gratis a cada amigo.</h3>
+            <p>
+              Y cada vez que un amigo tuyo carga saldo, vos recibís el{" "}
+              <b>{Math.round(REFERRAL_RATE * 100)}%</b> de esa carga en golpes.
+            </p>
+          </header>
+          {wallet ? (
+            <>
+              <div className="ab-referral-stats">
+                <div>
+                  <b>{wallet.credits.toLocaleString("es-PY")}</b>
+                  <small>GOLPES DE SALDO</small>
+                </div>
+                <div>
+                  <b>{wallet.friends}</b>
+                  <small>AMIGOS TRAÍDOS</small>
+                </div>
+                <div>
+                  <b>{wallet.earned.toLocaleString("es-PY")}</b>
+                  <small>GOLPES GANADOS</small>
+                </div>
+              </div>
+              <div className="ab-referral-link">
+                <code>{wallet.link}</code>
+                <button
+                  type="button"
+                  className="ab-btn"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(wallet.link);
+                    setMessage("Link copiado. ¡Mandáselo a tus amigos!");
+                  }}
+                >
+                  <Copy size={14} /> COPIAR
+                </button>
+                <a
+                  className="ab-btn ab-btn-primary"
+                  href={whatsappShare(wallet.link)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Users size={14} /> WHATSAPP
+                </a>
+              </div>
+              <small className="ab-referral-code">
+                Tu código: <b>{wallet.code}</b>
+              </small>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="ab-btn ab-btn-primary"
+              onClick={() => {
+                setPending("rivas-golpes-500");
+                setName(profile()?.name ?? "");
+              }}
+            >
+              <Gift size={14} /> CREAR MI LINK DE REFERIDO
+            </button>
+          )}
+        </section>
+        <section className="ab-packs" aria-label="Saldo de golpes">
+          <header>
+            <span className="ab-kicker">🥊 SALDO DE GOLPES</span>
+            <h3>Cargá golpes y usá cualquier arma paga sin comprarla.</h3>
+          </header>
+          <div className="ab-packs-grid">
+            {CREDIT_PACKS.map((item) => (
+              <article key={item.sku} className="ab-pack">
+                <b>{item.credits.toLocaleString("es-PY")}</b>
+                <small>GOLPES · {item.badge}</small>
+                <button
+                  className="ab-btn ab-btn-primary"
+                  disabled={busy !== null}
+                  onClick={() => void buy(item.sku)}
+                  aria-label={`Comprar ${item.name} por ${item.price} dólares`}
+                >
+                  {busy === item.sku ? <LoaderCircle className="ab-spin" size={14} /> : null}
+                  USD {item.price.toFixed(2)}
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
         <div className="ab-shop-grid">
-          {ABOGADO_SHOP_ITEMS.map((item) => {
+          {ABOGADO_SHOP_ITEMS.filter((item) => !isCreditPack(item.sku)).map((item) => {
             const has = owned.includes(item.sku);
             return (
               <article key={item.sku} className={`ab-item ${has ? "owned" : ""}`}>
@@ -561,6 +734,7 @@ function AbogadoShop({
             );
           })}
         </div>
+        </>
       )}
       <footer className="ab-shop-foot">
         <button className="ab-link" disabled={busy === "sync"} onClick={() => void sync()}>

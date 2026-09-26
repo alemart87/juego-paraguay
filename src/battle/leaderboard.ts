@@ -54,6 +54,8 @@ const scoreInput = z.object({
   time: z.number().int().min(1).max(3600),
   combo: z.number().int().min(0).max(999),
   runId: z.string().min(16).max(64),
+  /** Código del amigo que trajo a esta persona (solo cuenta al crear el perfil). */
+  ref: z.string().trim().max(12).optional(),
 });
 
 const profileInput = scoreInput
@@ -62,6 +64,7 @@ const profileInput = scoreInput
     contactKind: true,
     contact: true,
     consent: true,
+    ref: true,
   })
   .extend({ purchaseEmail: z.string().trim().max(160).optional() });
 
@@ -78,6 +81,21 @@ async function contactHash(kind: "email" | "phone", value: string) {
   return createHmac("sha256", configuredSecret ?? "influencers-battle-local-preview")
     .update(`${kind}:${normalized}`)
     .digest("hex");
+}
+
+/** Devuelve el hash del contacto si el token de beneficios es válido. */
+export async function verifyBenefitToken(
+  kind: "email" | "phone",
+  contact: string,
+  token: string,
+) {
+  const hash = await contactHash(kind, contact);
+  if (!hash) return null;
+  const expected = await benefitsToken(hash);
+  const { timingSafeEqual } = await import("node:crypto");
+  const supplied = Buffer.from(token, "utf8");
+  const wanted = Buffer.from(expected, "utf8");
+  return supplied.length === wanted.length && timingSafeEqual(supplied, wanted) ? hash : null;
 }
 
 async function benefitsToken(hash: string) {
@@ -152,7 +170,7 @@ export const registerLeaderboardPlayer = createServerFn({ method: "POST" })
     if (data.purchaseEmail && !purchaseHash)
       return { ok: false as const, message: "Ingresá un correo de compra válido." };
     const sql = await (await import("@/lib/db")).getSql();
-    const players = await sql.query<{ id: number }>(
+    const players = await sql.query<{ id: number; inserted: boolean }>(
       `INSERT INTO leaderboard_players
          (contact_hash, contact_kind, display_name, purchase_email_hash)
        VALUES ($1, $2, $3, $4)
@@ -160,11 +178,14 @@ export const registerLeaderboardPlayer = createServerFn({ method: "POST" })
          display_name = EXCLUDED.display_name,
          purchase_email_hash = COALESCE(EXCLUDED.purchase_email_hash, leaderboard_players.purchase_email_hash),
          updated_at = now()
-       RETURNING id`,
+       RETURNING id, (xmax = 0) AS inserted`,
       [hash, data.contactKind, data.name, purchaseHash],
     );
     const playerId = players[0]?.id;
     if (!playerId) throw new Error("No se pudo registrar el perfil");
+    const credits = await import("./credits.server");
+    await credits.ensureReferralCode(sql, Number(playerId));
+    if (data.ref && players[0]?.inserted) await credits.linkReferral(sql, Number(playerId), data.ref);
     if (purchaseHash) {
       await sql.query(
         `UPDATE whop_purchases SET player_id = $1, updated_at = now()
@@ -179,6 +200,7 @@ export const registerLeaderboardPlayer = createServerFn({ method: "POST" })
            player_id = EXCLUDED.player_id, status = 'active', updated_at = now()`,
         [playerId],
       );
+      await credits.creditPurchases(sql, { playerId: Number(playerId) });
     }
     return {
       ok: true as const,
@@ -263,16 +285,22 @@ export const submitLeaderboardScore = createServerFn({ method: "POST" })
     const hashedContact = await contactHash(data.contactKind, data.contact);
     if (!hashedContact) return { ok: false as const, message: "El contacto no es válido." };
     const sql = await getSql();
-    const players = await sql.query<{ id: number }>(
+    const players = await sql.query<{ id: number; inserted: boolean }>(
       `INSERT INTO leaderboard_players (contact_hash, contact_kind, display_name)
        VALUES ($1, $2, $3)
        ON CONFLICT (contact_hash) DO UPDATE
          SET display_name = EXCLUDED.display_name, updated_at = now()
-       RETURNING id`,
+       RETURNING id, (xmax = 0) AS inserted`,
       [hashedContact, data.contactKind, data.name],
     );
     const playerId = players[0]?.id;
     if (!playerId) throw new Error("No se pudo registrar el perfil");
+    {
+      const credits = await import("./credits.server");
+      await credits.ensureReferralCode(sql, Number(playerId));
+      if (data.ref && players[0]?.inserted)
+        await credits.linkReferral(sql, Number(playerId), data.ref);
+    }
     const inserted = await sql.query<{ score: number }>(
       `INSERT INTO leaderboard_score_events
          (run_id, player_id, score, level, hero, time_seconds, combo)

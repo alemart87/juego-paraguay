@@ -7,6 +7,7 @@ import {
   createWorld,
   hpForRound,
   layout,
+  selectWeapon,
   snapshot,
   step,
   throwPunch,
@@ -140,4 +141,35 @@ test("la foto oficial blinda y el tereré lo acelera", () => {
   for (let i = 0; i < 90 && !w.powerActive?.hit; i++) step(w, 0.02);
   assert.ok(w.hypeUntil > w.t);
   assert.ok(w.papers.length >= 2);
+});
+
+test("el saldo de golpes paga las armas no compradas y se agota", () => {
+  const w = createWorld({ weapon: "punos", goldTitle: false, owned: ["punos"], credits: 3 });
+  for (let i = 0; i < 20; i++) step(w, 0.05);
+  assert.equal(selectWeapon(w, "guantes"), "credits");
+  assert.equal(w.weapon, "guantes");
+  for (let i = 0; i < 3; i++) {
+    const L = layout(w);
+    throwPunch(w, L.headCx, L.headCy, 1);
+    for (let j = 0; j < 8; j++) step(w, 0.03);
+  }
+  assert.equal(w.credits, 0);
+  assert.equal(w.creditsUsed, 3);
+  assert.ok(w.runId.length >= 8);
+  // Sin saldo, el próximo puñetazo vuelve a los puños sin gastar nada.
+  const L = layout(w);
+  throwPunch(w, L.headCx, L.headCy, 1);
+  assert.equal(w.weapon, "punos");
+  assert.equal(w.creditsUsed, 3);
+  assert.equal(selectWeapon(w, "mazo"), "trial");
+  assert.equal(snapshot(w).credits, 0);
+});
+
+test("las armas compradas no gastan saldo", () => {
+  const w = createWorld({ weapon: "guantes", goldTitle: false, owned: ["punos", "guantes"], credits: 5 });
+  for (let i = 0; i < 20; i++) step(w, 0.05);
+  const L = layout(w);
+  throwPunch(w, L.headCx, L.headCy, 1);
+  assert.equal(w.credits, 5);
+  assert.equal(w.creditsUsed, 0);
 });
