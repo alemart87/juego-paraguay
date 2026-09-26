@@ -1651,6 +1651,7 @@ type CardDraw = {
   color: string;
   label: string;
   phrase: string;
+  explain: string;
   since: number;
   seconds: number;
   hitAt: number;
@@ -1666,8 +1667,9 @@ function drawSpecial(w: World, c: Ctx, art: Art | null) {
     img: art?.specials[w.specialActive.index] ?? null,
     name: card.name,
     color: card.color,
-    label: "ARMA ESPECIAL",
+    label: "TU ARMA ESPECIAL",
     phrase: card.phrase,
+    explain: card.explain,
     since: w.t - w.specialActive.t0,
     seconds: SPECIAL_SECONDS,
     hitAt: SPECIAL_HIT_AT,
@@ -1683,8 +1685,9 @@ function drawPower(w: World, c: Ctx, art: Art | null) {
     img: art?.powers[w.powerActive.index] ?? null,
     name: card.name,
     color: card.color,
-    label: "PODER DEL ABOGADO",
+    label: "REFUERZO DE HERNÁN",
     phrase: card.shout,
+    explain: card.explain,
     since: w.t - w.powerActive.t0,
     seconds: POWER_SECONDS,
     hitAt: POWER_HIT_AT,
@@ -1701,15 +1704,18 @@ function drawCard(w: World, c: Ctx, card: CardDraw) {
   const ease = 1 - Math.pow(1 - enter, 3);
   const leave = Math.max(0, (since - (card.seconds - 0.4)) / 0.4);
   const hitK = Math.max(0, 1 - Math.abs(since - card.hitAt) / 0.16);
-  const cw = Math.min(W * 0.55, 72);
-  const ch = cw * 1.3;
+  const cw = Math.min(W * 0.66, 84);
+  const ch = cw * 1.28;
   const cx = W / 2 + card.dir * ((1 - ease) * W * 0.9 - leave * leave * W * 1.2);
   const cy = H * 0.47 + Math.sin(since * 5) * 2 - leave * 20;
   const scale = (0.6 + ease * 0.4) * (1 + hitK * 0.18) * (1 + (1 - ease) * 1.4);
   const rot = card.dir * (-0.14 + (1 - ease) * 0.9) + Math.sin(since * 4) * 0.03 + hitK * 0.08;
 
+  // Oscurece el ring para que la carta sea lo único que importa.
+  c.fillStyle = `rgba(8,4,14,${0.55 * ease * (1 - leave)})`;
+  c.fillRect(0, 0, W, H);
   if (since < card.seconds - 0.4)
-    drawRays(c, cx, cy, card.color, w.t, Math.min(0.55, ease * 0.55) * (1 - leave));
+    drawRays(c, cx, cy, card.color, w.t, Math.min(0.6, ease * 0.6) * (1 - leave));
   c.save();
   c.translate(cx, cy);
   c.rotate(rot);
@@ -1767,21 +1773,34 @@ function drawCard(w: World, c: Ctx, card: CardDraw) {
   );
   c.restore();
 
-  // La frase, gritada bien grande y tambaleando.
+  // La frase, gritada bien grande sobre una placa, y debajo qué hizo la carta.
   if (since > 0.18 && leave < 1) {
     const pk = Math.min(1, (since - 0.18) / 0.14);
     const pop = 0.7 + pk * 0.3 + hitK * 0.12;
     c.save();
     c.globalAlpha = Math.min(1, pk) * (1 - leave);
-    c.translate(W / 2, cy + ch * 0.5 * scale + 12);
-    c.rotate(Math.sin(since * 6) * 0.03);
+    c.translate(W / 2, cy + ch * 0.5 * scale + 13);
+    c.rotate(Math.sin(since * 6) * 0.02);
     c.scale(pop, pop);
-    c.font = `italic 900 10px ${FONT}`;
-    const lines = wrap(c, card.phrase, W - 14);
-    lines.forEach((line, i) => {
-      const size = Math.min(10, ((W - 14) / Math.max(1, c.measureText(line).width)) * 10);
-      text(c, line, 0, i * 11, size, { color: "#ffe066", stroke: "#1a0f24" });
-    });
+    c.font = `italic 900 11px ${FONT}`;
+    const lines = wrap(c, card.phrase, W - 16);
+    const sizes = lines.map((line) =>
+      Math.min(11, ((W - 16) / Math.max(1, c.measureText(line).width)) * 11),
+    );
+    const plateH = lines.length * 12 + 8;
+    const plateW = Math.min(W - 6, Math.max(...lines.map((l, i) => {
+      c.font = `italic 900 ${sizes[i]}px ${FONT}`;
+      return c.measureText(l).width;
+    })) + 16);
+    c.fillStyle = "rgba(10,5,18,0.82)";
+    c.strokeStyle = card.color;
+    c.lineWidth = 1.4;
+    roundRect(c, -plateW / 2, -9, plateW, plateH, 4);
+    c.fill();
+    c.stroke();
+    lines.forEach((line, i) =>
+      text(c, line, 0, i * 12, sizes[i], { color: "#ffe066", stroke: "#1a0f24" }),
+    );
     c.restore();
   }
 }
@@ -1851,7 +1870,8 @@ export function drawScene(w: World, c: Ctx, art: Art | null) {
       text(c, "¡TOCALA!", s.x, s.y - s.half - 5, 7, { color: "#ffe066", stroke: "#1a0f24" });
   }
 
-  if (w.speech && w.mood !== "ko") drawBubble(w, c, w.speech.text, L.headCx, L.headCy);
+  if (w.speech && w.mood !== "ko" && !w.specialActive && !w.powerActive)
+    drawBubble(w, c, w.speech.text, L.headCx, L.headCy);
 
   if (jailed) {
     drawBars(w, c, since);

@@ -19,6 +19,8 @@ export type SpecialCard = {
   color: string;
   /** Daño como fracción de la vida máxima del round. */
   damage: number;
+  /** Qué hace la carta, en una línea, para el cartel del HUD. */
+  explain: string;
 };
 
 export const SPECIALS: SpecialCard[] = [
@@ -30,6 +32,7 @@ export const SPECIALS: SpecialCard[] = [
     reply: "¡Kattya es mala! ¡Ayyy!",
     color: "#1f3fb5",
     damage: 0.36,
+    explain: "Le saca el 36% de la vida",
   },
   {
     id: "sole",
@@ -39,6 +42,7 @@ export const SPECIALS: SpecialCard[] = [
     reply: "¡La Sole no, por favor!",
     color: "#e98aa0",
     damage: 0.34,
+    explain: "Le saca el 34% de la vida",
   },
 ];
 
@@ -55,6 +59,8 @@ export type PowerCard = {
   effect: PowerEffect;
   /** Duración del efecto en segundos (0 = instantáneo). */
   seconds: number;
+  /** Qué le hace a Hernán, en una línea, para el cartel del HUD. */
+  explain: string;
 };
 
 export const POWERUPS: PowerCard[] = [
@@ -67,6 +73,7 @@ export const POWERUPS: PowerCard[] = [
     color: "#e8332a",
     effect: "heal",
     seconds: 0,
+    explain: "Se cura el 35% de la vida",
   },
   {
     id: "oficial",
@@ -77,6 +84,7 @@ export const POWERUPS: PowerCard[] = [
     color: "#ffd23f",
     effect: "shield",
     seconds: 9,
+    explain: "Recibe la mitad del daño por 9 s",
   },
   {
     id: "terere",
@@ -87,18 +95,19 @@ export const POWERUPS: PowerCard[] = [
     color: "#2ec27e",
     effect: "hype",
     seconds: 10,
+    explain: "Esquiva más y tira demandas dobles por 10 s",
   },
 ];
 
 /** Puntos que llenan el medidor una vez. */
 export const SPECIAL_COST = 3600;
 /** Duración de la carta en pantalla (segundos). */
-export const SPECIAL_SECONDS = 2.8;
+export const SPECIAL_SECONDS = 4.6;
 /** Momento del impacto dentro de la animación. */
-export const SPECIAL_HIT_AT = 0.62;
+export const SPECIAL_HIT_AT = 1.1;
 /** Cada cuánto (segundos, mín y máx) le llega un refuerzo a Hernán. */
 export const POWER_INTERVAL: [number, number] = [16, 24];
-export const POWER_SECONDS = 2.6;
-export const POWER_HIT_AT = 0.6;
+export const POWER_SECONDS = 4.2;
+export const POWER_HIT_AT = 1;
 /** Cuánto cura Bachi (fracción de la vida máxima). */
 export const HEAL_FRACTION = 0.35;

@@ -1221,3 +1221,40 @@
   letter-spacing: 0.08em;
   white-space: nowrap;
 }
+
+/* Cartel de carta: quién entró y qué hizo */
+.ab-card-banner {
+  --power: #ff2d55;
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(10px, env(safe-area-inset-bottom)) + 8px);
+  transform: translateX(-50%);
+  width: min(92%, 420px);
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 3px solid #fff;
+  background: var(--power);
+  color: #fff;
+  text-align: center;
+  box-shadow:
+    0 0 30px var(--power),
+    0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: ab-pop 0.3s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+.ab-card-banner small {
+  display: block;
+  font: 900 10.5px/1.2 var(--ab-ui);
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+.ab-card-banner b {
+  display: block;
+  margin-top: 3px;
+  font: italic 900 clamp(20px, 5.6vw, 26px) / 1 var(--ab-display);
+  text-transform: uppercase;
+  -webkit-text-stroke: 1px var(--ab-edge);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+}
+.ab-card-banner.power {
+  border-color: #ffd23f;
+}

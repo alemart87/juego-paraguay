@@ -595,6 +595,7 @@ function hitZone(w: World, x: number, y: number): Zone | null {
 }
 
 function say(w: World, text: string, seconds = 1.6) {
+  if (!text) return;
   w.speech = { text, until: w.t + seconds };
   w.events.push({ type: "say", text });
 }
@@ -1058,16 +1059,6 @@ function fireSpecial(w: World) {
   w.shake = 8;
   w.slowUntil = w.t + 0.18;
   w.speech = null;
-  w.texts.push({
-    x: w.W / 2,
-    y: w.H * 0.12,
-    text: "¡ARMA ESPECIAL!",
-    color: card.color,
-    scale: 2.4,
-    life: 1.4,
-    max: 1.4,
-    vy: -3,
-  });
   w.events.push(
     { type: "sfx", name: "boom" },
     { type: "sfx", name: "crowd" },
@@ -1140,7 +1131,7 @@ function specialImpact(w: World) {
   if (w.hp <= 0) knockout(w);
   else {
     setMood(w, "dizzy", 2.4);
-    say(w, card.reply, 1.8);
+    say(w, card.reply, SPECIAL_SECONDS - (w.t - w.specialActive.t0) + 2.2);
     if (w.hp > w.maxHp * 0.5) {
       w.nextAiAt = Number.POSITIVE_INFINITY;
       w.texts.push({
@@ -1165,23 +1156,13 @@ export function activePower(w: World) {
 /** Le llega un refuerzo: la carta entra por su lado y él festeja a carcajadas. */
 function firePower(w: World) {
   const index = w.powerIndex % POWERUPS.length;
-  const card = POWERUPS[index];
   w.powerIndex++;
   w.powersUsed++;
   w.powerActive = { index, t0: w.t, hit: false };
   w.flash = Math.max(w.flash, 0.5);
   w.shake = Math.max(w.shake, 4);
-  w.texts.push({
-    x: w.W / 2,
-    y: w.H * 0.12,
-    text: "¡PODER DEL ABOGADO!",
-    color: card.color,
-    scale: 2.2,
-    life: 1.4,
-    max: 1.4,
-    vy: -3,
-  });
-  laugh(w, card.line);
+  // Se ríe mientras entra la carta; la frase la grita cuando el refuerzo le llega.
+  laugh(w, "");
   w.gesture = 1;
   w.events.push({ type: "sfx", name: "pickup" }, { type: "vibrate", ms: 40 });
   const [lo, hi] = POWER_INTERVAL;
@@ -1210,6 +1191,8 @@ function applyPower(w: World) {
   w.shake = Math.max(w.shake, 6);
   w.flash = Math.max(w.flash, 0.4);
   w.zoom.vel += 30;
+  // La burbuja recién se ve cuando la carta se va: que dure hasta entonces y un poco más.
+  say(w, card.line, POWER_SECONDS - (w.t - w.powerActive.t0) + 2.6);
   spray(w, L.headCx, L.headCy - 10, 14, "star", card.color, 90);
   if (card.effect === "heal") {
     const heal = Math.round(w.maxHp * HEAL_FRACTION);
@@ -1407,7 +1390,8 @@ export function step(w: World, dt: number) {
     w.events.push({ type: "sfx", name: "bell" });
   }
 
-  if (!w.demo && !w.ended) {
+  const cardOnScreen = Boolean(w.specialActive || w.powerActive);
+  if (!w.demo && !w.ended && !cardOnScreen) {
     w.timeLeft -= dt;
     if (w.timeLeft <= 0) {
       if (w.round < ROUNDS && w.mood !== "ko") {
@@ -1515,7 +1499,7 @@ export function step(w: World, dt: number) {
   if (w.mood === "laugh") w.leanTarget = Math.sin(w.t * 9) * 3;
   if (w.mood === "jailed") w.leanTarget = 0;
   if (w.mood === "dizzy") w.leanTarget = Math.sin(w.t * 5) * 6;
-  if (!w.ended) ai(w);
+  if (!w.ended && !cardOnScreen) ai(w);
 
   // Combo timeout
   const window = WEAPON_STATS[activeWeapon(w)].comboWindow;
@@ -1602,6 +1586,8 @@ export type Snapshot = {
   specialColor: string | null;
   powerName: string | null;
   powerColor: string | null;
+  /** Cartel del HUD mientras hay una carta: quién es y qué hace. */
+  cardBanner: { kind: "special" | "power"; title: string; explain: string; color: string } | null;
   shield: boolean;
   hype: boolean;
   weapon: Weapon;
@@ -1630,6 +1616,21 @@ export function snapshot(w: World): Snapshot {
     specialColor: activeSpecial(w)?.color ?? null,
     powerName: activePower(w)?.name ?? null,
     powerColor: activePower(w)?.color ?? null,
+    cardBanner: activeSpecial(w)
+      ? {
+          kind: "special",
+          title: `TU ARMA ESPECIAL · ${activeSpecial(w)!.name}`,
+          explain: activeSpecial(w)!.explain,
+          color: activeSpecial(w)!.color,
+        }
+      : activePower(w)
+        ? {
+            kind: "power",
+            title: `REFUERZO DE HERNÁN · ${activePower(w)!.name}`,
+            explain: activePower(w)!.explain,
+            color: activePower(w)!.color,
+          }
+        : null,
     shield: w.shieldUntil > w.t,
     hype: w.hypeUntil > w.t,
     weapon: activeWeapon(w),

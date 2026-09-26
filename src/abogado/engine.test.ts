@@ -105,10 +105,9 @@ test("los puntos llenan el medidor y la carta especial golpea sola", () => {
   assert.equal(w.specialsFired, 1);
   assert.ok(w.score >= SPECIAL_COST);
   assert.ok(w.specialActive);
-  assert.ok(w.texts.some((t) => t.text === "¡ARMA ESPECIAL!"));
   const before = w.hp;
   const round = w.round;
-  for (let i = 0; i < 60 && !w.specialActive?.hit; i++) step(w, 0.02);
+  for (let i = 0; i < 90 && !w.specialActive?.hit; i++) step(w, 0.02);
   assert.ok(w.t - w.specialActive!.t0 >= SPECIAL_HIT_AT);
   assert.ok(w.hp < before || w.round > round || w.mood === "ko");
   assert.equal(snapshot(w).specialName !== null, true);
@@ -122,8 +121,8 @@ test("a Hernán le llega un refuerzo: la carta Bachi lo cura mientras se ríe", 
   assert.ok(w.powerActive);
   assert.equal(w.powersUsed, 1);
   assert.equal(w.mood, "laugh");
+  for (let i = 0; i < 90 && !w.powerActive?.hit; i++) step(w, 0.02);
   assert.ok(w.speech?.text.includes("Bachi"));
-  for (let i = 0; i < 40 && !w.powerActive?.hit; i++) step(w, 0.02);
   assert.ok(w.hp > 50);
   assert.ok(snapshot(w).powerName);
 });
@@ -133,12 +132,12 @@ test("la foto oficial blinda y el tereré lo acelera", () => {
   for (let i = 0; i < 20; i++) step(w, 0.05);
   Object.assign(w, { mood: "idle", moodUntil: 0, nextPowerAt: 0, powerIndex: 1 });
   step(w, 0.05);
-  for (let i = 0; i < 40 && !w.powerActive?.hit; i++) step(w, 0.02);
+  for (let i = 0; i < 90 && !w.powerActive?.hit; i++) step(w, 0.02);
   assert.ok(w.shieldUntil > w.t);
   assert.equal(snapshot(w).shield, true);
   Object.assign(w, { powerActive: null, mood: "idle", moodUntil: 0, nextPowerAt: 0, powerIndex: 2 });
   step(w, 0.05);
-  for (let i = 0; i < 40 && !w.powerActive?.hit; i++) step(w, 0.02);
+  for (let i = 0; i < 90 && !w.powerActive?.hit; i++) step(w, 0.02);
   assert.ok(w.hypeUntil > w.t);
   assert.ok(w.papers.length >= 2);
 });

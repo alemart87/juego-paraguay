@@ -448,16 +448,18 @@ export function AbogadoScene({
           {hud.bonusMazo > 0 && (
             <div className="ab-bonus">🔨 MAZO DORADO {hud.bonusMazo.toFixed(1)}s</div>
           )}
-          {(hud.powerName || hud.shield || hud.hype) && (
+          {hud.cardBanner && (
+            <div
+              className={`ab-card-banner ${hud.cardBanner.kind}`}
+              style={{ "--power": hud.cardBanner.color } as CSSProperties}
+              role="status"
+            >
+              <small>{hud.cardBanner.kind === "special" ? "⚡" : "🛡"} {hud.cardBanner.title}</small>
+              <b>{hud.cardBanner.explain}</b>
+            </div>
+          )}
+          {(hud.shield || hud.hype) && (
             <div className="ab-status" aria-live="polite">
-              {hud.powerName && (
-                <div
-                  className="ab-power"
-                  style={{ "--power": hud.powerColor ?? "#e8332a" } as CSSProperties}
-                >
-                  ⚡ HERNÁN: {hud.powerName}
-                </div>
-              )}
               {hud.shield && (
                 <div className="ab-power" style={{ "--power": "#ffd23f" } as CSSProperties}>
                   🛡 TÍTULO BLINDADO · MENOS DAÑO
