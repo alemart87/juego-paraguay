@@ -12,14 +12,22 @@ export function PrizeBanner({
   active = true,
   delayMs = 3000,
   onEnter,
+  onOpenChange,
 }: {
   /** Solo cuenta el tiempo mientras esto es true (portada visible, sin diálogos). */
   active?: boolean;
   delayMs?: number;
   onEnter: () => void;
+  /** Avisa cuando se abre o cierra, para pausar el juego mientras está en pantalla. */
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const shown = useRef(false);
+  const notify = useRef(onOpenChange);
+  notify.current = onOpenChange;
+  useEffect(() => {
+    notify.current?.(open);
+  }, [open]);
   useEffect(() => {
     if (!active || shown.current) return;
     const timer = window.setTimeout(() => {

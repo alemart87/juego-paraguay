@@ -518,9 +518,15 @@ export function BattleGame() {
       )}
 
       <PrizeBanner
-        active={!intro && weeklyChismeDone && screen === "home" && !dialog && !autoStart}
+        active={!intro && weeklyChismeDone && !dialog}
+        onOpenChange={(open) => {
+          if (!world || world.ended) return;
+          if (open) world.paused = true;
+          else if (!dialog) world.paused = false;
+        }}
         onEnter={() => {
           sfx("ui");
+          if (world && !world.ended) world.paused = true;
           setDialog("ranking");
         }}
       />

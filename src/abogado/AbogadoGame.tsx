@@ -90,6 +90,7 @@ export function AbogadoGame() {
   const [sharing, setSharing] = useState(false);
   const [buying, setBuying] = useState<Weapon | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [bannerOpen, setBannerOpen] = useState(false);
   const refreshWallet = () => fetchWallet().then(setWallet);
 
   useEffect(() => {
@@ -210,6 +211,11 @@ export function AbogadoGame() {
 
   return (
     <main className={`ab-root ab-screen-${screen}`}>
+      <PrizeBanner
+        active={!shopOpen && buying === null}
+        onOpenChange={setBannerOpen}
+        onEnter={() => window.location.assign(PRIZE.rankingUrl)}
+      />
       {screen === "title" && (
         <>
           <AbogadoScene
@@ -217,10 +223,6 @@ export function AbogadoGame() {
             weapon={ownsWeapon(weapon) ? weapon : "punos"}
             goldTitle={goldTitle}
             soundOn={soundOn}
-          />
-          <PrizeBanner
-            active={!shopOpen}
-            onEnter={() => window.location.assign(PRIZE.rankingUrl)}
           />
           <section className="ab-title-panel">
             <a className="ab-back" href="/">
@@ -314,7 +316,7 @@ export function AbogadoGame() {
           goldTitle={goldTitle}
           owned={ownedWeapons}
           prices={prices}
-          hold={buying !== null}
+          hold={buying !== null || bannerOpen}
           credits={wallet?.credits ?? 0}
           onLockedWeapon={(id) => setBuying(id)}
           soundOn={soundOn}

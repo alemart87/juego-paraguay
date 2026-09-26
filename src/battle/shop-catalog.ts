@@ -131,7 +131,7 @@ export const SHOP_ITEMS = [
     icon: "🥊",
     image: "/abogado/shop/guantes.png",
     description: "Guantes rojos de campeón: más daño, combos más largos y golpe cargado más rápido.",
-    price: 0.99,
+    price: 1.49,
     badge: "RING",
     category: "ARMA",
     game: "abogado",
@@ -168,7 +168,7 @@ export const SHOP_ITEMS = [
     image: "/abogado/shop/guantes.png",
     description:
       "500 golpes para usar cualquier arma paga sin comprarla: guantes, mazo, hacha o magnum.",
-    price: 0.99,
+    price: 1.49,
     badge: "SALDO",
     category: "GOLPES",
     game: "abogado",

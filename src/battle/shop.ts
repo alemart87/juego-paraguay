@@ -10,6 +10,10 @@ const input = z.object({ sku: z.enum(SHOP_SKUS) });
 const DEFAULT_CHECKOUTS: Partial<Record<ShopSku, string>> = {
   pablito: "https://whop.com/checkout/plan_xhlnD3vpqBt4D",
   marito: "https://whop.com/checkout/plan_faICB6iGn6vYl",
+  "rivas-guantes": "https://whop.com/checkout/plan_hnDo4acYI013a",
+  "rivas-golpes-500": "https://whop.com/checkout/plan_am59bRwCKJiRI",
+  "rivas-golpes-2500": "https://whop.com/checkout/plan_BtwNYoIBFme6J",
+  "rivas-golpes-6000": "https://whop.com/checkout/plan_lfjCjNEymMXIn",
 };
 
 export const getWhopCheckout = createServerFn({ method: "POST" })
