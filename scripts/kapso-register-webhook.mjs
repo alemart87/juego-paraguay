@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Registra (una vez) el webhook de "Jesús te ama" en Kapso para el número del
- * proyecto. Idempotente: si ya existe uno con la misma URL, no crea otro.
+ * Registra o actualiza el webhook de "Jesús te ama" en Kapso para el número
+ * del proyecto, con buffering de ráfagas (Kapso junta los mensajes seguidos
+ * de cada conversación y los manda en un lote).
  *
  *   node --env-file=.env scripts/kapso-register-webhook.mjs [https://www.influencerspy.pro]
  */
@@ -19,34 +20,31 @@ const secret =
 const headers = { "content-type": "application/json", "X-API-Key": apiKey };
 const path = `${base}/platform/v1/whatsapp/phone_numbers/${phoneNumberId}/webhooks`;
 
-const listed = await fetch(path, { headers });
-if (listed.ok) {
-  const body = await listed.json();
-  const items = Array.isArray(body?.data) ? body.data : [];
-  const existing = items.find((item) => item.url === url);
-  if (existing) {
-    console.log(`ya existe: ${existing.id} → ${existing.url} (${existing.events?.join(", ")})`);
-    process.exit(0);
-  }
-  console.log(`webhooks actuales: ${items.length}`);
-} else console.log(`no pude listar (${listed.status}); intento crear igual`);
+/** Ventana de ráfaga: segundos de silencio que espera Kapso antes de mandar el lote. */
+const BUFFER_SECONDS = Number(process.env.KAPSO_BUFFER_SECONDS || 6);
+const settings = {
+  url,
+  secret_key: secret,
+  kind: "kapso",
+  events: ["whatsapp.message.received"],
+  active: true,
+  payload_version: "v2",
+  buffer_enabled: true,
+  buffer_window_seconds: BUFFER_SECONDS,
+  max_buffer_size: 20,
+  buffer_events: ["whatsapp.message.received"],
+};
 
-const created = await fetch(path, {
-  method: "POST",
-  headers,
-  body: JSON.stringify({
-    whatsapp_webhook: {
-      url,
-      secret_key: secret,
-      kind: "kapso",
-      events: ["whatsapp.message.received"],
-      active: true,
-      buffer_enabled: false,
-      payload_version: "v2",
-    },
-  }),
-});
-const text = await created.text();
-if (!created.ok) throw new Error(`Kapso ${created.status}: ${text.slice(0, 400)}`);
+const listed = await fetch(path, { headers });
+const items = listed.ok ? ((await listed.json())?.data ?? []) : [];
+const existing = items.find((item) => item.url === url);
+
+const response = existing
+  ? await fetch(`${path}/${existing.id}`, { method: "PATCH", headers, body: JSON.stringify({ whatsapp_webhook: settings }) })
+  : await fetch(path, { method: "POST", headers, body: JSON.stringify({ whatsapp_webhook: settings }) });
+const text = await response.text();
+if (!response.ok) throw new Error(`Kapso ${response.status}: ${text.slice(0, 400)}`);
 const data = JSON.parse(text)?.data ?? {};
-console.log(`creado: ${data.id} → ${data.url} (${(data.events ?? []).join(", ")})`);
+console.log(
+  `${existing ? "actualizado" : "creado"}: ${data.id} → ${data.url} · buffer ${data.buffer_enabled ? `${data.buffer_window_seconds}s / ${data.max_buffer_size}` : "off"} · ${(data.events ?? []).join(", ")}`,
+);

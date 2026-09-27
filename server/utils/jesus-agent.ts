@@ -147,39 +147,177 @@ type ResponsesOutput = {
   error?: { message?: string };
 };
 
-/** Una vuelta con el modelo. `history` ya incluye el último mensaje del usuario. */
-export async function askJesus(history: ChatTurn[], contactName: string | null) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new Error("OPENAI_API_KEY is missing");
-  // GPT-5.6 Luna: el tier barato de la familia 5.6 (USD 0,20 / 1,20 por millón),
-  // pensado para chat y agentes livianos. Cambiable con OPENAI_MODEL.
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-5.6-luna";
-  const reasoning = /^gpt-5/.test(model) ? { reasoning: { effort: "low" } } : {};
-  const who = contactName ? `La persona se llama ${contactName} según su perfil de WhatsApp.` : "";
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      instructions: `${INSTRUCTIONS}\n\n${who}`.trim(),
-      input: history.map((turn) => ({ role: turn.role, content: turn.content })),
-      max_output_tokens: 400,
-      store: false,
-      ...reasoning,
-    }),
-    signal: AbortSignal.timeout(25_000),
-  });
-  const data = (await response.json()) as ResponsesOutput;
-  if (!response.ok) throw new Error(`OpenAI ${response.status}: ${data.error?.message ?? ""}`);
-  const text =
-    data.output_text ??
+/** Emojis con los que Jesús puede reaccionar a un mensaje ("me gusta"). */
+export const REACTION_EMOJIS = ["❤️", "🙏", "🤍", "🕊️", "🙌"] as const;
+
+/** Un mensaje de la ráfaga actual, ya convertido a lo que el modelo puede leer. */
+export type BurstItem = {
+  /** Texto a mostrarle al modelo (texto, "(audio) …", "(foto) …"). */
+  text: string;
+  /** Imagen como data URL, si la persona mandó una foto. */
+  image?: string;
+};
+
+export type JesusReply = {
+  /** 1 a 3 burbujas cortas, en orden. */
+  messages: string[];
+  /** Índice (0-based) del mensaje de la ráfaga al que reacciona, o null. */
+  reaction: { index: number; emoji: string } | null;
+};
+
+const REPLY_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["messages", "reaction_to", "reaction_emoji"],
+  properties: {
+    messages: {
+      type: "array",
+      items: { type: "string" },
+      description: "Burbujas de WhatsApp, en orden. Normalmente 1 o 2; como máximo 3.",
+    },
+    reaction_to: {
+      type: "integer",
+      description: "Número del mensaje nuevo al que reaccionás ([1], [2]…), o 0 si no reaccionás.",
+    },
+    reaction_emoji: { type: "string", enum: [...REACTION_EMOJIS, "none"] },
+  },
+};
+
+const BURST_GUIDE = `
+
+Cómo llegan los mensajes: a veces la persona manda varios seguidos (una ráfaga). Te llegan juntos, numerados [1], [2]… Respondé a todo junto, como una sola conversación, sin contestar uno por uno.
+- "(audio)" es la transcripción de un audio que te mandó: respondé como si lo hubieras escuchado.
+- "(foto)" es una imagen que te mandó y que podés ver: mirála y respondé con cariño a lo que muestra (una persona querida, un lugar, una situación). No describas la foto como un inventario ni adivines datos sensibles.
+- "(sticker)", "(video)" o "(documento)": no los podés abrir; decilo con naturalidad si hace falta.
+
+Formato de tu respuesta: de 1 a 3 burbujas cortas de WhatsApp, como escribe alguien cercano. Normalmente 1 o 2.
+
+Reacciones: podés reaccionar con un emoji a UN mensaje nuevo (el "me gusta" de WhatsApp) solo cuando es especialmente significativo: una gratitud, algo doloroso que se animó a contar, una foto de alguien querido, una buena noticia. No reacciones en todas las respuestas; la mayoría de las veces, no.`;
+
+function outputText(data: ResponsesOutput) {
+  if (data.output_text) return data.output_text;
+  return (
     data.output
       ?.filter((item) => item.type === "message")
       .flatMap((item) => item.content ?? [])
       .filter((part) => part.type === "output_text")
       .map((part) => part.text ?? "")
       .join("\n")
-      .trim();
-  if (!text) throw new Error("OpenAI returned no text");
-  return tidyReply(text);
+      .trim() ?? ""
+  );
 }
+
+/**
+ * Una vuelta con el modelo. `history` son los turnos anteriores; `burst` la
+ * ráfaga nueva (texto, audios transcriptos y fotos).
+ */
+export async function askJesus(
+  history: ChatTurn[],
+  burst: BurstItem[],
+  contactName: string | null,
+): Promise<JesusReply> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) throw new Error("OPENAI_API_KEY is missing");
+  // GPT-5.6 Luna: el tier barato de la familia 5.6, con visión. Cambiable con OPENAI_MODEL.
+  const model = process.env.OPENAI_MODEL?.trim() || "gpt-5.6-luna";
+  const reasoning = /^gpt-5/.test(model) ? { reasoning: { effort: "low" } } : {};
+  const who = contactName ? `La persona se llama ${contactName} según su perfil de WhatsApp.` : "";
+  const numbered = burst.map((item, i) => `[${i + 1}] ${item.text}`).join("\n");
+  const content: Record<string, unknown>[] = [
+    { type: "input_text", text: `Mensajes nuevos:\n${numbered}` },
+    ...burst
+      .filter((item) => item.image)
+      .map((item) => ({ type: "input_image", image_url: item.image, detail: "low" })),
+  ];
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model,
+      instructions: `${INSTRUCTIONS}${BURST_GUIDE}\n\n${who}`.trim(),
+      input: [
+        ...history.map((turn) => ({ role: turn.role, content: turn.content })),
+        { role: "user", content },
+      ],
+      text: {
+        format: { type: "json_schema", name: "jesus_reply", strict: true, schema: REPLY_SCHEMA },
+      },
+      max_output_tokens: 600,
+      store: false,
+      ...reasoning,
+    }),
+    signal: AbortSignal.timeout(40_000),
+  });
+  const data = (await response.json()) as ResponsesOutput;
+  if (!response.ok) throw new Error(`OpenAI ${response.status}: ${data.error?.message ?? ""}`);
+  return parseReply(outputText(data), burst.length);
+}
+
+/** Valida la salida estructurada del modelo y aplica las barreras de voz. */
+export function parseReply(raw: string, burstSize: number): JesusReply {
+  let parsed: { messages?: unknown; reaction_to?: unknown; reaction_emoji?: unknown };
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // Si no vino JSON, se usa el texto como una burbuja.
+    const single = guardReply(tidyReply(raw));
+    if (!single) throw new Error("empty reply");
+    return { messages: [single], reaction: null };
+  }
+  const messages = (Array.isArray(parsed.messages) ? parsed.messages : [])
+    .filter((m): m is string => typeof m === "string" && m.trim().length > 0)
+    .slice(0, 3)
+    .map((m) => guardReply(tidyReply(m)));
+  // Si alguna burbuja se salió de la voz, se responde solo la frase fija.
+  const clean = messages.includes(DEFLECT_REPLY) ? [DEFLECT_REPLY] : messages;
+  if (!clean.length) throw new Error("empty reply");
+  const index = Number(parsed.reaction_to) - 1;
+  const emoji = String(parsed.reaction_emoji ?? "none");
+  const reaction =
+    Number.isInteger(index) &&
+    index >= 0 &&
+    index < burstSize &&
+    (REACTION_EMOJIS as readonly string[]).includes(emoji)
+      ? { index, emoji }
+      : null;
+  return { messages: clean, reaction };
+}
+
+/** Transcribe un audio (si Kapso no trajo la transcripción). */
+export async function transcribeAudio(buffer: Buffer, contentType: string) {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) throw new Error("OPENAI_API_KEY is missing");
+  const ext = /ogg|opus/.test(contentType)
+    ? "ogg"
+    : /mpeg|mp3/.test(contentType)
+      ? "mp3"
+      : /mp4|m4a|aac/.test(contentType)
+        ? "m4a"
+        : /webm/.test(contentType)
+          ? "webm"
+          : /wav/.test(contentType)
+            ? "wav"
+            : "ogg";
+  const models = [process.env.OPENAI_TRANSCRIBE_MODEL?.trim() || "gpt-transcribe", "whisper-1"];
+  let lastError: unknown = null;
+  for (const model of models) {
+    const form = new FormData();
+    form.set("model", model);
+    form.set("language", "es");
+    form.set("file", new Blob([new Uint8Array(buffer)], { type: contentType || "audio/ogg" }), `audio.${ext}`);
+    const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { authorization: `Bearer ${apiKey}` },
+      body: form,
+      signal: AbortSignal.timeout(40_000),
+    });
+    const data = (await response.json()) as { text?: string; error?: { message?: string } };
+    if (response.ok && data.text) return data.text.trim();
+    lastError = new Error(`transcribe ${model} ${response.status}: ${data.error?.message ?? ""}`);
+  }
+  throw lastError;
+}
+
+/** Pausa "humana" entre burbujas, según el largo del texto. */
+export const typingDelayMs = (text: string) =>
+  Math.round(Math.min(3500, Math.max(1100, text.length * 28)));

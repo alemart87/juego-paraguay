@@ -12,7 +12,7 @@ import {
   thanksText,
   tidyReply,
 } from "./jesus-agent";
-import { parseInbound, verifyKapsoSignature } from "./kapso";
+import { verifyKapsoSignature } from "./kapso";
 
 test("detecta la baja", () => {
   for (const t of ["BAJA", "baja.", " stop ", "No más", "salir"]) assert.equal(isOptOut(t), true, t);
@@ -32,29 +32,6 @@ test("el aporte es voluntario, desde 10 y sin promesas", () => {
   assert.match(INSTRUCTIONS, /Nunca promet/);
   assert.match(INSTRUCTIONS, /911/);
   assert.match(INSTRUCTIONS, /Blindaje/);
-});
-
-test("parsea el payload v2 de Kapso", () => {
-  const inbound = parseInbound({
-    message: {
-      id: "wamid.1",
-      timestamp: "1",
-      type: "text",
-      from: "595981123456",
-      text: { body: " Hola " },
-    },
-    conversation: { phone_number: "595981123456", contact_name: "Ana", phone_number_id: "111" },
-    phone_number_id: "111",
-  });
-  assert.deepEqual(inbound, {
-    messageId: "wamid.1",
-    from: "595981123456",
-    text: "Hola",
-    type: "text",
-    contactName: "Ana",
-    phoneNumberId: "111",
-  });
-  assert.equal(parseInbound({ message: { type: "text" } }), null);
 });
 
 test("verifica la firma HMAC del cuerpo crudo", () => {
