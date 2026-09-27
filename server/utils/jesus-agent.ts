@@ -382,8 +382,8 @@ export async function askJesus(
   if (!apiKey) throw new Error("OPENAI_API_KEY is missing");
   // GPT-5.6 Luna: el tier barato de la familia 5.6, con visión. Cambiable con OPENAI_MODEL.
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-5.6-luna";
-  // Esfuerzo de razonamiento: "medium" mantiene mejor el hilo de la charla; "low" es más barato.
-  const effort = process.env.JESUS_REASONING?.trim() || "medium";
+  // Esfuerzo de razonamiento: "high" piensa más cada respuesta (más lento y caro); "medium" o "low" para abaratar.
+  const effort = process.env.JESUS_REASONING?.trim() || "high";
   const reasoning = /^gpt-5/.test(model) ? { reasoning: { effort } } : {};
   const who = contactName ? `La persona se llama ${contactName} según su perfil de WhatsApp.` : "";
   const numbered = burst.map((item, i) => `[${i + 1}] ${item.text}`).join("\n");
@@ -406,11 +406,12 @@ export async function askJesus(
       text: {
         format: { type: "json_schema", name: "jesus_reply", strict: true, schema: REPLY_SCHEMA },
       },
-      max_output_tokens: 600,
+      // El razonamiento cuenta dentro de este tope: con "high" necesita margen o devuelve vacío.
+      max_output_tokens: 4000,
       store: false,
       ...reasoning,
     }),
-    signal: AbortSignal.timeout(40_000),
+    signal: AbortSignal.timeout(90_000),
   });
   const data = (await response.json()) as ResponsesOutput;
   if (!response.ok) throw new Error(`OpenAI ${response.status}: ${data.error?.message ?? ""}`);
