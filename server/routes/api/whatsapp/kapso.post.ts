@@ -10,6 +10,7 @@ import {
   DISCLOSURE,
   FALLBACK_REPLY,
   LIMIT_REPLY,
+  NOT_TEXT_REPLY,
   NUDGE_AFTER_USER_MESSAGES,
   OPT_OUT_REPLY,
   askJesus,
@@ -23,8 +24,8 @@ import { kapsoStatus, note, payloadShape } from "../../../utils/kapso-status";
 
 /** Tope de mensajes de una persona por día (cuida el costo de OpenAI). */
 const DAILY_LIMIT = 40;
-/** Cuántos turnos de contexto recibe el modelo. */
-const CONTEXT_TURNS = 16;
+/** Cuántos mensajes de contexto recibe el modelo: los últimos 20 de cada lado. */
+const CONTEXT_TURNS = 40;
 
 /**
  * Webhook de Kapso: cada WhatsApp entrante al número de "Jesús te ama" se
@@ -152,7 +153,10 @@ export default defineEventHandler(async (event) => {
 
   let text: string;
   let flagged = false;
-  if (looksLikeJailbreak(userText)) {
+  if (inbound.type !== "text" || !inbound.text) {
+    // Audio, foto o sticker: no gastamos modelo; respuesta fija en su voz.
+    text = NOT_TEXT_REPLY;
+  } else if (looksLikeJailbreak(userText)) {
     // No gastamos modelo ni le damos la chance: respuesta fija en su voz.
     flagged = true;
     text = DEFLECT_REPLY;
