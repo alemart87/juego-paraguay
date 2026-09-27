@@ -14,6 +14,8 @@ export type WebhookStatus = {
   lastResult: string | null;
   lastError: string | null;
   lastPayloadKeys: string[] | null;
+  /** Qué generó el agente en la última ráfaga (sin textos de la persona). */
+  lastGenerated: string | null;
 };
 
 const globalRef = globalThis as typeof globalThis & { __kapsoStatus?: WebhookStatus };
@@ -31,6 +33,7 @@ export function kapsoStatus(): WebhookStatus {
     lastResult: null,
     lastError: null,
     lastPayloadKeys: null,
+    lastGenerated: null,
   };
   return globalRef.__kapsoStatus;
 }

@@ -306,6 +306,7 @@ async function handleBurst(phone: string, incoming: InboundMessage[]) {
 
     let bubbles: string[];
     let meta = "normal";
+    let reacted: string | null = null;
     if (looksLikeJailbreak(texts.join("\n"))) {
       bubbles = [DEFLECT_REPLY];
       meta = "blindaje";
@@ -318,6 +319,7 @@ async function handleBurst(phone: string, incoming: InboundMessage[]) {
         );
         bubbles = reply.messages;
         if (reply.reaction) {
+          reacted = `${reply.reaction.emoji} a [${reply.reaction.index + 1}]`;
           const target = fresh[reply.reaction.index]?.message.messageId;
           if (target)
             await sendReaction(phone, target, reply.reaction.emoji).catch((error) =>
@@ -341,6 +343,9 @@ async function handleBurst(phone: string, incoming: InboundMessage[]) {
       await sql.query("UPDATE jesus_wa_threads SET nudged_at = now() WHERE phone = $1", [phone]);
       meta += "+aporte";
     }
+    note({
+      lastGenerated: `${meta} · ${fresh.length} mensaje/s → ${bubbles.length} burbuja/s · reacción ${reacted ?? "no"} · ${new Date().toISOString()}`,
+    });
     await send(bubbles, meta);
   } finally {
     clearInterval(keepTyping);
