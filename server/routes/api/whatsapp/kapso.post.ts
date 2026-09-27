@@ -38,24 +38,52 @@ const MAX_IMAGES = 3;
 
 type Sql = { query: <T>(query: string, params?: unknown[]) => Promise<T[]> };
 
-/** Una cola por persona: una ráfaga nueva espera a que termine la respuesta anterior. */
-const queues = (globalThis as typeof globalThis & { __jesusQueues?: Map<string, Promise<void>> })
-  .__jesusQueues ?? new Map<string, Promise<void>>();
-(globalThis as typeof globalThis & { __jesusQueues?: Map<string, Promise<void>> }).__jesusQueues = queues;
+/**
+ * Una conversación = un solo trabajador. Todo lo que llega mientras tanto se
+ * acumula y se responde JUNTO, nunca mensaje por mensaje.
+ */
+type Fresh = { message: InboundMessage; item: BurstItem };
+type ConvState = { pending: InboundMessage[]; running: boolean };
+const g = globalThis as typeof globalThis & { __jesusConv?: Map<string, ConvState> };
+const conversations = (g.__jesusConv ??= new Map<string, ConvState>());
 
-function enqueue(phone: string, job: () => Promise<void>) {
-  const previous = queues.get(phone) ?? Promise.resolve();
-  const next = previous
-    .catch(() => undefined)
-    .then(job)
-    .catch((error) => {
+/** Espera extra antes de responder, por si la ráfaga sigue (además del buffer de Kapso). */
+const SETTLE_MS = Number(process.env.JESUS_SETTLE_MS || 1500);
+
+function enqueue(phone: string, messages: InboundMessage[]) {
+  const conv = conversations.get(phone) ?? { pending: [], running: false };
+  conversations.set(phone, conv);
+  conv.pending.push(...messages);
+  if (conv.running) return;
+  conv.running = true;
+  void drain(phone, conv).finally(() => {
+    conv.running = false;
+    if (conv.pending.length) enqueue(phone, []);
+    else conversations.delete(phone);
+  });
+}
+
+async function drain(phone: string, conv: ConvState) {
+  let carry: Fresh[] = [];
+  for (let round = 0; round < 6; round++) {
+    await sleep(SETTLE_MS);
+    const batch = conv.pending.splice(0).sort((a, b) => a.timestamp - b.timestamp);
+    if (!batch.length && !carry.length) return;
+    try {
+      const outcome = await handleBurst(phone, batch, carry, () => conv.pending.length > 0);
+      // Llegaron mensajes nuevos antes de mandar: se descarta el borrador y se responde todo unido.
+      if (outcome?.superseded) {
+        carry = outcome.fresh;
+        continue;
+      }
+      carry = [];
+      if (!conv.pending.length) return;
+    } catch (error) {
       console.error("[jesus-wa] burst failed", error);
       note({ lastResult: "ráfaga falló", lastError: String(error).slice(0, 300) });
-    })
-    .finally(() => {
-      if (queues.get(phone) === next) queues.delete(phone);
-    });
-  queues.set(phone, next);
+      return;
+    }
+  }
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -102,7 +130,7 @@ export default defineEventHandler(async (event) => {
   }
   const byPhone = new Map<string, InboundMessage[]>();
   for (const message of messages) byPhone.set(message.from, [...(byPhone.get(message.from) ?? []), message]);
-  for (const [phone, burst] of byPhone) enqueue(phone, () => handleBurst(phone, burst));
+  for (const [phone, burst] of byPhone) enqueue(phone, burst);
   return { ok: true, queued: messages.length, conversations: byPhone.size };
 });
 
@@ -149,7 +177,12 @@ async function toBurstItem(message: InboundMessage, wantImage: boolean): Promise
   }
 }
 
-async function handleBurst(phone: string, incoming: InboundMessage[]) {
+async function handleBurst(
+  phone: string,
+  incoming: InboundMessage[],
+  carry: Fresh[],
+  hasNewer: () => boolean,
+): Promise<{ superseded: true; fresh: Fresh[] } | void> {
   const status = kapsoStatus();
   const sql = (await (await import("../../../../src/lib/db")).getSql()) as Sql;
   const contactName = incoming.find((m) => m.contactName)?.contactName ?? null;
@@ -172,20 +205,20 @@ async function handleBurst(phone: string, incoming: InboundMessage[]) {
       [phone, `(reaccionó ${r.reaction?.emoji ?? ""} a un mensaje)`, r.messageId],
     );
   }
-  if (!burstMessages.length) {
+  if (!burstMessages.length && !carry.length) {
     note({ lastResult: "reacción recibida" });
     return;
   }
 
   // "Escribiendo…" enseguida sobre el último mensaje, y renovado mientras pensamos.
-  const last = burstMessages[burstMessages.length - 1];
+  const last = burstMessages[burstMessages.length - 1] ?? carry[carry.length - 1].message;
   void markReadTyping(last.messageId);
   const keepTyping = setInterval(() => void markReadTyping(last.messageId), 20_000);
 
   try {
     // Convertir (transcribir audios, abrir fotos) y guardar solo lo nuevo.
     let imagesLeft = MAX_IMAGES;
-    const fresh: { message: InboundMessage; item: BurstItem }[] = [];
+    const stored: Fresh[] = [];
     for (const message of burstMessages) {
       const exists = await sql.query<{ id: number }>(
         "SELECT id FROM jesus_wa_messages WHERE wa_message_id = $1",
@@ -200,8 +233,9 @@ async function handleBurst(phone: string, incoming: InboundMessage[]) {
          VALUES ($1, 'user', $2, $3) ON CONFLICT (wa_message_id) DO NOTHING RETURNING id`,
         [phone, item.text.slice(0, 4000), message.messageId],
       );
-      if (inserted.length) fresh.push({ message, item });
+      if (inserted.length) stored.push({ message, item });
     }
+    const fresh: Fresh[] = [...carry, ...stored];
     if (!fresh.length) return;
     await sql.query(
       "DELETE FROM jesus_wa_messages WHERE phone = $1 AND created_at < now() - interval '30 days'",
@@ -217,7 +251,7 @@ async function handleBurst(phone: string, incoming: InboundMessage[]) {
     }>(
       `UPDATE jesus_wa_threads SET user_messages = user_messages + $2 WHERE phone = $1
        RETURNING user_messages, opted_out, nudged_at, contact_name, support_token`,
-      [phone, fresh.length],
+      [phone, stored.length],
     );
     const firstReply = Number(thread.user_messages) === fresh.length;
 
@@ -307,6 +341,7 @@ async function handleBurst(phone: string, incoming: InboundMessage[]) {
     let bubbles: string[];
     let meta = "normal";
     let reacted: string | null = null;
+    let reaction: { target: string; emoji: string } | null = null;
     if (looksLikeJailbreak(texts.join("\n"))) {
       bubbles = [DEFLECT_REPLY];
       meta = "blindaje";
@@ -321,10 +356,7 @@ async function handleBurst(phone: string, incoming: InboundMessage[]) {
         if (reply.reaction) {
           reacted = `${reply.reaction.emoji} a [${reply.reaction.index + 1}]`;
           const target = fresh[reply.reaction.index]?.message.messageId;
-          if (target)
-            await sendReaction(phone, target, reply.reaction.emoji).catch((error) =>
-              console.error("[kapso] reaction failed", error),
-            );
+          if (target) reaction = { target, emoji: reply.reaction.emoji };
         }
       } catch (error) {
         console.error("[jesus-agent] failed", error);
@@ -343,6 +375,14 @@ async function handleBurst(phone: string, incoming: InboundMessage[]) {
       await sql.query("UPDATE jesus_wa_threads SET nudged_at = now() WHERE phone = $1", [phone]);
       meta += "+aporte";
     }
+    if (hasNewer()) {
+      note({ lastGenerated: `borrador descartado: siguen llegando mensajes (${fresh.length} hasta ahora)` });
+      return { superseded: true, fresh };
+    }
+    if (reaction)
+      await sendReaction(phone, reaction.target, reaction.emoji).catch((error) =>
+        console.error("[kapso] reaction failed", error),
+      );
     note({
       lastGenerated: `${meta} · ${fresh.length} mensaje/s → ${bubbles.length} burbuja/s · reacción ${reacted ?? "no"} · ${new Date().toISOString()}`,
     });
