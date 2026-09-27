@@ -30,8 +30,9 @@ test("el aporte es voluntario, desde 10 y sin promesas", () => {
   assert.match(n, /USD 10/);
   assert.match(n, /No cambia nada/);
   assert.match(n, /\/jesus-te-ama\?apoyo=1/);
-  assert.match(INSTRUCTIONS, /Nunca promet/);
-  assert.match(INSTRUCTIONS, /911/);
+  assert.match(INSTRUCTIONS, /no prometés curaciones/);
+  assert.match(INSTRUCTIONS, /SOLO casos extremos/);
+  assert.match(INSTRUCTIONS, /NO son emergencias/);
   assert.match(INSTRUCTIONS, /Blindaje/);
 });
 
