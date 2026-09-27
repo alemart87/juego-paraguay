@@ -5,6 +5,7 @@ import {
   DEFLECT_REPLY,
   INSTRUCTIONS,
   guardReply,
+  isImminentRisk,
   isOptOut,
   isSupportRequest,
   looksLikeJailbreak,
@@ -91,4 +92,24 @@ test("pedido de apoyo: primero en el mensaje 7, después cada 20", () => {
   assert.equal(shouldNudge(27, 7), true);
   assert.equal(shouldNudge(46, 27), false);
   assert.equal(shouldNudge(47, 27), true);
+});
+
+test("red de seguridad: solo peligro inminente activa el 911", () => {
+  for (const s of [
+    "ya tengo las pastillas en la mano, esta noche me voy a matar",
+    "me voy a quitar la vida",
+    "estoy pensando en suicidarme",
+    "hoy me mato",
+    "mi papá no respira",
+  ])
+    assert.equal(isImminentRisk(s), true, s);
+  for (const s of [
+    "hoy no aguanto más",
+    "mi mamá murió y lloro todos los días",
+    "debo mucha plata y tengo miedo",
+    "me diagnosticaron cáncer",
+    "este trabajo me está matando",
+    "me muero de vergüenza",
+  ])
+    assert.equal(isImminentRisk(s), false, s);
 });

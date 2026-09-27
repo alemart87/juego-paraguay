@@ -16,7 +16,9 @@ import {
   LIMIT_REPLY,
   shouldNudge,
   OPT_OUT_REPLY,
+  CRISIS_REPLY,
   askJesus,
+  isImminentRisk,
   isOptOut,
   isSupportRequest,
   looksLikeJailbreak,
@@ -381,9 +383,16 @@ async function handleBurst(
       }
     }
 
+    // Red de seguridad: peligro inminente sin 911 en la respuesta → burbuja en su voz.
+    const crisis = isImminentRisk(texts.join("\n"));
+    if (crisis && !bubbles.some((b) => /\b911\b/.test(b))) {
+      bubbles.push(CRISIS_REPLY);
+      meta += "+crisis";
+    }
     if (firstReply) bubbles[bubbles.length - 1] += `\n\n${DISCLOSURE}`;
     // Pedido de apoyo: primero en el mensaje 7, después cada 20 mensajes de la persona.
-    const nudge = shouldNudge(Number(thread.user_messages), Number(thread.nudged_count) || 0);
+    // Nunca se pide apoyo en una crisis.
+    const nudge = !crisis && shouldNudge(Number(thread.user_messages), Number(thread.nudged_count) || 0);
     if (nudge) {
       bubbles.push(nudgeText(await supportToken()));
       meta += "+aporte";
@@ -397,7 +406,7 @@ async function handleBurst(
         console.error("[kapso] reaction failed", error),
       );
     note({
-      lastGenerated: `${meta} · ${fresh.length} mensaje/s → ${bubbles.length} burbuja/s · reacción ${reacted ?? "no"} · 911 ${bubbles.some((b) => /911/.test(b)) ? "sí" : "no"} · cita ${bubbles.some((b) => /\d?\s?[A-ZÁÉÍÓÚ][a-záéíóú]+\s\d+:\d+/.test(b)) ? "sí" : "no"} · ${new Date().toISOString()}`,
+      lastGenerated: `${meta} · ${fresh.length} mensaje/s → ${bubbles.length} burbuja/s · reacción ${reacted ?? "no"} · 911 ${bubbles.some((b) => /\b911\b/.test(b)) ? "sí" : "no"} · cita ${bubbles.some((b) => /\b\d?\s?[A-ZÁÉÍÓÚ][a-záéíóú]+\s\d+:\d+/.test(b)) ? "sí" : "no"} · ${new Date().toISOString()}`,
     });
     if (nudge)
       await sql.query(
