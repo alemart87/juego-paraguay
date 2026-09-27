@@ -504,3 +504,26 @@ test("vite plugin bakes og identity as a virtual module", () => {
   assert.match(plugin, /snapshotOgIdentity/);
 });
 
+
+test("a route that declares its own og:title + og:image keeps it (routeCardWins)", () => {
+  const html =
+    '<html><head><title>Jesús te ama</title>' +
+    '<meta property="og:title" content="Jesús te ama">' +
+    '<meta property="og:image" content="https://www.influencerspy.pro/jesus/og.jpg">' +
+    '<meta property="og:image:width" content="1200">' +
+    "</head><body></body></html>";
+  const site = { title: "Influencers Battle", card: "custom", image: "/og.jpg", type: "x:game" };
+  const kept = injectGrokPwaHead(html, { host: "www.influencerspy.pro", site, routeCardWins: true, cwd: "/nope" });
+  assert.match(kept, /og:title" content="Jesús te ama"/);
+  assert.match(kept, /og:image" content="https:\/\/www\.influencerspy\.pro\/jesus\/og\.jpg"/);
+  assert.doesNotMatch(kept, /og:title" content="Influencers Battle"/);
+  assert.doesNotMatch(kept, /content="https:\/\/www\.influencerspy\.pro\/og\.jpg"/);
+  assert.equal((kept.match(/og:image:width/g) ?? []).length, 1);
+  // Keys the route left out are still filled in by the site card.
+  assert.match(kept, /twitter:card" content="summary_large_image"/);
+  assert.match(kept, /og:type" content="x:game"/);
+
+  const overridden = injectGrokPwaHead(html, { host: "www.influencerspy.pro", site, cwd: "/nope" });
+  assert.match(overridden, /og:title" content="Influencers Battle"/);
+  assert.doesNotMatch(overridden, /jesus\/og\.jpg/);
+});

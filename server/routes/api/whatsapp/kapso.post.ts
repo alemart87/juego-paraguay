@@ -4,7 +4,9 @@ import {
   markReadTyping,
   parseDelivery,
   sendReaction,
+  sendWhatsAppButtons,
   sendWhatsAppText,
+  INTERACTIVE_BODY_MAX,
   verifyKapsoSignature,
   type InboundMessage,
 } from "../../../utils/kapso";
@@ -25,6 +27,7 @@ import {
   mergeBubbles,
   wantsToSupport,
   nudgeText,
+  NUDGE_OPTIONS,
   transcribeAudio,
   typingDelayMs,
   type BurstItem,
@@ -286,16 +289,31 @@ async function handleBurst(
       return row.support_token;
     };
 
-    /** Manda una o varias burbujas con "escribiendo…" y pausa humana entre ellas. */
-    const send = async (bubbles: string[], meta: string) => {
+    /**
+     * Manda una o varias burbujas con "escribiendo…" y pausa humana entre ellas.
+     * `options` son botones de respuesta rápida bajo la última burbuja.
+     */
+    const send = async (bubbles: string[], meta: string, options: string[] = []) => {
       for (let i = 0; i < bubbles.length; i++) {
         const text = bubbles[i];
         if (i > 0) {
           void markReadTyping(last.messageId);
           await sleep(typingDelayMs(text));
         }
+        const withButtons =
+          i === bubbles.length - 1 && options.length > 0 && text.length <= INTERACTIVE_BODY_MAX;
         try {
-          await sendWhatsAppText(phone, text);
+          if (withButtons) {
+            try {
+              await sendWhatsAppButtons(phone, text, options);
+            } catch (error) {
+              // Si WhatsApp rechaza el interactivo, va el texto igual.
+              console.error("[kapso] buttons failed, sending text", error);
+              await sendWhatsAppText(phone, text);
+            }
+          } else {
+            await sendWhatsAppText(phone, text);
+          }
         } catch (error) {
           console.error("[kapso] send failed", error);
           status.sendFailures++;
@@ -361,6 +379,7 @@ async function handleBurst(
     let meta = "normal";
     let reacted: string | null = null;
     let reaction: { target: string; emoji: string } | null = null;
+    let options: string[] = [];
     if (looksLikeJailbreak(texts.join("\n"))) {
       bubbles = [DEFLECT_REPLY];
       meta = "blindaje";
@@ -372,6 +391,7 @@ async function handleBurst(
           thread.contact_name,
         );
         bubbles = reply.messages;
+        options = reply.options;
         if (reply.reaction) {
           reacted = `${reply.reaction.emoji} a [${reply.reaction.index + 1}]`;
           const target = fresh[reply.reaction.index]?.message.messageId;
@@ -394,8 +414,9 @@ async function handleBurst(
       bubbles.push(CRISIS_REPLY);
       meta += "+crisis";
     }
+    if (crisis) options = [];
     if (firstReply) bubbles[bubbles.length - 1] += `\n\n${DISCLOSURE}`;
-    // Pedido de apoyo: primero en el mensaje 7, después cada 20 mensajes de la persona.
+    // Pedido de apoyo: primero en el mensaje 7, después cada 12 mensajes de la persona.
     // Nunca se pide apoyo en una crisis.
     // Si la persona expresó ganas de aportar, el link va sí o sí (con su bendición).
     const wantsLink = !crisis && texts.some(wantsToSupport);
@@ -406,6 +427,8 @@ async function handleBurst(
       const token = await supportToken();
       bubbles.push(wantsLink ? ASK_SUPPORT_REPLY(token) : nudgeText(token));
       meta += wantsLink ? "+link" : "+aporte";
+      // La invitación va con botones: "Quiero aportar" manda el link al instante.
+      options = wantsLink ? [] : NUDGE_OPTIONS;
     }
     if (hasNewer()) {
       note({ lastGenerated: `borrador descartado: siguen llegando mensajes (${fresh.length} hasta ahora)` });
@@ -416,14 +439,14 @@ async function handleBurst(
         console.error("[kapso] reaction failed", error),
       );
     note({
-      lastGenerated: `${meta} · ${fresh.length} mensaje/s → ${bubbles.length} burbuja/s · reacción ${reacted ?? "no"} · 911 ${bubbles.some((b) => /\b911\b/.test(b)) ? "sí" : "no"} · cita ${bubbles.some((b) => /\b\d?\s?[A-ZÁÉÍÓÚ][a-záéíóú]+\s\d+:\d+/.test(b)) ? "sí" : "no"} · ${new Date().toISOString()}`,
+      lastGenerated: `${meta} · ${fresh.length} mensaje/s → ${bubbles.length} burbuja/s · botones ${options.length ? options.join(" | ") : "no"} · reacción ${reacted ?? "no"} · 911 ${bubbles.some((b) => /\b911\b/.test(b)) ? "sí" : "no"} · cita ${bubbles.some((b) => /\b\d?\s?[A-ZÁÉÍÓÚ][a-záéíóú]+\s\d+:\d+/.test(b)) ? "sí" : "no"} · ${new Date().toISOString()}`,
     });
     if (nudge)
       await sql.query(
         "UPDATE jesus_wa_threads SET nudged_at = now(), nudged_count = $2 WHERE phone = $1",
         [phone, Number(thread.user_messages)],
       );
-    await send(bubbles, meta);
+    await send(bubbles, meta, options);
   } finally {
     clearInterval(keepTyping);
   }

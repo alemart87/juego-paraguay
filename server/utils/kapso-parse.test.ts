@@ -75,7 +75,7 @@ test("salida estructurada: burbujas, reacción válida y barrera de voz", () => 
     JSON.stringify({ messages: ["Estoy acá.", "Contame más."], reaction_to: 2, reaction_emoji: "🙏" }),
     2,
   );
-  assert.deepEqual(ok, { messages: ["Estoy acá.", "Contame más."], reaction: { index: 1, emoji: "🙏" } });
+  assert.deepEqual(ok, { messages: ["Estoy acá.", "Contame más."], reaction: { index: 1, emoji: "🙏" }, options: [] });
   const noReact = parseReply(JSON.stringify({ messages: ["Hola."], reaction_to: 0, reaction_emoji: "none" }), 1);
   assert.equal(noReact.reaction, null);
   const outOfRange = parseReply(JSON.stringify({ messages: ["Hola."], reaction_to: 5, reaction_emoji: "❤️" }), 1);
@@ -85,4 +85,37 @@ test("salida estructurada: burbujas, reacción válida y barrera de voz", () => 
   const four = parseReply(JSON.stringify({ messages: ["a.", "b.", "c.", "d."], reaction_to: 0, reaction_emoji: "none" }), 1);
   assert.equal(four.messages.length, 3);
   assert.deepEqual(parseReply("texto suelto", 1).messages, ["texto suelto"]);
+});
+
+test("botón tocado: llega como texto con el título del botón", () => {
+  const m = parseInbound(
+    wrap({
+      id: "wamid.b",
+      timestamp: "14",
+      type: "interactive",
+      from: "595981123456",
+      interactive: { type: "button_reply", button_reply: { id: "qr_1_x", title: "Quiero aportar" } },
+    }),
+  );
+  assert.equal(m?.type, "text");
+  assert.equal(m?.text, "Quiero aportar");
+  const list = parseInbound(
+    wrap({ id: "wamid.l", timestamp: "15", type: "interactive", from: "595981123456", interactive: { type: "list_reply", list_reply: { id: "x", title: "Orar juntos" } } }),
+  );
+  assert.equal(list?.text, "Orar juntos");
+});
+
+test("respuestas rápidas: máximo 3, 20 caracteres, sin repetidas ni vacías", () => {
+  const r = parseReply(
+    JSON.stringify({
+      messages: ["¿Querés que oremos?"],
+      reaction_to: 0,
+      reaction_emoji: "none",
+      options: [" Orar juntos 🙏 ", "orar juntos 🙏", "", "Contarte un poquito más de todo esto", "Sí", "Ahora no"],
+    }),
+    1,
+  );
+  assert.deepEqual(r.options, ["Orar juntos 🙏", "Contarte un poquito", "Sí"]);
+  const none = parseReply(JSON.stringify({ messages: ["Hola."], reaction_to: 0, reaction_emoji: "none" }), 1);
+  assert.deepEqual(none.options, []);
 });

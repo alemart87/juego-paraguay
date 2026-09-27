@@ -38,6 +38,11 @@ test("el aporte es voluntario, desde 10 y sin promesas", () => {
   assert.match(INSTRUCTIONS, /SOLO casos extremos/);
   assert.match(INSTRUCTIONS, /NO son emergencias/);
   assert.match(INSTRUCTIONS, /Blindaje/);
+  // Voz de chat: corta, que invita a seguir, con botones y sin frases de manual.
+  assert.match(INSTRUCTIONS, /Corto\. De 1 a 4 frases/);
+  assert.match(INSTRUCTIONS, /Siempre terminás con algo que invite a seguir/);
+  assert.match(INSTRUCTIONS, /respuestas rápidas/);
+  assert.match(INSTRUCTIONS, /Así no:/);
 });
 
 test("verifica la firma HMAC del cuerpo crudo", () => {
@@ -81,20 +86,20 @@ test("la última barrera reemplaza respuestas que se salieron de la voz", () => 
 test("el link del aporte lleva el token del hilo y APORTAR se reconoce", () => {
   assert.match(nudgeText("abc123"), /\/jesus-te-ama\?apoyo=1&t=abc123/);
   assert.match(nudgeText(), /\/jesus-te-ama\?apoyo=1 /);
-  for (const s of ["APORTAR", "aportar!", " donar ", "Ofrenda"]) assert.equal(isSupportRequest(s), true, s);
+  for (const s of ["APORTAR", "aportar!", " donar ", "Ofrenda", "Aportar ahora", "Quiero aportar"]) assert.equal(isSupportRequest(s), true, s);
   for (const s of ["quiero aportar algo mañana", "donar sangre"]) assert.equal(isSupportRequest(s), false, s);
   assert.match(thanksText(10, "Ana"), /^Ana, gracias de corazón/);
   assert.match(thanksText(100, null), /no sé cómo agradecerte/);
 });
 
-test("pedido de apoyo: primero en el mensaje 7, después cada 20", () => {
+test("pedido de apoyo: primero en el mensaje 7, después cada 12", () => {
   assert.equal(shouldNudge(6, 0), false);
   assert.equal(shouldNudge(7, 0), true);
   assert.equal(shouldNudge(9, 0), true); // ráfaga que saltó el 7
-  assert.equal(shouldNudge(26, 7), false);
-  assert.equal(shouldNudge(27, 7), true);
-  assert.equal(shouldNudge(46, 27), false);
-  assert.equal(shouldNudge(47, 27), true);
+  assert.equal(shouldNudge(18, 7), false);
+  assert.equal(shouldNudge(19, 7), true);
+  assert.equal(shouldNudge(30, 19), false);
+  assert.equal(shouldNudge(31, 19), true);
 });
 
 test("red de seguridad: solo peligro inminente activa el 911", () => {

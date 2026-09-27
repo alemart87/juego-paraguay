@@ -40,6 +40,8 @@ function injectHeadStreaming(response: Response, host: string): Response {
   const injector = createHeadInjector({
     host,
     site: grokOgIdentity.site,
+    // /jesus-te-ama y /hernan-rivas-abogado traen su propia tarjeta (og:title + og:image).
+    routeCardWins: true,
   });
   const transformed = response.body!.pipeThrough(
     new TransformStream<Uint8Array, Uint8Array>({

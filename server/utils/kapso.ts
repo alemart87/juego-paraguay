@@ -67,6 +67,37 @@ export function sendWhatsAppText(to: string, body: string, phoneNumberId = kapso
   });
 }
 
+/** Cuerpo máximo de un mensaje interactivo de WhatsApp. */
+export const INTERACTIVE_BODY_MAX = 1024;
+
+/**
+ * Manda un texto con hasta 3 botones de respuesta rápida (mensaje interactivo
+ * de WhatsApp). Al tocarlos, la persona nos manda el título del botón.
+ */
+export function sendWhatsAppButtons(
+  to: string,
+  body: string,
+  buttons: string[],
+  phoneNumberId = kapsoPhoneNumberId(),
+) {
+  return post(messagesPath(phoneNumberId), {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to,
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: body },
+      action: {
+        buttons: buttons.slice(0, 3).map((title, i) => ({
+          type: "reply",
+          reply: { id: `qr_${i + 1}_${Date.now().toString(36)}`, title: title.slice(0, 20) },
+        })),
+      },
+    },
+  });
+}
+
 /** Reacciona con un emoji a un mensaje de la persona (el "me gusta" de WhatsApp). */
 export function sendReaction(
   to: string,
@@ -158,11 +189,19 @@ export function parseInbound(payload: unknown): InboundMessage | null {
   const transcript =
     str(obj(message.transcript).text) || str(obj(kapso.transcript).text) || str(kapso.transcript);
   const caption = str(media.caption) || str(obj(kapso.message_type_data).caption);
+  // Botón tocado (respuesta rápida o lista): llega como texto para todo lo demás.
+  const interactive = obj(message.interactive);
+  const buttonText =
+    type === "interactive"
+      ? str(obj(interactive.button_reply).title) || str(obj(interactive.list_reply).title)
+      : type === "button"
+        ? str(obj(message.button).text)
+        : "";
   return {
     messageId,
     from: from.replace(/[^\d+]/g, ""),
-    type,
-    text: (type === "text" ? str(obj(message.text).body) : "").trim(),
+    type: buttonText ? "text" : type,
+    text: (type === "text" ? str(obj(message.text).body) : buttonText).trim(),
     caption: caption.trim(),
     transcript: transcript.trim(),
     mediaUrl: str(kapso.media_url) || str(mediaData.url) || null,

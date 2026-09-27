@@ -40,6 +40,8 @@ export type GrokHeadContext = {
   host?: string | null;
   cwd?: string;
   site?: OgSite;
+  /** Let a route that declares its own og:title + og:image keep its share card. */
+  routeCardWins?: boolean;
 };
 
 export declare function readOgSite(cwd?: string): OgSite;

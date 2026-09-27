@@ -375,14 +375,37 @@ export function grokOgHeadTags({
   return tags;
 }
 
+function shareMetaKeyOf(tag) {
+  const attrs = [...String(tag).matchAll(/\b(?:property|name)\s*=\s*["']([^"']+)["']/gi)];
+  for (const match of attrs) {
+    const key = String(match[1]).toLowerCase();
+    if (SHARE_META_KEYS.has(key)) return key;
+  }
+  return "";
+}
+
 export function stripShareMetaTags(html) {
-  return String(html).replace(/<meta\b[^>]*>/gi, (tag) => {
-    const attrs = [...tag.matchAll(/\b(?:property|name)\s*=\s*["']([^"']+)["']/gi)];
-    for (const match of attrs) {
-      if (SHARE_META_KEYS.has(String(match[1]).toLowerCase())) return "";
-    }
-    return tag;
-  });
+  return String(html).replace(/<meta\b[^>]*>/gi, (tag) => (shareMetaKeyOf(tag) ? "" : tag));
+}
+
+/** Share-card keys the document already declares (`og:title`, `og:image`, …). */
+export function declaredShareMetaKeys(html) {
+  const keys = new Set();
+  for (const match of String(html).matchAll(/<meta\b[^>]*>/gi)) {
+    const key = shareMetaKeyOf(match[0]);
+    if (key) keys.add(key);
+  }
+  return keys;
+}
+
+/**
+ * A route that renders its own `og:title` + `og:image` owns its share card
+ * (a devotional page must not preview as the arcade game). The site-wide card
+ * then only fills in the keys the route left out.
+ */
+export function routeOwnsShareCard(html) {
+  const keys = declaredShareMetaKeys(html);
+  return keys.has("og:title") && keys.has("og:image");
 }
 
 function insertAfterHeadOpen(html, snippet) {
@@ -432,7 +455,10 @@ export function injectGrokPwaHead(html, ctx = {}) {
     host,
     documentTitle,
   );
-  let next = stripShareMetaTags(html);
+  // Per-route share cards win over the site-wide one when the caller opts in.
+  const routeCard = Boolean(ctx.routeCardWins) && routeOwnsShareCard(html);
+  const declared = routeCard ? declaredShareMetaKeys(html) : new Set();
+  let next = routeCard ? html : stripShareMetaTags(html);
 
   const missing = grokPwaHeadTags(appName)
     .filter(([key]) => {
@@ -442,10 +468,14 @@ export function injectGrokPwaHead(html, ctx = {}) {
     })
     .map(([, tag]) => tag);
 
-  next = insertAfterHeadOpen(
-    next,
-    grokOgHeadTags({ host, appName, site, documentTitle, cwd }).join(""),
-  );
+  const ogTags = grokOgHeadTags({ host, appName, site, documentTitle, cwd }).filter((tag) => {
+    if (!routeCard) return true;
+    const key = shareMetaKeyOf(tag);
+    // og:image dimensions describe the route's image, not ours.
+    if (key === "og:image:width" || key === "og:image:height") return false;
+    return !key || !declared.has(key);
+  });
+  next = insertAfterHeadOpen(next, ogTags.join(""));
 
   if (!next.includes("/grok-app-builder/extensions.js")) {
     missing.push(...grokExtensionsHeadTags(projectId));
@@ -498,6 +528,7 @@ export function createHeadInjector(ctx = {}) {
       host: normalized.host,
       cwd: normalized.cwd,
       site: normalized.site,
+      routeCardWins: Boolean(ctx.routeCardWins),
     });
 
   return {
