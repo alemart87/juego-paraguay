@@ -115,7 +115,10 @@ type ResponsesOutput = {
 export async function askJesus(history: ChatTurn[], contactName: string | null) {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) throw new Error("OPENAI_API_KEY is missing");
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
+  // GPT-5.6 Luna: el tier barato de la familia 5.6 (USD 0,20 / 1,20 por millón),
+  // pensado para chat y agentes livianos. Cambiable con OPENAI_MODEL.
+  const model = process.env.OPENAI_MODEL?.trim() || "gpt-5.6-luna";
+  const reasoning = /^gpt-5/.test(model) ? { reasoning: { effort: "low" } } : {};
   const who = contactName ? `La persona se llama ${contactName} según su perfil de WhatsApp.` : "";
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -126,6 +129,7 @@ export async function askJesus(history: ChatTurn[], contactName: string | null) 
       input: history.map((turn) => ({ role: turn.role, content: turn.content })),
       max_output_tokens: 400,
       store: false,
+      ...reasoning,
     }),
     signal: AbortSignal.timeout(25_000),
   });
