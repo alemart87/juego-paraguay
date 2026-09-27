@@ -12,7 +12,7 @@ export default defineEventHandler((event) => {
       : "none";
   return {
     ok: true,
-    version: "rafagas-v4",
+    version: "rafagas-v5",
     env: {
       kapsoApiKey: Boolean(kapsoApiKey()),
       openaiApiKey: Boolean(process.env.OPENAI_API_KEY?.trim()),

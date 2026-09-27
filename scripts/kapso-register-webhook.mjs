@@ -21,7 +21,7 @@ const headers = { "content-type": "application/json", "X-API-Key": apiKey };
 const path = `${base}/platform/v1/whatsapp/phone_numbers/${phoneNumberId}/webhooks`;
 
 /** Ventana de ráfaga: segundos de silencio que espera Kapso antes de mandar el lote. */
-const BUFFER_SECONDS = Number(process.env.KAPSO_BUFFER_SECONDS || 6);
+const BUFFER_SECONDS = Number(process.env.KAPSO_BUFFER_SECONDS || 10);
 const settings = {
   url,
   secret_key: secret,

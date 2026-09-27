@@ -43,16 +43,26 @@ type Sql = { query: <T>(query: string, params?: unknown[]) => Promise<T[]> };
  * acumula y se responde JUNTO, nunca mensaje por mensaje.
  */
 type Fresh = { message: InboundMessage; item: BurstItem };
-type ConvState = { pending: InboundMessage[]; running: boolean };
+type ConvState = { pending: InboundMessage[]; running: boolean; lastAt: number; firstAt: number };
 const g = globalThis as typeof globalThis & { __jesusConv?: Map<string, ConvState> };
 const conversations = (g.__jesusConv ??= new Map<string, ConvState>());
 
-/** Espera extra antes de responder, por si la ráfaga sigue (además del buffer de Kapso). */
-const SETTLE_MS = Number(process.env.JESUS_SETTLE_MS || 1500);
+/**
+ * Debounce propio además del buffer de Kapso: se responde recién cuando la
+ * persona lleva QUIET_MS sin mandar nada (tope MAX_WAIT_MS desde el primer mensaje).
+ */
+const QUIET_MS = Number(process.env.JESUS_QUIET_MS || 5000);
+const MAX_WAIT_MS = Number(process.env.JESUS_MAX_WAIT_MS || 30000);
 
 function enqueue(phone: string, messages: InboundMessage[]) {
-  const conv = conversations.get(phone) ?? { pending: [], running: false };
+  const conv = conversations.get(phone) ?? { pending: [], running: false, lastAt: 0, firstAt: 0 };
   conversations.set(phone, conv);
+  if (messages.length) {
+    if (!conv.pending.length) conv.firstAt = Date.now();
+    conv.lastAt = Date.now();
+    // "Escribiendo…" enseguida, así la persona sabe que la leímos.
+    void markReadTyping(messages[messages.length - 1].messageId);
+  }
   conv.pending.push(...messages);
   if (conv.running) return;
   conv.running = true;
@@ -66,7 +76,9 @@ function enqueue(phone: string, messages: InboundMessage[]) {
 async function drain(phone: string, conv: ConvState) {
   let carry: Fresh[] = [];
   for (let round = 0; round < 6; round++) {
-    await sleep(SETTLE_MS);
+    // Esperar a que la persona deje de escribir.
+    while (Date.now() - conv.lastAt < QUIET_MS && Date.now() - conv.firstAt < MAX_WAIT_MS)
+      await sleep(Math.min(1000, QUIET_MS - (Date.now() - conv.lastAt) + 50));
     const batch = conv.pending.splice(0).sort((a, b) => a.timestamp - b.timestamp);
     if (!batch.length && !carry.length) return;
     try {
