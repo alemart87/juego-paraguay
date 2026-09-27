@@ -19,6 +19,7 @@ import {
   nudgeText,
   type ChatTurn,
 } from "../../../utils/jesus-agent";
+import { kapsoStatus, note, payloadShape } from "../../../utils/kapso-status";
 
 /** Tope de mensajes de una persona por día (cuida el costo de OpenAI). */
 const DAILY_LIMIT = 40;
@@ -31,12 +32,26 @@ const CONTEXT_TURNS = 16;
  */
 export default defineEventHandler(async (event) => {
   const raw = (await readRawBody(event, "utf8")) ?? "";
+  const status = kapsoStatus();
+  status.received++;
+  const kind = getHeader(event, "x-webhook-event") ?? "";
+  note({ lastEvent: kind || "(sin X-Webhook-Event)" });
   if (!verifyKapsoSignature(raw, getHeader(event, "x-webhook-signature"))) {
+    status.rejectedSignature++;
+    note({
+      lastResult: "firma rechazada",
+      lastError: process.env.KAPSO_API_KEY?.trim()
+        ? "la firma no coincide con el secreto derivado de KAPSO_API_KEY"
+        : "KAPSO_API_KEY no está configurada en este servidor",
+    });
     setResponseStatus(event, 401);
     return { ok: false, error: "bad signature" };
   }
-  const kind = getHeader(event, "x-webhook-event") ?? "";
-  if (kind && kind !== "whatsapp.message.received") return { ok: true, ignored: kind };
+  status.accepted++;
+  if (kind && kind !== "whatsapp.message.received") {
+    note({ lastResult: `ignorado: ${kind}` });
+    return { ok: true, ignored: kind };
+  }
   let payload: unknown;
   try {
     payload = JSON.parse(raw);
@@ -45,7 +60,11 @@ export default defineEventHandler(async (event) => {
     return { ok: false, error: "bad json" };
   }
   const inbound = parseInbound(payload);
-  if (!inbound) return { ok: true, ignored: "no message" };
+  if (!inbound) {
+    note({ lastResult: "sin mensaje reconocible", lastPayloadKeys: payloadShape(payload) });
+    return { ok: true, ignored: "no message" };
+  }
+  note({ lastPayloadKeys: payloadShape(payload) });
 
   const sql = await (await import("../../../../src/lib/db")).getSql();
   const phone = inbound.from;
@@ -93,8 +112,12 @@ export default defineEventHandler(async (event) => {
       );
     } catch (error) {
       console.error("[kapso] send failed", error);
+      status.sendFailures++;
+      note({ lastResult: "envío falló", lastError: String(error).slice(0, 300) });
       return { ok: false, sent: false, ...meta };
     }
+    status.replied++;
+    note({ lastResult: `respondido (${Object.keys(meta).filter((k) => meta[k]).join(",") || "normal"})`, lastError: null });
     return { ok: true, sent: true, ...meta };
   };
 
@@ -138,6 +161,7 @@ export default defineEventHandler(async (event) => {
       text = guardReply(await askJesus(history, thread.contact_name));
     } catch (error) {
       console.error("[jesus-agent] failed", error);
+      note({ lastError: `agente: ${String(error).slice(0, 300)}` });
       text = FALLBACK_REPLY;
     }
   }
