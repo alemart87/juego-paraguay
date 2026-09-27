@@ -22,6 +22,8 @@ import {
   isOptOut,
   isSupportRequest,
   looksLikeJailbreak,
+  mergeBubbles,
+  wantsToSupport,
   nudgeText,
   transcribeAudio,
   typingDelayMs,
@@ -383,6 +385,9 @@ async function handleBurst(
       }
     }
 
+    // Una sola respuesta para toda la ráfaga, aunque el modelo la haya partido.
+    bubbles = mergeBubbles(bubbles);
+
     // Red de seguridad: peligro inminente sin 911 en la respuesta → burbuja en su voz.
     const crisis = isImminentRisk(texts.join("\n"));
     if (crisis && !bubbles.some((b) => /\b911\b/.test(b))) {
@@ -392,10 +397,15 @@ async function handleBurst(
     if (firstReply) bubbles[bubbles.length - 1] += `\n\n${DISCLOSURE}`;
     // Pedido de apoyo: primero en el mensaje 7, después cada 20 mensajes de la persona.
     // Nunca se pide apoyo en una crisis.
-    const nudge = !crisis && shouldNudge(Number(thread.user_messages), Number(thread.nudged_count) || 0);
+    // Si la persona expresó ganas de aportar, el link va sí o sí (con su bendición).
+    const wantsLink = !crisis && texts.some(wantsToSupport);
+    const nudge =
+      !crisis &&
+      (wantsLink || shouldNudge(Number(thread.user_messages), Number(thread.nudged_count) || 0));
     if (nudge) {
-      bubbles.push(nudgeText(await supportToken()));
-      meta += "+aporte";
+      const token = await supportToken();
+      bubbles.push(wantsLink ? ASK_SUPPORT_REPLY(token) : nudgeText(token));
+      meta += wantsLink ? "+link" : "+aporte";
     }
     if (hasNewer()) {
       note({ lastGenerated: `borrador descartado: siguen llegando mensajes (${fresh.length} hasta ahora)` });

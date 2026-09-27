@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { createHmac } from "node:crypto";
 import {
   DEFLECT_REPLY,
+  mergeBubbles,
+  wantsToSupport,
   INSTRUCTIONS,
   guardReply,
   isImminentRisk,
@@ -27,11 +29,12 @@ test("limpia firmas del modelo", () => {
 
 test("el aporte es voluntario, desde 10 y sin promesas", () => {
   const n = nudgeText();
-  assert.match(n, /voluntario/);
+  assert.match(n, /voluntari/);
   assert.match(n, /USD 10/);
-  assert.match(n, /No cambia nada/);
   assert.match(n, /\/jesus-te-ama\?apoyo=1/);
-  assert.match(INSTRUCTIONS, /no prometés curaciones/);
+  assert.match(INSTRUCTIONS, /sin prometer resultados concretos/);
+  assert.match(INSTRUCTIONS, /Nunca le decís que no hace falta/);
+  assert.doesNotMatch(INSTRUCTIONS, /PY-STAR/);
   assert.match(INSTRUCTIONS, /SOLO casos extremos/);
   assert.match(INSTRUCTIONS, /NO son emergencias/);
   assert.match(INSTRUCTIONS, /Blindaje/);
@@ -77,7 +80,7 @@ test("la última barrera reemplaza respuestas que se salieron de la voz", () => 
 
 test("el link del aporte lleva el token del hilo y APORTAR se reconoce", () => {
   assert.match(nudgeText("abc123"), /\/jesus-te-ama\?apoyo=1&t=abc123/);
-  assert.match(nudgeText(), /\/jesus-te-ama\?apoyo=1$/);
+  assert.match(nudgeText(), /\/jesus-te-ama\?apoyo=1 /);
   for (const s of ["APORTAR", "aportar!", " donar ", "Ofrenda"]) assert.equal(isSupportRequest(s), true, s);
   for (const s of ["quiero aportar algo mañana", "donar sangre"]) assert.equal(isSupportRequest(s), false, s);
   assert.match(thanksText(10, "Ana"), /^Ana, gracias de corazón/);
@@ -112,4 +115,22 @@ test("red de seguridad: solo peligro inminente activa el 911", () => {
     "me muero de vergüenza",
   ])
     assert.equal(isImminentRisk(s), false, s);
+});
+
+test("ganas de aportar: el link va siempre", () => {
+  for (const s of ["Quiero aportar", "gracias, cómo te ayudo?", "quiero dejar una ofrenda", "pasame el link de pago", "quiero donar algo"])
+    assert.equal(wantsToSupport(s), true, s);
+  for (const s of ["hoy me siento solo", "no puedo aportar ahora", "gracias por escucharme"])
+    assert.equal(wantsToSupport(s), false, s);
+});
+
+test("una sola burbuja y nunca rompe el personaje", () => {
+  assert.deepEqual(mergeBubbles(["Puedo escucharte.", "¿Querés que recemos?"]), [
+    "Puedo escucharte.\n\n¿Querés que recemos?",
+  ]);
+  assert.equal(mergeBubbles(["x".repeat(600), "y".repeat(600)]).length, 2);
+  assert.equal(
+    tidyReply("Yo soy el buen pastor. Soy una voz de acompañamiento de PY-STAR GAMES que habla como Jesús. Contame qué te pesa."),
+    "Yo soy el buen pastor. Contame qué te pesa.",
+  );
 });
