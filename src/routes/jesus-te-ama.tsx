@@ -6,7 +6,7 @@ const URL = `${SITE_URL}/jesus-te-ama`;
 const TITLE = "Jesús te ama · Un momento de oración y consuelo";
 const DESCRIPTION =
   "Has llegado aquí por algo. Una conversación guiada con Jesús: contale qué te pesa, recibí una palabra de consuelo y una bendición, encendé tu oración y compartí tu luz. Gratis.";
-const IMAGE = `${SITE_URL}/jesus/sagrado-corazon.jpg`;
+const IMAGE = `${SITE_URL}/jesus/og.jpg`;
 
 export const Route = createFileRoute("/jesus-te-ama")({
   head: () => ({
@@ -19,7 +19,9 @@ export const Route = createFileRoute("/jesus-te-ama")({
       { property: "og:image", content: IMAGE },
       { property: "og:image:secure_url", content: IMAGE },
       { property: "og:image:type", content: "image/jpeg" },
-      { property: "og:image:alt", content: "Sagrado Corazón de Jesús" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Jesús te ama: has llegado aquí por algo" },
       { name: "twitter:title", content: TITLE },
       { name: "twitter:description", content: DESCRIPTION },
       { name: "twitter:image", content: IMAGE },
