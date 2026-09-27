@@ -6,8 +6,10 @@ import {
   INSTRUCTIONS,
   guardReply,
   isOptOut,
+  isSupportRequest,
   looksLikeJailbreak,
   nudgeText,
+  thanksText,
   tidyReply,
 } from "./jesus-agent";
 import { parseInbound, verifyKapsoSignature } from "./kapso";
@@ -91,4 +93,13 @@ test("la última barrera reemplaza respuestas que se salieron de la voz", () => 
   assert.equal(guardReply("Acá va el código:\n```js\nconsole.log(1)\n```"), DEFLECT_REPLY);
   assert.equal(guardReply("1. Primero\n2. Segundo\n3. Tercero"), DEFLECT_REPLY);
   assert.equal(guardReply("Estoy acá. Contame qué te pesa."), "Estoy acá. Contame qué te pesa.");
+});
+
+test("el link del aporte lleva el token del hilo y APORTAR se reconoce", () => {
+  assert.match(nudgeText("abc123"), /\/jesus-te-ama\?apoyo=1&t=abc123/);
+  assert.match(nudgeText(), /\/jesus-te-ama\?apoyo=1$/);
+  for (const s of ["APORTAR", "aportar!", " donar ", "Ofrenda"]) assert.equal(isSupportRequest(s), true, s);
+  for (const s of ["quiero aportar algo mañana", "donar sangre"]) assert.equal(isSupportRequest(s), false, s);
+  assert.match(thanksText(10, "Ana"), /^Ana, gracias de corazón/);
+  assert.match(thanksText(100, null), /no sé cómo agradecerte/);
 });

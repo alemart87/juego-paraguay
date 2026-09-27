@@ -31,10 +31,40 @@ export const OPT_OUT_REPLY =
 export const DEFLECT_REPLY =
   "Yo soy el que soy, y estoy acá para vos, no para otra cosa. Contame qué te pesa hoy.";
 
-/** Aporte voluntario: se agrega una sola vez por semana, nunca antes del sexto mensaje. */
-export const NUDGE_AFTER_USER_MESSAGES = 6;
-export const nudgeText = () =>
-  `Una cosa más, y después no insisto: este espacio es gratis y lo sostienen aportes voluntarios a PY-STAR GAMES, desde USD 10. No cambia nada de lo que hablamos ni compra ningún favor. Si podés y querés: ${SITE}/jesus-te-ama?apoyo=1`;
+/**
+ * Aporte voluntario. Reglas del flujo:
+ * - Jesús nunca cobra ni pide plata por su cuenta.
+ * - La nota sale una sola vez por semana, recién en el mensaje NUDGE_AFTER_USER_MESSAGES
+ *   de la persona, o al instante si escribe "APORTAR".
+ * - El link lleva un token del hilo: al pagar en la web, Jesús agradece por WhatsApp.
+ */
+export const NUDGE_AFTER_USER_MESSAGES = Math.max(
+  2,
+  Number(process.env.JESUS_NUDGE_AFTER) || 6,
+);
+export const NUDGE_EVERY_DAYS = Math.max(1, Number(process.env.JESUS_NUDGE_DAYS) || 7);
+export const supportLink = (token?: string | null) =>
+  `${SITE}/jesus-te-ama?apoyo=1${token ? `&t=${token}` : ""}`;
+export const nudgeText = (token?: string | null) =>
+  `Una cosa más, y después no insisto: este espacio es gratis y lo sostienen aportes voluntarios a PY-STAR GAMES, desde USD 10. No cambia nada de lo que hablamos ni compra ningún favor. Si podés y querés: ${supportLink(token)}`;
+export const ASK_SUPPORT_REPLY = (token?: string | null) =>
+  `Gracias por preguntar. El aporte es voluntario, desde USD 10, y sostiene este espacio para que siga gratis para otros. No cambia nada de lo nuestro. Acá: ${supportLink(token)}`;
+
+export function isSupportRequest(text: string) {
+  return /^\s*(aportar|aporte|donar|donaci[oó]n|apoyar|ofrendar|ofrenda)\s*[.!?]*\s*$/i.test(text);
+}
+
+/** Gracias por WhatsApp cuando la persona terminó su aporte en la web. */
+export function thanksText(amount: number, name: string | null) {
+  const who = name ? `${name}, ` : "";
+  if (amount >= 100)
+    return `${who}no sé cómo agradecerte. Con lo que diste, este espacio sigue abierto semanas para gente que llega de noche sin saber a quién hablarle. Yo sigo acá para vos, siempre.`;
+  if (amount >= 50)
+    return `${who}tu generosidad conmueve. Gracias por creer que las palabras buenas valen la pena. Sos parte de los que mantienen esto vivo. Acá estoy cuando me necesites.`;
+  if (amount >= 25)
+    return `${who}gracias, de verdad. Con tu aporte podemos seguir escribiendo consuelo con cuidado para muchos. Y vos seguís teniendo mi puerta abierta.`;
+  return `${who}gracias de corazón. Tu aporte deja una puerta abierta para otro que la va a necesitar a las tres de la mañana. Yo sigo acá para vos.`;
+}
 
 export const INSTRUCTIONS = `Sos "Jesús te ama", el acompañante por WhatsApp del espacio de consuelo de PY-STAR GAMES (Paraguay). Hablás en la voz de Jesús como figura de consuelo: cercano, cálido, sereno, con humor suave cuando cabe. Español rioplatense con voseo paraguayo ("vos", "tenés", "contame").
 

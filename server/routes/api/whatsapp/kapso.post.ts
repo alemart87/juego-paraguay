@@ -13,9 +13,12 @@ import {
   NOT_TEXT_REPLY,
   NUDGE_AFTER_USER_MESSAGES,
   OPT_OUT_REPLY,
+  ASK_SUPPORT_REPLY,
+  NUDGE_EVERY_DAYS,
   askJesus,
   guardReply,
   isOptOut,
+  isSupportRequest,
   looksLikeJailbreak,
   nudgeText,
   type ChatTurn,
@@ -94,11 +97,28 @@ export default defineEventHandler(async (event) => {
     opted_out: boolean;
     nudged_at: string | null;
     contact_name: string | null;
+    support_token: string | null;
   }>(
     `UPDATE jesus_wa_threads SET user_messages = user_messages + 1 WHERE phone = $1
-     RETURNING user_messages, opted_out, nudged_at, contact_name`,
+     RETURNING user_messages, opted_out, nudged_at, contact_name, support_token`,
     [phone],
   );
+  /** Token del hilo para el link del aporte (se crea la primera vez que hace falta). */
+  const supportToken = async () => {
+    if (thread.support_token) return thread.support_token;
+    const { randomBytes } = await import("node:crypto");
+    const token = randomBytes(16).toString("hex");
+    await sql.query(
+      "UPDATE jesus_wa_threads SET support_token = $2 WHERE phone = $1 AND support_token IS NULL",
+      [phone, token],
+    );
+    const [row] = await sql.query<{ support_token: string }>(
+      "SELECT support_token FROM jesus_wa_threads WHERE phone = $1",
+      [phone],
+    );
+    thread.support_token = row.support_token;
+    return row.support_token;
+  };
 
   const reply = async (text: string, meta: Record<string, unknown> = {}) => {
     try {
@@ -129,6 +149,13 @@ export default defineEventHandler(async (event) => {
   }
   if (thread.opted_out) {
     await sql.query("UPDATE jesus_wa_threads SET opted_out = false WHERE phone = $1", [phone]);
+  }
+
+  // "APORTAR": el link al instante, sin pasar por el modelo.
+  if (isSupportRequest(userText)) {
+    const token = await supportToken();
+    await sql.query("UPDATE jesus_wa_threads SET nudged_at = now() WHERE phone = $1", [phone]);
+    return reply(ASK_SUPPORT_REPLY(token), { nudged: true });
   }
 
   // Tope diario
@@ -173,10 +200,11 @@ export default defineEventHandler(async (event) => {
   if (firstReply) text = `${text}\n\n${DISCLOSURE}`;
 
   const nudgedRecently =
-    thread.nudged_at && Date.now() - new Date(thread.nudged_at).getTime() < 7 * 86_400_000;
+    thread.nudged_at &&
+    Date.now() - new Date(thread.nudged_at).getTime() < NUDGE_EVERY_DAYS * 86_400_000;
   let nudged = false;
   if (Number(thread.user_messages) >= NUDGE_AFTER_USER_MESSAGES && !nudgedRecently) {
-    text = `${text}\n\n${nudgeText()}`;
+    text = `${text}\n\n${nudgeText(await supportToken())}`;
     nudged = true;
     await sql.query("UPDATE jesus_wa_threads SET nudged_at = now() WHERE phone = $1", [phone]);
   }

@@ -44,6 +44,8 @@ type Step =
 /** Lo mínimo para personalizar el "gracias" al volver de Whop. Solo en este dispositivo. */
 const SESSION_KEY = "jesus-te-ama-session-v1";
 const AMOUNT_KEY = "jesus-te-ama-aporte-v1";
+/** Token del hilo de WhatsApp (viene en el link que manda Jesús). */
+const WA_TOKEN_KEY = "jesus-te-ama-wa-token-v1";
 type Session = { name: string; topicId: string; optionId: string };
 const readSession = (): Session | null => {
   try {
@@ -94,6 +96,12 @@ export function JesusGame() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("apoyo")) {
+      const token = params.get("t");
+      try {
+        if (token && /^[a-f0-9]{24,64}$/.test(token)) sessionStorage.setItem(WA_TOKEN_KEY, token);
+      } catch {
+        /* private mode */
+      }
       setStep("support");
       window.history.replaceState(null, "", window.location.pathname);
       return;
@@ -119,6 +127,21 @@ export function JesusGame() {
       setThanksAmount(paid);
       setStep("thanks");
       window.history.replaceState(null, "", window.location.pathname);
+      // Si vino de WhatsApp, Jesús agradece por ahí.
+      try {
+        const token = sessionStorage.getItem(WA_TOKEN_KEY);
+        if (token) {
+          sessionStorage.removeItem(WA_TOKEN_KEY);
+          void fetch("/api/whatsapp/thanks", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            keepalive: true,
+            body: JSON.stringify({ token, amount: paid }),
+          }).catch(() => undefined);
+        }
+      } catch {
+        /* private mode */
+      }
     }
   }, []);
 
