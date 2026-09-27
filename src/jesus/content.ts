@@ -321,6 +321,11 @@ export const THANKS_TIERS = [
 export const thanksTier = (amount: number) =>
   [...THANKS_TIERS].reverse().find((tier) => amount >= tier.min) ?? THANKS_TIERS[0];
 
+/** Número de WhatsApp de "Jesús te ama" (Kapso), en formato wa.me. */
+export const WHATSAPP_NUMBER = "12083799810";
+export const whatsappLink = (text = "Hola, llegué desde Jesús te ama.") =>
+  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+
 export const MIN_DONATION = 10;
 export const MAX_DONATION = 1000;
 export const DONATION_PRESETS = [10, 20, 50, 100];

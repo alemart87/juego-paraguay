@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   if (!isAdmin(event)) throw createError({ statusCode: 401, statusMessage: "Iniciá sesión" });
   setHeader(event, "cache-control", "no-store");
   const sql = await (await import("../../../../src/lib/db")).getSql();
-  const [summary, topics, options, days, donations] = await Promise.all([
+  const [summary, topics, options, days, donations, whatsapp] = await Promise.all([
     sql.query<{
       total: number;
       today: number;
@@ -45,6 +45,13 @@ export default defineEventHandler(async (event) => {
       `SELECT count(*)::int n, COALESCE(sum(amount), 0)::text total
          FROM whop_purchases WHERE game_sku = 'jesus-aporte' AND status = 'paid'`,
     ),
+    sql.query<{ threads: number; today: number; messages: number; nudged: number }>(
+      `SELECT (SELECT count(*) FROM jesus_wa_threads)::int threads,
+              (SELECT count(*) FROM jesus_wa_messages WHERE role='user'
+                 AND created_at >= date_trunc('day', now()))::int today,
+              (SELECT count(*) FROM jesus_wa_messages WHERE role='user')::int messages,
+              (SELECT count(*) FROM jesus_wa_threads WHERE nudged_at IS NOT NULL)::int nudged`,
+    ),
   ]);
   return {
     ok: true,
@@ -53,5 +60,6 @@ export default defineEventHandler(async (event) => {
     options,
     days,
     donations: { count: donations[0]?.n ?? 0, total: Number(donations[0]?.total ?? 0) },
+    whatsapp: whatsapp[0],
   };
 });

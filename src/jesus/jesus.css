@@ -566,3 +566,42 @@
     animation: none;
   }
 }
+
+/* WhatsApp */
+.jt-wa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 0;
+  background: #25d366;
+  color: #072b12;
+  font: 700 17px/1 var(--serif);
+  text-decoration: none;
+  box-shadow:
+    0 10px 30px rgba(37, 211, 102, 0.3),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+}
+.jt-wa-intro {
+  position: relative;
+  z-index: 3;
+  width: min(100%, 320px);
+  margin-top: -6px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 1.2s ease,
+    transform 1.2s ease;
+}
+.jt-wa-intro.on {
+  opacity: 1;
+  transform: none;
+}
+.jt-step-intro .jt-scene {
+  flex-direction: column;
+  gap: 8px;
+}

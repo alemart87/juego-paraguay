@@ -791,6 +791,7 @@ type JesusTelemetry = {
   options: { topic: string; option: string; n: number }[];
   days: { label: string; n: number; people: number }[];
   donations: { count: number; total: number };
+  whatsapp?: { threads: number; today: number; messages: number; nudged: number };
 };
 
 const topicLabel = (id: string) => TOPICS.find((t) => t.id === id)?.label ?? id;
@@ -822,6 +823,10 @@ function AdminJesus() {
     ["ABRIERON EL APORTE", `${pct(data.summary.support)}%`],
     ["LUCES PROMEDIO", data.summary.avg_lights],
     ["APORTES", `${data.donations.count} · USD ${data.donations.total.toFixed(2)}`],
+    ["WHATSAPP · PERSONAS", data.whatsapp?.threads ?? 0],
+    ["WHATSAPP · MENSAJES HOY", data.whatsapp?.today ?? 0],
+    ["WHATSAPP · MENSAJES", data.whatsapp?.messages ?? 0],
+    ["WHATSAPP · VIERON EL APORTE", data.whatsapp?.nudged ?? 0],
   ] as const;
   const maxTopic = Math.max(1, ...data.topics.map((x) => x.n)),
     maxOption = Math.max(1, ...data.options.map((x) => x.n)),

@@ -8,6 +8,7 @@ import {
   Share2,
   Volume2,
   VolumeX,
+  MessageCircle,
 } from "lucide-react";
 import { bell, choir, flute, setMuted, stopChoir, unlock } from "./audio";
 import {
@@ -17,6 +18,7 @@ import {
   TOPICS,
   TOUCH_LINES,
   thanksTier,
+  whatsappLink,
   topic as findTopic,
   type Option,
   type Topic,
@@ -91,6 +93,11 @@ export function JesusGame() {
   // Volver de Whop: ?gracias=<monto>
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.has("apoyo")) {
+      setStep("support");
+      window.history.replaceState(null, "", window.location.pathname);
+      return;
+    }
     if (params.has("gracias")) {
       // El monto real lo guardamos antes de ir a Whop; la URL es solo la señal de vuelta.
       let paid = Number(params.get("gracias"));
@@ -324,6 +331,17 @@ export function JesusGame() {
             <span className="jt-hint">{introLine >= 2 ? "Tocá para empezar" : "Tocá para seguir"}</span>
           </button>
         )}
+        {step === "intro" && (
+          <a
+            className={`jt-wa jt-wa-intro ${introLine >= 1 ? "on" : ""}`}
+            href={whatsappLink()}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MessageCircle size={20} /> Hablar por WhatsApp
+          </a>
+        )}
 
         {step === "name" && (
           <div className="jt-panel">
@@ -344,6 +362,12 @@ export function JesusGame() {
             <button className="jt-link" onClick={() => go("topic")}>
               Prefiero no decirlo
             </button>
+            <a className="jt-wa" href={whatsappLink()} target="_blank" rel="noreferrer">
+              <MessageCircle size={20} /> O hablá por WhatsApp
+            </a>
+            <small className="jt-fine">
+              Del otro lado responde un asistente automático que habla en la voz de Jesús.
+            </small>
           </div>
         )}
 
@@ -468,6 +492,16 @@ export function JesusGame() {
               </button>
             </div>
             {card && <img className="jt-card-preview" src={card.url} alt="Tarjeta de luz" />}
+            <a
+              className="jt-wa"
+              href={whatsappLink(
+                `Hola, vengo de Jesús te ama. Hoy pedí por ${current.shareLabel}.`,
+              )}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <MessageCircle size={20} /> Seguir hablando por WhatsApp
+            </a>
             <button
               className="jt-btn jt-btn-soft"
               onClick={() => {

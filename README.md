@@ -126,6 +126,8 @@ migrations/                     ranking, episodio 4 y compras Whop
 server/routes/health.ts        health check de Render
 server/routes/api/webhooks/    receptor firmado de eventos Whop
 server/routes/media/           imágenes desde /persistent
+server/routes/api/whatsapp/    Jesús te ama por WhatsApp: webhook de Kapso → agente OpenAI
+                               (server/utils/jesus-agent.ts); registro: scripts/kapso-register-webhook.mjs
 src/jesus/                     Jesús te ama: conversación guiada de consuelo, efectos y
                                aporte voluntario (desde USD 10, monto libre) vía Whop
 src/battle/credits*.ts         saldo de golpes y referidos: 500 golpes al amigo que entra con
