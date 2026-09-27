@@ -34,15 +34,24 @@ export const DEFLECT_REPLY =
 /**
  * Aporte voluntario. Reglas del flujo:
  * - Jesús nunca cobra ni pide plata por su cuenta.
- * - La nota sale una sola vez por semana, recién en el mensaje NUDGE_AFTER_USER_MESSAGES
- *   de la persona, o al instante si escribe "APORTAR".
+ * - La primera nota sale en el mensaje NUDGE_AFTER_USER_MESSAGES de la persona (7),
+ *   y después cada NUDGE_EVERY_MESSAGES mensajes (20). "APORTAR" la manda al instante.
  * - El link lleva un token del hilo: al pagar en la web, Jesús agradece por WhatsApp.
  */
 export const NUDGE_AFTER_USER_MESSAGES = Math.max(
   2,
-  Number(process.env.JESUS_NUDGE_AFTER) || 6,
+  Number(process.env.JESUS_NUDGE_AFTER) || 7,
 );
-export const NUDGE_EVERY_DAYS = Math.max(1, Number(process.env.JESUS_NUDGE_DAYS) || 7);
+export const NUDGE_EVERY_MESSAGES = Math.max(
+  5,
+  Number(process.env.JESUS_NUDGE_EVERY) || 20,
+);
+
+/** ¿Toca pedir apoyo ahora? `lastNudgeAt` = mensajes de la persona cuando se pidió la última vez (0 = nunca). */
+export function shouldNudge(userMessages: number, lastNudgeAt: number) {
+  if (lastNudgeAt <= 0) return userMessages >= NUDGE_AFTER_USER_MESSAGES;
+  return userMessages - lastNudgeAt >= NUDGE_EVERY_MESSAGES;
+}
 export const supportLink = (token?: string | null) =>
   `${SITE}/jesus-te-ama?apoyo=1${token ? `&t=${token}` : ""}`;
 export const nudgeText = (token?: string | null) =>

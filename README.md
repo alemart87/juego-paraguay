@@ -126,8 +126,8 @@ migrations/                     ranking, episodio 4 y compras Whop
 server/routes/health.ts        health check de Render
 server/routes/api/webhooks/    receptor firmado de eventos Whop
 server/routes/media/           imágenes desde /persistent
-                               Flujo del aporte por WhatsApp: Jesús nunca cobra; en el 6º mensaje
-                               (JESUS_NUDGE_AFTER) y máx. 1 vez/semana (JESUS_NUDGE_DAYS) manda el
+                               Flujo del aporte por WhatsApp: Jesús nunca cobra; en el 7º mensaje
+                               (JESUS_NUDGE_AFTER) y luego cada 20 (JESUS_NUDGE_EVERY) manda el
                                link con token; 'APORTAR' lo manda al instante; se paga en la web
                                (Whop) y al volver, /api/whatsapp/thanks hace que Jesús agradezca.
 server/routes/api/whatsapp/    Jesús te ama por WhatsApp: webhook de Kapso → agente OpenAI

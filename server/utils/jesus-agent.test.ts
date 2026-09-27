@@ -9,6 +9,7 @@ import {
   isSupportRequest,
   looksLikeJailbreak,
   nudgeText,
+  shouldNudge,
   thanksText,
   tidyReply,
 } from "./jesus-agent";
@@ -79,4 +80,14 @@ test("el link del aporte lleva el token del hilo y APORTAR se reconoce", () => {
   for (const s of ["quiero aportar algo mañana", "donar sangre"]) assert.equal(isSupportRequest(s), false, s);
   assert.match(thanksText(10, "Ana"), /^Ana, gracias de corazón/);
   assert.match(thanksText(100, null), /no sé cómo agradecerte/);
+});
+
+test("pedido de apoyo: primero en el mensaje 7, después cada 20", () => {
+  assert.equal(shouldNudge(6, 0), false);
+  assert.equal(shouldNudge(7, 0), true);
+  assert.equal(shouldNudge(9, 0), true); // ráfaga que saltó el 7
+  assert.equal(shouldNudge(26, 7), false);
+  assert.equal(shouldNudge(27, 7), true);
+  assert.equal(shouldNudge(46, 27), false);
+  assert.equal(shouldNudge(47, 27), true);
 });

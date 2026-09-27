@@ -14,8 +14,7 @@ import {
   DISCLOSURE,
   FALLBACK_REPLY,
   LIMIT_REPLY,
-  NUDGE_AFTER_USER_MESSAGES,
-  NUDGE_EVERY_DAYS,
+  shouldNudge,
   OPT_OUT_REPLY,
   askJesus,
   isOptOut,
@@ -258,11 +257,12 @@ async function handleBurst(
       user_messages: number;
       opted_out: boolean;
       nudged_at: string | null;
+      nudged_count: number;
       contact_name: string | null;
       support_token: string | null;
     }>(
       `UPDATE jesus_wa_threads SET user_messages = user_messages + $2 WHERE phone = $1
-       RETURNING user_messages, opted_out, nudged_at, contact_name, support_token`,
+       RETURNING user_messages, opted_out, nudged_at, nudged_count, contact_name, support_token`,
       [phone, stored.length],
     );
     const firstReply = Number(thread.user_messages) === fresh.length;
@@ -325,7 +325,10 @@ async function handleBurst(
     // "APORTAR": el link al instante, sin pasar por el modelo.
     if (plain.length === fresh.length && plain.every(isSupportRequest)) {
       const token = await supportToken();
-      await sql.query("UPDATE jesus_wa_threads SET nudged_at = now() WHERE phone = $1", [phone]);
+      await sql.query(
+        "UPDATE jesus_wa_threads SET nudged_at = now(), nudged_count = user_messages WHERE phone = $1",
+        [phone],
+      );
       return send([ASK_SUPPORT_REPLY(token)], "aporte");
     }
 
@@ -379,12 +382,10 @@ async function handleBurst(
     }
 
     if (firstReply) bubbles[bubbles.length - 1] += `\n\n${DISCLOSURE}`;
-    const nudgedRecently =
-      thread.nudged_at &&
-      Date.now() - new Date(thread.nudged_at).getTime() < NUDGE_EVERY_DAYS * 86_400_000;
-    if (Number(thread.user_messages) >= NUDGE_AFTER_USER_MESSAGES && !nudgedRecently) {
+    // Pedido de apoyo: primero en el mensaje 7, después cada 20 mensajes de la persona.
+    const nudge = shouldNudge(Number(thread.user_messages), Number(thread.nudged_count) || 0);
+    if (nudge) {
       bubbles.push(nudgeText(await supportToken()));
-      await sql.query("UPDATE jesus_wa_threads SET nudged_at = now() WHERE phone = $1", [phone]);
       meta += "+aporte";
     }
     if (hasNewer()) {
@@ -398,6 +399,11 @@ async function handleBurst(
     note({
       lastGenerated: `${meta} · ${fresh.length} mensaje/s → ${bubbles.length} burbuja/s · reacción ${reacted ?? "no"} · ${new Date().toISOString()}`,
     });
+    if (nudge)
+      await sql.query(
+        "UPDATE jesus_wa_threads SET nudged_at = now(), nudged_count = $2 WHERE phone = $1",
+        [phone, Number(thread.user_messages)],
+      );
     await send(bubbles, meta);
   } finally {
     clearInterval(keepTyping);
