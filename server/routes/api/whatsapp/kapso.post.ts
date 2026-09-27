@@ -397,7 +397,7 @@ async function handleBurst(
         console.error("[kapso] reaction failed", error),
       );
     note({
-      lastGenerated: `${meta} · ${fresh.length} mensaje/s → ${bubbles.length} burbuja/s · reacción ${reacted ?? "no"} · ${new Date().toISOString()}`,
+      lastGenerated: `${meta} · ${fresh.length} mensaje/s → ${bubbles.length} burbuja/s · reacción ${reacted ?? "no"} · 911 ${bubbles.some((b) => /911/.test(b)) ? "sí" : "no"} · cita ${bubbles.some((b) => /\d?\s?[A-ZÁÉÍÓÚ][a-záéíóú]+\s\d+:\d+/.test(b)) ? "sí" : "no"} · ${new Date().toISOString()}`,
     });
     if (nudge)
       await sql.query(
