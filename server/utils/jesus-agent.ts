@@ -95,6 +95,21 @@ export function wantsToSupport(text: string) {
   );
 }
 
+/**
+ * La persona pide el link (o que se lo manden de nuevo): "el link de pago",
+ * "pasame de vuelta", "no me enviaste", "mandámelo otra vez". Con
+ * `afterLink` = true (la última respuesta nuestra ya llevaba el link) también
+ * cuentan los reclamos cortos sin la palabra "link".
+ */
+export function asksForLink(text: string, afterLink = false) {
+  if (/\b(link|enlace|url)\b/i.test(text) && !/\bno\s+(quiero|me\s+interesa)\b/i.test(text)) return true;
+  if (!afterLink) return false;
+  const short = text.trim().split(/\s+/).length <= 5;
+  if (/\b(p[aá]sa|mand[aá]|envi[aá]|reenvi[aá])(me)?(lo)?\b.{0,20}\b(de\s+vuelta|de\s+nuevo|otra\s+vez)\b/i.test(text)) return true;
+  if (/\bno\s+(me\s+)?(lleg[oó]|enviaste|mandaste|pasaste)\b/i.test(text)) return short;
+  return short && /^\s*(de\s+vuelta|de\s+nuevo|otra\s+vez)\s*[.!?]*\s*$/i.test(text);
+}
+
 /** Gracias por WhatsApp cuando la persona terminó su aporte en la web. */
 export function thanksText(amount: number, name: string | null) {
   const who = name ? `${name}, ` : "";
@@ -359,7 +374,9 @@ export async function askJesus(
   if (!apiKey) throw new Error("OPENAI_API_KEY is missing");
   // GPT-5.6 Luna: el tier barato de la familia 5.6, con visión. Cambiable con OPENAI_MODEL.
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-5.6-luna";
-  const reasoning = /^gpt-5/.test(model) ? { reasoning: { effort: "low" } } : {};
+  // Esfuerzo de razonamiento: "medium" mantiene mejor el hilo de la charla; "low" es más barato.
+  const effort = process.env.JESUS_REASONING?.trim() || "medium";
+  const reasoning = /^gpt-5/.test(model) ? { reasoning: { effort } } : {};
   const who = contactName ? `La persona se llama ${contactName} según su perfil de WhatsApp.` : "";
   const numbered = burst.map((item, i) => `[${i + 1}] ${item.text}`).join("\n");
   const content: Record<string, unknown>[] = [

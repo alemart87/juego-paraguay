@@ -23,6 +23,7 @@ import {
   isImminentRisk,
   isOptOut,
   isSupportRequest,
+  asksForLink,
   looksLikeJailbreak,
   mergeBubbles,
   wantsToSupport,
@@ -35,8 +36,8 @@ import {
 } from "../../../utils/jesus-agent";
 import { kapsoStatus, note, payloadShape } from "../../../utils/kapso-status";
 
-/** Tope de mensajes de una persona por día (cuida el costo de OpenAI). */
-const DAILY_LIMIT = 60;
+/** Tope de mensajes de una persona por día (cuida el costo de OpenAI). Pedidos del link no cuentan. */
+const DAILY_LIMIT = Math.max(20, Number(process.env.JESUS_DAILY_LIMIT) || 200);
 /** Mensajes de contexto que recibe el modelo: los últimos 20 de cada lado. */
 const CONTEXT_TURNS = 40;
 /** Fotos por ráfaga que mira el modelo. */
@@ -344,8 +345,18 @@ async function handleBurst(
     if (thread.opted_out)
       await sql.query("UPDATE jesus_wa_threads SET opted_out = false WHERE phone = $1", [phone]);
 
-    // "APORTAR": el link al instante, sin pasar por el modelo.
-    if (plain.length === fresh.length && plain.every(isSupportRequest)) {
+    // "APORTAR", "el link de pago", "pasame de vuelta": el link al instante, sin pasar
+    // por el modelo y sin importar el tope diario.
+    const [lastBot] = await sql.query<{ content: string }>(
+      `SELECT content FROM jesus_wa_messages WHERE phone = $1 AND role = 'assistant'
+        ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [phone],
+    );
+    const afterLink = Boolean(lastBot?.content.includes("/jesus-te-ama?apoyo="));
+    const onlyLinkTalk =
+      plain.length === fresh.length &&
+      plain.every((t) => isSupportRequest(t) || asksForLink(t, afterLink));
+    if (onlyLinkTalk) {
       const token = await supportToken();
       await sql.query(
         "UPDATE jesus_wa_threads SET nudged_at = now(), nudged_count = user_messages WHERE phone = $1",
@@ -360,8 +371,14 @@ async function handleBurst(
         WHERE phone = $1 AND role = 'user' AND created_at >= now() - interval '1 day'`,
       [phone],
     );
-    if (today.n - fresh.length >= DAILY_LIMIT) return;
-    if (today.n >= DAILY_LIMIT) return send([LIMIT_REPLY], "tope");
+    if (today.n >= DAILY_LIMIT) {
+      // Se avisa una vez; después, silencio hasta que pase el día (salvo pedidos del link, arriba).
+      if (today.n - fresh.length >= DAILY_LIMIT) {
+        note({ lastResult: `tope diario (${today.n}/${DAILY_LIMIT}), sin respuesta` });
+        return;
+      }
+      return send([LIMIT_REPLY], "tope");
+    }
 
     // Historial anterior (sin la ráfaga, que va aparte con sus fotos).
     const freshIds = fresh.map((f) => f.message.messageId);

@@ -5,6 +5,7 @@ import {
   DEFLECT_REPLY,
   mergeBubbles,
   wantsToSupport,
+  asksForLink,
   INSTRUCTIONS,
   guardReply,
   isImminentRisk,
@@ -138,4 +139,14 @@ test("una sola burbuja y nunca rompe el personaje", () => {
     tidyReply("Yo soy el buen pastor. Soy una voz de acompañamiento de PY-STAR GAMES que habla como Jesús. Contame qué te pesa."),
     "Yo soy el buen pastor. Contame qué te pesa.",
   );
+});
+
+test("pedir el link (o de vuelta) siempre lo manda, aun con tope diario", () => {
+  for (const s of ["El link de pago", "pasame el link", "mandame el enlace"]) assert.equal(asksForLink(s), true, s);
+  for (const s of ["Pásame de vuelta", "No me enviaste", "mandámelo otra vez", "de nuevo"]) {
+    assert.equal(asksForLink(s, true), true, s);
+    assert.equal(asksForLink(s, false), false, s);
+  }
+  for (const s of ["otra vez me pasó lo mismo con mi jefe", "no quiero el link", "hoy estoy triste"])
+    assert.equal(asksForLink(s, true), false, s);
 });

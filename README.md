@@ -128,7 +128,8 @@ server/routes/api/webhooks/    receptor firmado de eventos Whop
 server/routes/media/           imágenes desde /persistent
                                Flujo del aporte por WhatsApp: Jesús nunca cobra; en el 7º mensaje
                                (JESUS_NUDGE_AFTER) y luego cada 12 (JESUS_NUDGE_EVERY) manda el
-                               link con token; 'APORTAR' lo manda al instante; se paga en la web
+                               link con token; "APORTAR" o "el link" lo manda al instante (aun con tope
+                               diario JESUS_DAILY_LIMIT, 200); se paga en la web
                                (Whop) y al volver, /api/whatsapp/thanks hace que Jesús agradezca.
 server/routes/api/whatsapp/    Jesús te ama por WhatsApp: webhook de Kapso → agente OpenAI
                                (server/utils/jesus-agent.ts); registro: scripts/kapso-register-webhook.mjs
