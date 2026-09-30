@@ -6,6 +6,9 @@ import {
   mergeBubbles,
   wantsToSupport,
   asksForLink,
+  asksToShare,
+  shareBubbles,
+  shouldInviteShare,
   INSTRUCTIONS,
   guardReply,
   isImminentRisk,
@@ -149,4 +152,21 @@ test("pedir el link (o de vuelta) siempre lo manda, aun con tope diario", () => 
   }
   for (const s of ["otra vez me pasó lo mismo con mi jefe", "no quiero el link", "hoy estoy triste"])
     assert.equal(asksForLink(s, true), false, s);
+});
+
+test("compartir el número: pedido explícito, momento natural y ritmo", () => {
+  for (const s of ["pasame tu número para mi hermana", "quiero compartirte con mi mamá", "cómo le paso tu contacto a un amigo", "te voy a recomendar"])
+    assert.equal(asksToShare(s), true, s);
+  for (const s of ["hoy estoy triste", "no quiero compartir eso", "el link de pago"]) assert.equal(asksToShare(s), false, s);
+  assert.equal(shouldInviteShare(2, 0, true), false); // muy temprano
+  assert.equal(shouldInviteShare(3, 0, true), true); // el modelo ve el momento
+  assert.equal(shouldInviteShare(9, 0, false), false);
+  assert.equal(shouldInviteShare(10, 0, false), true); // nunca se invitó: sale igual
+  assert.equal(shouldInviteShare(10, 5, true), false); // muy seguido
+  assert.equal(shouldInviteShare(13, 5, true), true);
+  assert.equal(shouldInviteShare(30, 5, false), false); // después de la primera, solo en momentos naturales
+  const [invite, card] = shareBubbles("Ana");
+  assert.match(invite, /^Ana, ¿hay alguien/);
+  assert.match(card, /https:\/\/wa\.me\/12083799810\?text=/);
+  assert.doesNotMatch(card, /apoyo=1/);
 });

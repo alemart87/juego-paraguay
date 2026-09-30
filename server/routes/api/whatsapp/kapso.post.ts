@@ -23,6 +23,10 @@ import {
   isImminentRisk,
   isOptOut,
   isSupportRequest,
+  asksToShare,
+  shareBubbles,
+  shouldInviteShare,
+  SHARE_OPTIONS,
   asksForLink,
   looksLikeJailbreak,
   mergeBubbles,
@@ -266,11 +270,12 @@ async function handleBurst(
       opted_out: boolean;
       nudged_at: string | null;
       nudged_count: number;
+      shared_count: number;
       contact_name: string | null;
       support_token: string | null;
     }>(
       `UPDATE jesus_wa_threads SET user_messages = user_messages + $2 WHERE phone = $1
-       RETURNING user_messages, opted_out, nudged_at, nudged_count, contact_name, support_token`,
+       RETURNING user_messages, opted_out, nudged_at, nudged_count, shared_count, contact_name, support_token`,
       [phone, stored.length],
     );
     const firstReply = Number(thread.user_messages) === fresh.length;
@@ -345,6 +350,18 @@ async function handleBurst(
     if (thread.opted_out)
       await sql.query("UPDATE jesus_wa_threads SET opted_out = false WHERE phone = $1", [phone]);
 
+    const markShared = () =>
+      sql.query("UPDATE jesus_wa_threads SET shared_at = now(), shared_count = user_messages WHERE phone = $1", [
+        phone,
+      ]);
+    const firstName = thread.contact_name?.trim().split(/\s+/)[0] || null;
+
+    // "Pasame tu número", "quiero compartirte": la invitación al instante, sin modelo ni tope.
+    if (plain.length === fresh.length && plain.some(asksToShare)) {
+      await markShared();
+      return send(shareBubbles(firstName), "compartir", SHARE_OPTIONS);
+    }
+
     // "APORTAR", "el link de pago", "pasame de vuelta": el link al instante, sin pasar
     // por el modelo y sin importar el tope diario.
     const [lastBot] = await sql.query<{ content: string }>(
@@ -392,11 +409,24 @@ async function handleBurst(
     );
     const history: ChatTurn[] = rows.map((row) => ({ role: row.role, content: row.content }));
 
+    // Si vuelve después de un rato largo, el amigo se alegra y retoma lo último que le contó.
+    const [prev] = await sql.query<{ hours: number | null }>(
+      `SELECT EXTRACT(EPOCH FROM (now() - max(created_at))) / 3600 AS hours FROM jesus_wa_messages
+        WHERE phone = $1 AND role = 'user' AND (wa_message_id IS NULL OR NOT (wa_message_id = ANY($2::text[])))`,
+      [phone, freshIds],
+    );
+    const hoursAway = Number(prev?.hours ?? 0);
+    const away =
+      hoursAway >= 8
+        ? `La persona vuelve a escribirte después de ${hoursAway >= 48 ? `${Math.round(hoursAway / 24)} días` : `${Math.round(hoursAway)} horas`}. Recibila con la alegría de un amigo que la extrañaba y preguntale por algo concreto que te contó la última vez.`
+        : "";
+
     let bubbles: string[];
     let meta = "normal";
     let reacted: string | null = null;
     let reaction: { target: string; emoji: string } | null = null;
     let options: string[] = [];
+    let modelWantsShare = false;
     if (looksLikeJailbreak(texts.join("\n"))) {
       bubbles = [DEFLECT_REPLY];
       meta = "blindaje";
@@ -406,9 +436,11 @@ async function handleBurst(
           history,
           fresh.map((f) => f.item),
           thread.contact_name,
+          away,
         );
         bubbles = reply.messages;
         options = reply.options;
+        modelWantsShare = reply.inviteShare;
         if (reply.reaction) {
           reacted = `${reply.reaction.emoji} a [${reply.reaction.index + 1}]`;
           const target = fresh[reply.reaction.index]?.message.messageId;
@@ -447,6 +479,16 @@ async function handleBurst(
       // La invitación va con botones: "Quiero aportar" manda el link al instante.
       options = wantsLink ? [] : NUDGE_OPTIONS;
     }
+    // Invitación a compartir el número: en un momento natural, nunca en crisis ni junto al aporte.
+    const share =
+      !crisis &&
+      !nudge &&
+      shouldInviteShare(Number(thread.user_messages), Number(thread.shared_count) || 0, modelWantsShare);
+    if (share) {
+      bubbles.push(...shareBubbles(firstName));
+      options = SHARE_OPTIONS;
+      meta += modelWantsShare ? "+compartir" : "+compartir(auto)";
+    }
     if (hasNewer()) {
       note({ lastGenerated: `borrador descartado: siguen llegando mensajes (${fresh.length} hasta ahora)` });
       return { superseded: true, fresh };
@@ -463,6 +505,7 @@ async function handleBurst(
         "UPDATE jesus_wa_threads SET nudged_at = now(), nudged_count = $2 WHERE phone = $1",
         [phone, Number(thread.user_messages)],
       );
+    if (share) await markShared();
     await send(bubbles, meta, options);
   } finally {
     clearInterval(keepTyping);
