@@ -131,6 +131,15 @@ server/routes/media/           imágenes desde /persistent
                                link con token; "APORTAR" o "el link" lo manda al instante (aun con tope
                                diario JESUS_DAILY_LIMIT, 200); se paga en la web
                                (Whop) y al volver, /api/whatsapp/thanks hace que Jesús agradezca.
+server/routes/api/guias/       Guías de oración de 30 días (PDF, USD 5,99): descarga solo con pedido
+                               pagado (token del comprador). Catálogo src/jesus/guias/catalog.json,
+                               contenido src/jesus/guias/content/*.json (scripts/jesus-guias/generate.mjs),
+                               PDFs assets/guias (scripts/jesus-guias/render.mjs), Whop: producto + un
+                               plan por guía (scripts/jesus-guias/whop-setup.mjs → whop-ids.json),
+                               checkout por comprador con metadatos; el webhook de Whop marca el pedido
+                               pagado y Jesús manda el PDF por WhatsApp. Páginas: /jesus-te-ama/guias.
+                               Jesús las ofrece solo con tema claro + persona serena (offer_guide),
+                               desde el mensaje 4, cada 10 (JESUS_GUIDE_MIN / JESUS_GUIDE_GAP).
 server/routes/api/whatsapp/    Jesús te ama por WhatsApp: webhook de Kapso → agente OpenAI
                                (server/utils/jesus-agent.ts); registro: scripts/kapso-register-webhook.mjs
 src/jesus/                     Jesús te ama: conversación guiada de consuelo, efectos y

@@ -9,6 +9,9 @@ import {
   asksToShare,
   shareBubbles,
   shouldInviteShare,
+  asksForGuide,
+  shouldOfferGuide,
+  guideOfferText,
   INSTRUCTIONS,
   guardReply,
   isImminentRisk,
@@ -169,4 +172,24 @@ test("compartir el número: pedido explícito, momento natural y ritmo", () => {
   assert.match(invite, /^Ana, ¿hay alguien/);
   assert.match(card, /https:\/\/wa\.me\/12083799810\?text=/);
   assert.doesNotMatch(card, /apoyo=1/);
+});
+
+test("guías de 30 días: pedido explícito, criterio del servidor y texto de la oferta", () => {
+  assert.equal(asksForGuide("quiero la guía de los hijos"), "hijos");
+  assert.equal(asksForGuide("me interesa la guia de la plata"), "dinero");
+  assert.equal(asksForGuide("la guía del trabajo"), "trabajo");
+  assert.equal(asksForGuide("Quiero la guía"), "any");
+  assert.equal(asksForGuide("no quiero la guía"), null);
+  assert.equal(asksForGuide("hoy estoy triste"), null);
+  assert.equal(shouldOfferGuide(null, 10, 0, ""), false);
+  assert.equal(shouldOfferGuide("dinero", 3, 0, ""), false); // muy temprano
+  assert.equal(shouldOfferGuide("dinero", 4, 0, ""), true);
+  assert.equal(shouldOfferGuide("dinero", 9, 4, "dinero"), false); // ya ofrecida
+  assert.equal(shouldOfferGuide("amor", 9, 4, "dinero"), false); // muy seguido
+  assert.equal(shouldOfferGuide("amor", 14, 4, "dinero"), true);
+  const text = guideOfferText({ title: "30 días de oración por tu economía", pitch: "Un camino." }, "USD 5,99 (unos Gs 30.000)", "https://x/guias/dinero?t=abc", "Ana");
+  assert.match(text, /^Ana, esto es lo que tengo/);
+  assert.match(text, /USD 5,99/);
+  assert.match(text, /https:\/\/x\/guias\/dinero\?t=abc/);
+  assert.match(text, /yo sigo acá igual/);
 });

@@ -27,6 +27,11 @@ import {
   shareBubbles,
   shouldInviteShare,
   SHARE_OPTIONS,
+  asksForGuide,
+  guideOfferText,
+  shouldOfferGuide,
+  GUIDE_OPTIONS,
+  type GuideKey,
   asksForLink,
   looksLikeJailbreak,
   mergeBubbles,
@@ -39,6 +44,7 @@ import {
   type ChatTurn,
 } from "../../../utils/jesus-agent";
 import { kapsoStatus, note, payloadShape } from "../../../utils/kapso-status";
+import { findGuide, getOrCreateGuideCheckout, getOrder, guideDownloadUrl, guidePageUrl, priceLabel } from "../../../utils/jesus-guias";
 
 /** Tope de mensajes de una persona por día (cuida el costo de OpenAI). Pedidos del link no cuentan. */
 const DAILY_LIMIT = Math.max(20, Number(process.env.JESUS_DAILY_LIMIT) || 200);
@@ -271,11 +277,13 @@ async function handleBurst(
       nudged_at: string | null;
       nudged_count: number;
       shared_count: number;
+      guides_offered: string;
+      guide_offer_count: number;
       contact_name: string | null;
       support_token: string | null;
     }>(
       `UPDATE jesus_wa_threads SET user_messages = user_messages + $2 WHERE phone = $1
-       RETURNING user_messages, opted_out, nudged_at, nudged_count, shared_count, contact_name, support_token`,
+       RETURNING user_messages, opted_out, nudged_at, nudged_count, shared_count, guides_offered, guide_offer_count, contact_name, support_token`,
       [phone, stored.length],
     );
     const firstReply = Number(thread.user_messages) === fresh.length;
@@ -362,13 +370,50 @@ async function handleBurst(
       return send(shareBubbles(firstName), "compartir", SHARE_OPTIONS);
     }
 
-    // "APORTAR", "el link de pago", "pasame de vuelta": el link al instante, sin pasar
-    // por el modelo y sin importar el tope diario.
+    /** Burbuja de oferta de una guía (checkout de Whop propio de esta persona). */
+    const offerGuideBubble = async (guideId: GuideKey) => {
+      const guide = findGuide(guideId)!;
+      const token = await supportToken();
+      const checkout = await getOrCreateGuideCheckout(sql, token, guideId, phone);
+      const link = checkout.paid ? guideDownloadUrl(guideId, token) : guidePageUrl(guideId, token);
+      await sql.query(
+        `UPDATE jesus_wa_threads SET guide_offer_count = user_messages,
+           guides_offered = CASE WHEN guides_offered = '' THEN $2 ELSE guides_offered || ',' || $2 END
+         WHERE phone = $1 AND NOT (',' || guides_offered || ',' LIKE '%,' || $2 || ',%')`,
+        [phone, guideId],
+      );
+      return checkout.paid
+        ? `${firstName ? `${firstName}, ` : ""}esa guía ya es tuya 🤍 Bajala de nuevo acá 👉 ${link}`
+        : guideOfferText(guide, priceLabel(), link, firstName);
+    };
+
     const [lastBot] = await sql.query<{ content: string }>(
       `SELECT content FROM jesus_wa_messages WHERE phone = $1 AND role = 'assistant'
         ORDER BY created_at DESC, id DESC LIMIT 1`,
       [phone],
     );
+    const offeredGuides = thread.guides_offered.split(",").filter(Boolean) as GuideKey[];
+    const lastGuide = offeredGuides[offeredGuides.length - 1] ?? null;
+    // Jesús acaba de ofrecer (o anunciar) una guía y la persona dice "sí", "dale", "pasámela".
+    const afterGuideTalk = Boolean(
+      lastBot && (lastBot.content.includes("/jesus-te-ama/guias/") || /camino de oraci[oó]n de 30 d[ií]as/i.test(lastBot.content)),
+    );
+    const saysYes = (t: string) =>
+      /^\s*(s[ií]|dale|ok|okey|bueno|claro|quiero|la\s+quiero|s[ií]\s*,?\s*(dale|quiero|pas[aá]mela)|pas[aá]mela|mand[aá]mela|envi[aá]mela)(\s|[.!…]|🙏|🤍)*$/iu.test(t);
+
+    // "Quiero la guía", "la guía de los hijos" o un "sí" a la oferta: la manda sin modelo.
+    const guideAsk = plain.map(asksForGuide).find((g) => g !== null) ?? null;
+    const yesToGuide = afterGuideTalk && lastGuide && plain.length > 0 && plain.every(saysYes);
+    if ((guideAsk || yesToGuide) && plain.length === fresh.length) {
+      const guideId = guideAsk && guideAsk !== "any" ? guideAsk : lastGuide;
+      if (guideId) {
+        const paid = await getOrder(sql, await supportToken(), guideId);
+        return send([await offerGuideBubble(guideId)], paid?.status === "paid" ? "guia-descarga" : "guia-link", paid?.status === "paid" ? [] : ["Seguir hablando"]);
+      }
+    }
+
+    // "APORTAR", "el link de pago", "pasame de vuelta": el link al instante, sin pasar
+    // por el modelo y sin importar el tope diario.
     const afterLink = Boolean(lastBot?.content.includes("/jesus-te-ama?apoyo="));
     const onlyLinkTalk =
       plain.length === fresh.length &&
@@ -427,6 +472,7 @@ async function handleBurst(
     let reaction: { target: string; emoji: string } | null = null;
     let options: string[] = [];
     let modelWantsShare = false;
+    let modelGuide: GuideKey | null = null;
     if (looksLikeJailbreak(texts.join("\n"))) {
       bubbles = [DEFLECT_REPLY];
       meta = "blindaje";
@@ -441,6 +487,7 @@ async function handleBurst(
         bubbles = reply.messages;
         options = reply.options;
         modelWantsShare = reply.inviteShare;
+        modelGuide = reply.offerGuide;
         if (reply.reaction) {
           reacted = `${reply.reaction.emoji} a [${reply.reaction.index + 1}]`;
           const target = fresh[reply.reaction.index]?.message.messageId;
@@ -479,10 +526,29 @@ async function handleBurst(
       // La invitación va con botones: "Quiero aportar" manda el link al instante.
       options = wantsLink ? [] : NUDGE_OPTIONS;
     }
+    // Guía de 30 días: cuando el modelo la ve oportuna y el servidor lo permite (nunca en crisis ni con el aporte).
+    const offerGuide =
+      !crisis &&
+      !nudge &&
+      shouldOfferGuide(modelGuide, Number(thread.user_messages), Number(thread.guide_offer_count) || 0, thread.guides_offered);
+    // Si el modelo dijo "te la paso" de una guía ya ofrecida y la persona la pidió, va el link igual.
+    const resendGuide =
+      !crisis && !offerGuide && modelGuide && offeredGuides.includes(modelGuide) && texts.some((t) => saysYes(t) || asksForGuide(t));
+    if ((offerGuide || resendGuide) && modelGuide) {
+      try {
+        bubbles.push(await offerGuideBubble(modelGuide));
+        options = GUIDE_OPTIONS;
+        meta += `+guia:${modelGuide}`;
+      } catch (error) {
+        console.error("[guias] no se pudo armar el checkout", error);
+        note({ lastError: `guía: ${String(error).slice(0, 200)}` });
+      }
+    }
     // Invitación a compartir el número: en un momento natural, nunca en crisis ni junto al aporte.
     const share =
       !crisis &&
       !nudge &&
+      !meta.includes("+guia") &&
       shouldInviteShare(Number(thread.user_messages), Number(thread.shared_count) || 0, modelWantsShare);
     if (share) {
       bubbles.push(...shareBubbles(firstName));

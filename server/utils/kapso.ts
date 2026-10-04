@@ -67,6 +67,23 @@ export function sendWhatsAppText(to: string, body: string, phoneNumberId = kapso
   });
 }
 
+/** Manda un documento (PDF) por link público; WhatsApp lo descarga y lo adjunta. */
+export function sendWhatsAppDocument(
+  to: string,
+  link: string,
+  filename: string,
+  caption?: string,
+  phoneNumberId = kapsoPhoneNumberId(),
+) {
+  return post(messagesPath(phoneNumberId), {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to,
+    type: "document",
+    document: { link, filename, ...(caption ? { caption } : {}) },
+  });
+}
+
 /** Cuerpo máximo de un mensaje interactivo de WhatsApp. */
 export const INTERACTIVE_BODY_MAX = 1024;
 

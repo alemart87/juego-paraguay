@@ -16,8 +16,10 @@ import { Route as HernanRivasAbogadoRouteImport } from './routes/hernan-rivas-ab
 import { Route as JesusTeAmaRouteImport } from './routes/jesus-te-ama'
 import { Route as PoliticaDeComprasRouteImport } from './routes/politica-de-compras'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as JesusTeAmaGuiasRouteImport } from './routes/jesus-te-ama_.guias'
 import { Route as PersonajesIndexRouteImport } from './routes/personajes.index'
 import { Route as PersonajesSlugRouteImport } from './routes/personajes.$slug'
+import { Route as JesusTeAmaGuiasGuideRouteImport } from './routes/jesus-te-ama_.guias_.$guide'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -54,6 +56,11 @@ const PrivacidadRoute = PrivacidadRouteImport.update({
   path: '/privacidad',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JesusTeAmaGuiasRoute = JesusTeAmaGuiasRouteImport.update({
+  id: '/jesus-te-ama_/guias',
+  path: '/jesus-te-ama/guias',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PersonajesIndexRoute = PersonajesIndexRouteImport.update({
   id: '/personajes/',
   path: '/personajes/',
@@ -62,6 +69,11 @@ const PersonajesIndexRoute = PersonajesIndexRouteImport.update({
 const PersonajesSlugRoute = PersonajesSlugRouteImport.update({
   id: '/personajes/$slug',
   path: '/personajes/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JesusTeAmaGuiasGuideRoute = JesusTeAmaGuiasGuideRouteImport.update({
+  id: '/jesus-te-ama_/guias_/$guide',
+  path: '/jesus-te-ama/guias/$guide',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -73,8 +85,10 @@ export interface FileRoutesByFullPath {
   '/jesus-te-ama': typeof JesusTeAmaRoute
   '/politica-de-compras': typeof PoliticaDeComprasRoute
   '/privacidad': typeof PrivacidadRoute
+  '/jesus-te-ama/guias': typeof JesusTeAmaGuiasRoute
   '/personajes/$slug': typeof PersonajesSlugRoute
   '/personajes/': typeof PersonajesIndexRoute
+  '/jesus-te-ama/guias/$guide': typeof JesusTeAmaGuiasGuideRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -84,8 +98,10 @@ export interface FileRoutesByTo {
   '/jesus-te-ama': typeof JesusTeAmaRoute
   '/politica-de-compras': typeof PoliticaDeComprasRoute
   '/privacidad': typeof PrivacidadRoute
+  '/jesus-te-ama/guias': typeof JesusTeAmaGuiasRoute
   '/personajes/$slug': typeof PersonajesSlugRoute
   '/personajes': typeof PersonajesIndexRoute
+  '/jesus-te-ama/guias/$guide': typeof JesusTeAmaGuiasGuideRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,8 +112,10 @@ export interface FileRoutesById {
   '/jesus-te-ama': typeof JesusTeAmaRoute
   '/politica-de-compras': typeof PoliticaDeComprasRoute
   '/privacidad': typeof PrivacidadRoute
+  '/jesus-te-ama_/guias': typeof JesusTeAmaGuiasRoute
   '/personajes/$slug': typeof PersonajesSlugRoute
   '/personajes/': typeof PersonajesIndexRoute
+  '/jesus-te-ama_/guias_/$guide': typeof JesusTeAmaGuiasGuideRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,8 +127,10 @@ export interface FileRouteTypes {
     | '/jesus-te-ama'
     | '/politica-de-compras'
     | '/privacidad'
+    | '/jesus-te-ama/guias'
     | '/personajes/$slug'
     | '/personajes/'
+    | '/jesus-te-ama/guias/$guide'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -120,8 +140,10 @@ export interface FileRouteTypes {
     | '/jesus-te-ama'
     | '/politica-de-compras'
     | '/privacidad'
+    | '/jesus-te-ama/guias'
     | '/personajes/$slug'
     | '/personajes'
+    | '/jesus-te-ama/guias/$guide'
   id:
     | '__root__'
     | '/'
@@ -131,8 +153,10 @@ export interface FileRouteTypes {
     | '/jesus-te-ama'
     | '/politica-de-compras'
     | '/privacidad'
+    | '/jesus-te-ama_/guias'
     | '/personajes/$slug'
     | '/personajes/'
+    | '/jesus-te-ama_/guias_/$guide'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -143,8 +167,10 @@ export interface RootRouteChildren {
   JesusTeAmaRoute: typeof JesusTeAmaRoute
   PoliticaDeComprasRoute: typeof PoliticaDeComprasRoute
   PrivacidadRoute: typeof PrivacidadRoute
+  JesusTeAmaGuiasRoute: typeof JesusTeAmaGuiasRoute
   PersonajesSlugRoute: typeof PersonajesSlugRoute
   PersonajesIndexRoute: typeof PersonajesIndexRoute
+  JesusTeAmaGuiasGuideRoute: typeof JesusTeAmaGuiasGuideRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -198,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacidadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/jesus-te-ama_/guias': {
+      id: '/jesus-te-ama_/guias'
+      path: '/jesus-te-ama/guias'
+      fullPath: '/jesus-te-ama/guias'
+      preLoaderRoute: typeof JesusTeAmaGuiasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/personajes/': {
       id: '/personajes/'
       path: '/personajes'
@@ -212,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PersonajesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/jesus-te-ama_/guias_/$guide': {
+      id: '/jesus-te-ama_/guias_/$guide'
+      path: '/jesus-te-ama/guias/$guide'
+      fullPath: '/jesus-te-ama/guias/$guide'
+      preLoaderRoute: typeof JesusTeAmaGuiasGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -223,8 +263,10 @@ const rootRouteChildren: RootRouteChildren = {
   JesusTeAmaRoute: JesusTeAmaRoute,
   PoliticaDeComprasRoute: PoliticaDeComprasRoute,
   PrivacidadRoute: PrivacidadRoute,
+  JesusTeAmaGuiasRoute: JesusTeAmaGuiasRoute,
   PersonajesSlugRoute: PersonajesSlugRoute,
   PersonajesIndexRoute: PersonajesIndexRoute,
+  JesusTeAmaGuiasGuideRoute: JesusTeAmaGuiasGuideRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

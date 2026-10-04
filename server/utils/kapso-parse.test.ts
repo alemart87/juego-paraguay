@@ -75,7 +75,9 @@ test("salida estructurada: burbujas, reacción válida y barrera de voz", () => 
     JSON.stringify({ messages: ["Estoy acá.", "Contame más."], reaction_to: 2, reaction_emoji: "🙏" }),
     2,
   );
-  assert.deepEqual(ok, { messages: ["Estoy acá.", "Contame más."], reaction: { index: 1, emoji: "🙏" }, options: [], inviteShare: false });
+  assert.deepEqual(ok, { messages: ["Estoy acá.", "Contame más."], reaction: { index: 1, emoji: "🙏" }, options: [], inviteShare: false, offerGuide: null });
+  assert.equal(parseReply(JSON.stringify({ messages: ["Tengo algo para vos."], reaction_to: 0, reaction_emoji: "none", options: [], invite_share: false, offer_guide: "hijos" }), 1).offerGuide, "hijos");
+  assert.equal(parseReply(JSON.stringify({ messages: ["Hola."], reaction_to: 0, reaction_emoji: "none", options: [], invite_share: false, offer_guide: "otra" }), 1).offerGuide, null);
   assert.equal(parseReply(JSON.stringify({ messages: ["Gracias a vos."], reaction_to: 0, reaction_emoji: "none", options: [], invite_share: true }), 1).inviteShare, true);
   const noReact = parseReply(JSON.stringify({ messages: ["Hola."], reaction_to: 0, reaction_emoji: "none" }), 1);
   assert.equal(noReact.reaction, null);

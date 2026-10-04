@@ -27,6 +27,7 @@ ENV NODE_ENV=production \
 COPY --from=production-dependencies /app/node_modules ./node_modules
 COPY --from=builder /app/.output ./.output
 COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/assets ./assets
 COPY --from=builder /app/public/battle ./public/battle
 COPY --from=builder /app/scripts/migrate.mjs ./scripts/migrate.mjs
 COPY --from=builder /app/scripts/migration-plan.mjs ./scripts/migration-plan.mjs

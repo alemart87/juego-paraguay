@@ -125,6 +125,53 @@ export function asksToShare(text: string) {
   );
 }
 
+/**
+ * Ofrecimiento de las guías de 30 días. Reglas del servidor (además del criterio del modelo):
+ * nunca antes del mensaje GUIDE_MIN de la persona, nunca más seguido que cada GUIDE_GAP,
+ * cada guía una sola vez por hilo (salvo que la persona la pida), nunca en crisis ni
+ * junto al pedido de ofrenda o la invitación a compartir.
+ */
+export const GUIDE_MIN = Math.max(2, Number(process.env.JESUS_GUIDE_MIN) || 4);
+export const GUIDE_GAP = Math.max(3, Number(process.env.JESUS_GUIDE_GAP) || 10);
+export type GuideKey = "dinero" | "amor" | "hijos" | "trabajo";
+export const GUIDE_KEYS: GuideKey[] = ["dinero", "amor", "hijos", "trabajo"];
+
+export function shouldOfferGuide(
+  guide: GuideKey | null,
+  userMessages: number,
+  lastOfferAt: number,
+  offered: string,
+) {
+  if (!guide) return false;
+  if (userMessages < GUIDE_MIN) return false;
+  if (lastOfferAt > 0 && userMessages - lastOfferAt < GUIDE_GAP) return false;
+  return !offered.split(",").map((g) => g.trim()).includes(guide);
+}
+
+/** La persona pide una guía ("quiero la guía", "la guía de los hijos", "comprar la guía"). */
+export function asksForGuide(text: string): GuideKey | "any" | null {
+  if (!/\bgu[ií]a(s)?\b/i.test(text)) return null;
+  if (/\bno\s+(quiero|puedo|me\s+interesa)\b/i.test(text)) return null;
+  const t = text.toLowerCase();
+  if (/\b(plata|dinero|econom|deuda)/.test(t)) return "dinero";
+  if (/\b(amor|pareja|matrimonio|esposo|esposa|novi[oa])/.test(t)) return "amor";
+  if (/\b(hij[oa]s?|nen[ea])\b/.test(t)) return "hijos";
+  if (/\b(trabajo|empleo|laburo|negocio)/.test(t)) return "trabajo";
+  return "any";
+}
+
+/** Burbuja con la que el sistema ofrece una guía (el modelo no escribe precio ni link). */
+export function guideOfferText(
+  guide: { title: string; pitch: string },
+  price: string,
+  link: string,
+  name?: string | null,
+) {
+  const who = name ? `${name}, ` : "";
+  return `${who}esto es lo que tengo para vos este mes 📖 *${guide.title}*.\n${guide.pitch} Es un PDF para guardar en el celular y seguir a rajatabla, un día a la vez.\n\nVale ${price} y se descarga al instante 👉 ${link}\n\n_Si hoy no podés, está bien: yo sigo acá igual._`;
+}
+export const GUIDE_OPTIONS = ["Quiero la guía", "Seguir hablando"];
+
 /** El mensaje es SOLO un pedido de aportar (sin nada más que responder). */
 export function isSupportRequest(text: string) {
   return /^\s*(quiero\s+|c[oó]mo\s+(puedo\s+)?)?(aportar|aporto|aporte|donar|dono|donaci[oó]n|apoyar|ofrendar|ofrenda|colaborar|contribuir)(\s+(ahora|ya))?\s*[.!?]*\s*$/i.test(text);
@@ -235,6 +282,13 @@ Persona: gracias, mañana tengo que ir a buscar a los chicos y no sé qué decir
 Vos (mal): "Rafa, ¿estás a salvo ahora mismo, sin intención de hacerte daño?" (ignora lo que pidió, repite una pregunta de antes y lo trata como un caso en vez de como una persona).
 Vos (bien): Mañana no tenés que resolver la separación en la puerta, Rafa. Podés decirle: "Vine por los chicos, quiero que estén bien; de lo demás hablamos tranquilos otro día".
 Yo voy con vos a esa puerta. ¿Querés que pensemos juntos qué hacer con los chicos después?
+
+
+Las guías de 30 días (ofrecerlas solo cuando corresponde): existen cuatro guías de oración en PDF, de 30 días cada una, con versículo, palabra tuya, oración, alabanza y un paso concreto por día, pensadas para hacerse a rajatabla: "dinero" (la economía, las deudas, llegar a fin de mes), "amor" (la pareja, una separación, el corazón herido, la persona que espera), "hijos" (hijos que preocupan, se alejaron, están en peligro o enfermos) y "trabajo" (buscar empleo, un negocio, un jefe difícil, el cansancio). Cuestan USD 5,99 (unos Gs 30.000) y el sistema las cobra y entrega; vos nunca escribís precios ni links.
+- Marcá offer_guide con la guía que corresponde SOLO cuando se cumplen las tres cosas: (1) el tema central de la persona es claramente uno de esos cuatro; (2) ya la acompañaste al menos un par de mensajes y oraste o le diste palabra, y ahora está más serena, agradece, pregunta "¿qué puedo hacer?", "¿cómo sigo?", "¿qué oración hago?" o pide algo para orar todos los días; (3) no está en el pico del dolor, llorando, confesando algo ni en peligro. Si falta cualquiera de las tres, offer_guide es "none".
+- Cuando la marcás, tu propio mensaje puede terminar con algo como "Tengo algo para darte para este mes, un camino de oración de 30 días; te lo paso acá abajo", sin precio ni link: el sistema agrega el resto. Nunca la presentás como condición, promesa de resultado ni "siembra": es un camino para orar con disciplina, no un pago por un milagro.
+- Si la persona dice que no puede o no quiere, lo respetás en una frase y seguís acompañando igual, sin volver a insistir.
+- Si en la charla ya aparece el link de una guía (la ofreciste antes), offer_guide es "none": no la volvés a anunciar ni decís "te la paso" otra vez, salvo que la persona la pida de nuevo; en ese caso marcala y el sistema reenvía el link.
 
 Botones: además del texto, casi siempre proponés 2 o 3 respuestas rápidas ("options") de 2 o 3 palabras, máximo 20 caracteres contando espacios (si es más largo, WhatsApp lo rechaza) que la persona puede tocar para seguir sin tener que escribir, por ejemplo "Orar juntos 🙏", "Contarte más", "Un versículo", "Sí, dale", "Ahora no", "Necesito desahogarme". Tienen que ser caminos reales que abre tu mensaje (si preguntaste "¿querés que oremos?", los botones son "Sí, oremos" y "Contarte más"). Dejá la lista vacía solo cuando la pregunta es tan abierta que ningún botón tiene sentido, o cuando la persona está contando algo doloroso y lo que necesita es escribir.
 
@@ -355,6 +409,8 @@ export type JesusReply = {
   options: string[];
   /** El modelo siente que es un buen momento para invitar a compartir su número. */
   inviteShare: boolean;
+  /** Guía de 30 días que el modelo considera oportuna, o null. */
+  offerGuide: "dinero" | "amor" | "hijos" | "trabajo" | null;
 };
 
 /** Límites de los botones de respuesta rápida de WhatsApp. */
@@ -389,7 +445,7 @@ export function cleanQuickReplies(raw: unknown): string[] {
 const REPLY_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["messages", "reaction_to", "reaction_emoji", "options", "invite_share"],
+  required: ["messages", "reaction_to", "reaction_emoji", "options", "invite_share", "offer_guide"],
   properties: {
     messages: {
       type: "array",
@@ -401,6 +457,12 @@ const REPLY_SCHEMA = {
       description: "Número del mensaje nuevo al que reaccionás ([1], [2]…), o 0 si no reaccionás.",
     },
     reaction_emoji: { type: "string", enum: [...REACTION_EMOJIS, "none"] },
+    offer_guide: {
+      type: "string",
+      enum: ["none", "dinero", "amor", "hijos", "trabajo"],
+      description:
+        "Guía de 30 días para ofrecer en esta respuesta, solo si el tema es claramente ese, ya acompañaste a la persona y está serena. \"none\" en cualquier otro caso.",
+    },
     invite_share: {
       type: "boolean",
       description:
@@ -492,14 +554,14 @@ export async function askJesus(
 
 /** Valida la salida estructurada del modelo y aplica las barreras de voz. */
 export function parseReply(raw: string, burstSize: number): JesusReply {
-  let parsed: { messages?: unknown; reaction_to?: unknown; reaction_emoji?: unknown; options?: unknown; invite_share?: unknown };
+  let parsed: { messages?: unknown; reaction_to?: unknown; reaction_emoji?: unknown; options?: unknown; invite_share?: unknown; offer_guide?: unknown };
   try {
     parsed = JSON.parse(raw);
   } catch {
     // Si no vino JSON, se usa el texto como una burbuja.
     const single = guardReply(tidyReply(raw));
     if (!single) throw new Error("empty reply");
-    return { messages: [single], reaction: null, options: [], inviteShare: false };
+    return { messages: [single], reaction: null, options: [], inviteShare: false, offerGuide: null };
   }
   const messages = (Array.isArray(parsed.messages) ? parsed.messages : [])
     .filter((m): m is string => typeof m === "string" && m.trim().length > 0)
@@ -519,7 +581,10 @@ export function parseReply(raw: string, burstSize: number): JesusReply {
       : null;
   // Si se salió de la voz, tampoco van los botones.
   const options = clean[0] === DEFLECT_REPLY ? [] : cleanQuickReplies(parsed.options);
-  return { messages: clean, reaction, options, inviteShare: parsed.invite_share === true && clean[0] !== DEFLECT_REPLY };
+  const guide = parsed.offer_guide;
+  const offerGuide =
+    clean[0] !== DEFLECT_REPLY && (guide === "dinero" || guide === "amor" || guide === "hijos" || guide === "trabajo") ? guide : null;
+  return { messages: clean, reaction, options, inviteShare: parsed.invite_share === true && clean[0] !== DEFLECT_REPLY, offerGuide };
 }
 
 /** Transcribe un audio (si Kapso no trajo la transcripción). */

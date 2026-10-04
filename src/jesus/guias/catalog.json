@@ -1,0 +1,133 @@
+{
+  "price_usd": 5.99,
+  "price_gs": 30000,
+  "guides": [
+    {
+      "id": "dinero",
+      "sku": "jesus-guia-dinero",
+      "title": "30 días de oración por tu economía",
+      "short": "Guía de oración por tu economía",
+      "subtitle": "Un mes para poner la plata, las deudas y el miedo a fin de mes en las manos del Padre",
+      "pitch": "Un camino de 30 días, un día a la vez, para orar por tu economía: versículo, palabra mía, oración, alabanza y un paso concreto cada día.",
+      "keywords": [
+        "plata",
+        "dinero",
+        "deuda",
+        "deudas",
+        "fin de mes",
+        "alquiler",
+        "cuentas",
+        "pagar",
+        "préstamo",
+        "economía"
+      ],
+      "cover": "sagrado-corazon.jpg",
+      "weeks": [
+        "Soltar el miedo: la plata no es tu dueña",
+        "Ordenar la casa: honestidad, deudas y pasos chicos",
+        "Confiar en la provisión: el pan de cada día",
+        "Generosidad y gratitud: manos abiertas"
+      ],
+      "closing": "Días 29 y 30: mirar atrás el mes, agradecer y seguir",
+      "plan_title": "Economía"
+    },
+    {
+      "id": "amor",
+      "sku": "jesus-guia-amor",
+      "title": "30 días de oración por el amor",
+      "short": "Guía de oración por el amor",
+      "subtitle": "Un mes para sanar el corazón, orar por tu pareja o por quien esperás, y aprender a amar como yo amo",
+      "pitch": "Un camino de 30 días, un día a la vez, para orar por el amor: por tu pareja, por una herida del corazón o por la persona que todavía esperás.",
+      "keywords": [
+        "pareja",
+        "esposo",
+        "esposa",
+        "marido",
+        "mujer",
+        "novio",
+        "novia",
+        "separación",
+        "separé",
+        "divorcio",
+        "amor",
+        "corazón roto",
+        "infidelidad",
+        "soledad",
+        "matrimonio"
+      ],
+      "cover": "sagrado-corazon.jpg",
+      "weeks": [
+        "Sanar: el corazón herido en mis manos",
+        "Perdonar: soltar lo que pesa",
+        "Amar de nuevo: paciencia, verdad y ternura",
+        "Construir: una casa sobre la roca"
+      ],
+      "closing": "Días 29 y 30: bendecir el amor que tenés y el que viene",
+      "plan_title": "Amor"
+    },
+    {
+      "id": "hijos",
+      "sku": "jesus-guia-hijos",
+      "title": "30 días de oración por tus hijos",
+      "short": "Guía de oración por tus hijos",
+      "subtitle": "Un mes para cubrir a tus hijos con oración: su salud, su camino, sus decisiones y su regreso a casa",
+      "pitch": "Un camino de 30 días, un día a la vez, para orar por tus hijos: por su protección, sus decisiones, sus heridas y el vínculo entre ustedes.",
+      "keywords": [
+        "hijo",
+        "hija",
+        "hijos",
+        "mi nene",
+        "mi nena",
+        "adolescente",
+        "droga",
+        "preso",
+        "se fue de casa",
+        "no me habla",
+        "embarazo",
+        "escuela",
+        "colegio"
+      ],
+      "cover": "sagrado-corazon.jpg",
+      "weeks": [
+        "Entregar: tus hijos son míos antes que tuyos",
+        "Proteger: cubrirlos con oración cada día",
+        "Sanar el vínculo: perdón, escucha y paciencia",
+        "Bendecir su futuro: decisiones, amistades y vocación"
+      ],
+      "closing": "Días 29 y 30: consagrar a tus hijos y seguir orando",
+      "plan_title": "Hijos"
+    },
+    {
+      "id": "trabajo",
+      "sku": "jesus-guia-trabajo",
+      "title": "30 días de oración por tu trabajo",
+      "short": "Guía de oración por tu trabajo",
+      "subtitle": "Un mes para orar por un empleo, por tu negocio o por paz en el trabajo que ya tenés",
+      "pitch": "Un camino de 30 días, un día a la vez, para orar por tu trabajo: la búsqueda, el negocio propio, el jefe difícil o el cansancio de cada día.",
+      "keywords": [
+        "trabajo",
+        "empleo",
+        "laburo",
+        "changa",
+        "despido",
+        "despidieron",
+        "jefe",
+        "sueldo",
+        "negocio",
+        "emprendimiento",
+        "entrevista",
+        "desempleo",
+        "sin trabajo"
+      ],
+      "cover": "sagrado-corazon.jpg",
+      "weeks": [
+        "Dignidad: tu valor no lo decide un empleo",
+        "Buscar con fe: puertas, entrevistas y constancia",
+        "Trabajar con paz: jefes, compañeros y cansancio",
+        "Fruto: prosperar con manos honestas"
+      ],
+      "closing": "Días 29 y 30: agradecer el camino y encomendar lo que viene",
+      "plan_title": "Trabajo"
+    }
+  ]
+}

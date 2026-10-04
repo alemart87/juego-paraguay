@@ -37,6 +37,7 @@ function paymentDetails(event: WhopWebhookEvent) {
 
   return {
     paymentId: text(payment?.id),
+    metadata,
     sku:
       text(metadata?.game_sku) ?? text(planMetadata?.game_sku) ?? text(productMetadata?.game_sku),
     userId: text(user?.id),
@@ -82,7 +83,19 @@ export async function recordWhopWebhook(event: WhopWebhookEvent, webhookId: stri
   );
   if (!rows.length || rows[0].processed_at) return { duplicate: true };
 
-  if (event.type === "payment.succeeded" && details.paymentId && details.sku) {
+  const isGuide = details.sku?.startsWith("jesus-guia") || details.metadata?.kind === "guia";
+  if (event.type === "payment.succeeded" && details.paymentId && isGuide) {
+    // Guías de oración (PDF): marca el pedido pagado y lo entrega por WhatsApp si vino de ahí.
+    const { fulfillGuidePayment } = await import("../../server/utils/jesus-guias");
+    await fulfillGuidePayment(sql, {
+      paymentId: details.paymentId,
+      checkoutConfigurationId: details.checkoutConfigurationId,
+      metadata: details.metadata,
+      amount: details.amount,
+      currency: details.currency,
+      paidAt: event.timestamp ?? null,
+    });
+  } else if (event.type === "payment.succeeded" && details.paymentId && details.sku) {
     await sql.query(
       `INSERT INTO whop_purchases
          (payment_id, whop_user_id, game_sku, checkout_configuration_id, amount, currency,
@@ -126,6 +139,8 @@ export async function recordWhopWebhook(event: WhopWebhookEvent, webhookId: stri
   }
 
   if (event.type === "refund.updated" && details.paymentId && event.data.status === "succeeded") {
+    const { refundGuidePayment } = await import("../../server/utils/jesus-guias");
+    await refundGuidePayment(sql, details.paymentId);
     await sql.query(
       `UPDATE whop_purchases
        SET status = 'refunded', refunded_at = COALESCE($2, now()), updated_at = now()

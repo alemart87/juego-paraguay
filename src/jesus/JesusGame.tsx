@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   Download,
   Heart,
   LoaderCircle,
@@ -46,6 +47,9 @@ const SESSION_KEY = "jesus-te-ama-session-v1";
 const AMOUNT_KEY = "jesus-te-ama-aporte-v1";
 /** Token del hilo de WhatsApp (viene en el link que manda Jesús). */
 const WA_TOKEN_KEY = "jesus-te-ama-wa-token-v1";
+/** Tema de la web → guía de 30 días que le corresponde (si hay). */
+const guideForTopic = (topic: string) =>
+  topic === "dinero" ? "dinero" : topic === "familiar" ? "hijos" : topic === "soledad" ? "amor" : "";
 type Session = { name: string; topicId: string; optionId: string };
 const readSession = (): Session | null => {
   try {
@@ -524,6 +528,9 @@ export function JesusGame() {
               rel="noreferrer"
             >
               <MessageCircle size={20} /> Seguir hablando por WhatsApp
+            </a>
+            <a className="jt-btn jt-btn-soft" href={`/jesus-te-ama/guias${guideForTopic(current.id) ? `/${guideForTopic(current.id)}` : ""}`}>
+              <BookOpen size={18} /> Guía de 30 días de oración
             </a>
             <button
               className="jt-btn jt-btn-soft"
